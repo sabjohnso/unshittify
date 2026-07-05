@@ -40,6 +40,11 @@
       "name": "development",
       "source": "./plugins/development",
       "description": "General software-development tooling not specific to any one language."
+    },
+    {
+      "name": "cxx",
+      "source": "./plugins/cxx",
+      "description": "Claude Code skills for C++ development: compiling and running with sanitizers, and more."
     }
   ]
 }
