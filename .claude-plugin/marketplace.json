@@ -35,6 +35,11 @@
       "name": "communication",
       "source": "./plugins/communication",
       "description": "Review prose against this project's house style — BadProseExamples.org and CLAUDE.md's Communicate Clearly rules — before it reaches the user."
+    },
+    {
+      "name": "development",
+      "source": "./plugins/development",
+      "description": "General software-development tooling not specific to any one language."
     }
   ]
 }
