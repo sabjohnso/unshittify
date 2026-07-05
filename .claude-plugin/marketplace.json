@@ -15,6 +15,11 @@
       "name": "racket",
       "source": "./plugins/racket",
       "description": "Claude Code skills for working in Racket: classes, contracts, macros, concurrency, GUI, drawing, testing, packaging, and more."
+    },
+    {
+      "name": "global",
+      "source": "./plugins/global",
+      "description": "Inspect and manage the user's global Claude Code settings (~/.claude/settings.json)."
     }
   ]
 }
