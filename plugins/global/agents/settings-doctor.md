@@ -25,6 +25,7 @@ This is the lowest-precedence settings scope: enterprise managed settings, CLI f
 6. **Stale marketplace references** — if `extraKnownMarketplaces` appears, check that each entry's `source.path` (for `"source": "directory"` entries) still exists on disk. Flag any that don't.
 7. **Hook exposure** — for each entry under `hooks`, surface the command verbatim in your report. These commands run automatically and unattended for every matching tool call across every project; call out anything that looks like it embeds a credential, token, or overly permissive shell logic (e.g. missing quoting around `$(...)` substitutions).
 8. **File permissions** — run `stat -c '%a %U:%G' ~/.claude/settings.json` (or `stat -f '%Lp %Su:%Sg'` on macOS). Flag the file if it is group- or world-writable: anyone else with access to the machine could alter auto-executing hooks.
+9. **Repository hook wiring** — for each `extraKnownMarketplaces` entry whose `source.path` contains a `hooks/` directory, check for `enforce-prose-review.sh`, `enforce-code-review.sh`, and `confirm-git-commit-push.sh`. For each one present on disk, confirm it is wired into the top-level `hooks` key: `enforce-prose-review.sh` and `enforce-code-review.sh` must appear as a `command` under `hooks.Stop`; `confirm-git-commit-push.sh` must appear under `hooks.PreToolUse` with a `matcher` of `Bash`. Flag any script found on disk but missing from `hooks`, wired under the wrong event, or missing the expected matcher. Skip silently if no marketplace path contains a `hooks/` directory with these scripts.
 
 ## Output
 
