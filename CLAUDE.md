@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repository is
 
-`unshittify` is a Claude Code **plugin marketplace**: a `.claude-plugin/marketplace.json` listing six plugins under `plugins/`, each a self-contained bundle of skills (`skills/<name>/SKILL.md`) and subagents (`agents/<name>.md`). There is no application code, no build step, and no test suite — every file is either a JSON manifest or a Markdown prompt that the Claude Code harness loads directly.
+`unshittify` is a Claude Code **plugin marketplace**: a `.claude-plugin/marketplace.json` listing six plugins under `plugins/`, each a self-contained bundle of skills (`skills/<name>/SKILL.md`) and subagents (`agents/<name>.md`). Everything under `plugins/` is a JSON manifest or a Markdown prompt that the Claude Code harness loads directly — no application code, no build step, no test suite. The one exception is `hooks/` (below), which is real bash code with its own test suite.
 
 Plugins:
 - `local` — manage project-local settings (`.claude/settings.local.json`): theme, model, per-project plugin enable/disable, a settings-doctor audit.
@@ -16,11 +16,22 @@ Plugins:
 
 ## Commands
 
-There is nothing to compile or test. The only verification available is:
+There is nothing to compile or test under `plugins/`. The only verification available there is:
 
 - **Validate a manifest edit**: `python3 -m json.tool <file>` (or `jq . <file>`) on `.claude-plugin/marketplace.json` or any `plugins/*/.claude-plugin/plugin.json` after editing it, since nothing else will catch a syntax error.
 - **List installed plugins / their enabled state**: `claude plugin list --json`.
 - **Exercise a skill or agent manually**: install/enable the plugin locally, then invoke its slash command (e.g. `/local:check-settings`) or trigger its agent by description in a live session — there is no offline harness for this.
+
+For `hooks/`, see the next section.
+
+## The `hooks/` directory
+
+`hooks/` holds personal Claude Code `Stop` hook scripts (bash) — not a plugin, and not loaded by the marketplace manifest. They are wired into `~/.claude/settings.json` under `hooks.Stop` by absolute path, so they take effect globally, in every project, regardless of which repository is the current working directory:
+
+- `hooks/enforce-prose-review.sh` — blocks ending a turn if the final assistant message is substantial prose and the `communication:review-prose` skill was not invoked on it this turn.
+- `hooks/enforce-code-review.sh` — blocks ending a turn if code was written or edited this turn but the required reviews (TDD, NST, property-tests — each satisfiable via its skill or its matching subagent) were not all invoked since the user's last message.
+
+Both scripts must pass `shellcheck` cleanly; run it directly (`shellcheck hooks/*.sh`) after editing either one. Both have a test suite under `tests/hooks/`, using `bats` (bats-core) rather than any custom harness — run the whole suite with `tests/hooks/run_tests.sh`. Follow strict TDD when changing this logic: these scripts encode real decision functions (e.g. `enforce-code-review.sh`'s missing-reviews computation has stated laws — monotonicity, order-invariance, duplicate-insensitivity — each pinned by a test in `tests/hooks/enforce-code-review.bats`), not incidental scripting, so a behavior change belongs behind a new failing test first.
 
 ## Architecture and conventions specific to this repo
 
