@@ -26,10 +26,11 @@ For `hooks/`, see the next section.
 
 ## The `hooks/` directory
 
-`hooks/` holds personal Claude Code `Stop` hook scripts (bash) — not a plugin, and not loaded by the marketplace manifest. They are wired into `~/.claude/settings.json` under `hooks.Stop` by absolute path, so they take effect globally, in every project, regardless of which repository is the current working directory:
+`hooks/` holds personal Claude Code hook scripts (bash) — not a plugin, and not loaded by the marketplace manifest. They are wired into `~/.claude/settings.json` by absolute path, so they take effect globally, in every project, regardless of which repository is the current working directory:
 
-- `hooks/enforce-prose-review.sh` — blocks ending a turn if the final assistant message is substantial prose and the `communication:review-prose` skill was not invoked on it this turn.
-- `hooks/enforce-code-review.sh` — blocks ending a turn if code was written or edited this turn but the required reviews (TDD, NST, property-tests — each satisfiable via its skill or its matching subagent) were not all invoked since the user's last message.
+- `hooks/enforce-prose-review.sh` (`Stop`) — blocks ending a turn if the final assistant message is substantial prose and the `communication:review-prose` skill was not invoked on it this turn.
+- `hooks/enforce-code-review.sh` (`Stop`) — blocks ending a turn if code was written or edited this turn but the required reviews (TDD, NST, property-tests — each satisfiable via its skill or its matching subagent) were not all invoked since the user's last message.
+- `hooks/confirm-git-commit-push.sh` (`PreToolUse`, matcher `Bash`) — asks for confirmation before a `git commit` or `git push` runs, since those require an explicit instruction in the current turn.
 
 Both scripts must pass `shellcheck` cleanly; run it directly (`shellcheck hooks/*.sh`) after editing either one. Both have a test suite under `tests/hooks/`, using `bats` (bats-core) rather than any custom harness — run the whole suite with `tests/hooks/run_tests.sh`. Follow strict TDD when changing this logic: these scripts encode real decision functions (e.g. `enforce-code-review.sh`'s missing-reviews computation has stated laws — monotonicity, order-invariance, duplicate-insensitivity — each pinned by a test in `tests/hooks/enforce-code-review.bats`), not incidental scripting, so a behavior change belongs behind a new failing test first.
 
