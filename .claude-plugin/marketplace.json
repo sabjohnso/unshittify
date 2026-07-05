@@ -20,6 +20,11 @@
       "name": "global",
       "source": "./plugins/global",
       "description": "Inspect and manage the user's global Claude Code settings (~/.claude/settings.json)."
+    },
+    {
+      "name": "git",
+      "source": "./plugins/git",
+      "description": "Git-related Claude Code tooling."
     }
   ]
 }
