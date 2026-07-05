@@ -44,7 +44,7 @@
     {
       "name": "cxx",
       "source": "./plugins/cxx",
-      "description": "Claude Code skills for C++ development: compiling and running with sanitizers, and more."
+      "description": "Claude Code skills for C++ development: compiling and running with sanitizers, querying code structure with clang-query, and more."
     }
   ]
 }

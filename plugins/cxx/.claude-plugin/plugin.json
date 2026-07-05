@@ -1,7 +1,7 @@
 {
   "name": "cxx",
-  "description": "Claude Code skills for C++ development: compiling and running with sanitizers, and more.",
-  "version": "0.1.0",
+  "description": "Claude Code skills for C++ development: compiling and running with sanitizers, querying code structure with clang-query, and more.",
+  "version": "0.2.0",
   "author": {
     "name": "Samuel Bryant Johnson",
     "email": "samuel.bryant.johnson@gmail.com"
