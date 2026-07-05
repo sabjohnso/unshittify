@@ -25,6 +25,16 @@
       "name": "git",
       "source": "./plugins/git",
       "description": "Git-related Claude Code tooling."
+    },
+    {
+      "name": "meta",
+      "source": "./plugins/meta",
+      "description": "Tooling for authoring Claude Code plugins — writing skills and agents."
+    },
+    {
+      "name": "communication",
+      "source": "./plugins/communication",
+      "description": "Review prose against this project's house style — BadProseExamples.org and CLAUDE.md's Communicate Clearly rules — before it reaches the user."
     }
   ]
 }
