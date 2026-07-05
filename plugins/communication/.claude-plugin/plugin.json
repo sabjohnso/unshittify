@@ -1,6 +1,6 @@
 {
   "name": "communication",
-  "description": "Review prose against this project's house style — BadProseExamples.org and CLAUDE.md's Communicate Clearly rules — before it reaches the user.",
+  "description": "Review and format output before it reaches the user: prose against this project's house style (BadProseExamples.org and CLAUDE.md's Communicate Clearly rules), and markdown tables for column alignment.",
   "version": "0.1.0",
   "author": {
     "name": "Samuel Bryant Johnson",
