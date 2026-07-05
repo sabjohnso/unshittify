@@ -1,0 +1,9 @@
+{
+  "name": "meta",
+  "description": "Tooling for authoring Claude Code plugins — writing skills and agents.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Samuel Bryant Johnson",
+    "email": "samuel.bryant.johnson@gmail.com"
+  }
+}
