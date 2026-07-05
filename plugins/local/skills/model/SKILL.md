@@ -1,6 +1,6 @@
 ---
 description: Set the Claude Code model for the CURRENT project only, by writing to .claude/settings.local.json. Use when the user asks to set/change the project-local default model, e.g. "/local:model opus".
-argument-hint: [model-alias-or-id]
+argument-hint: "[model-alias-or-id]"
 disable-model-invocation: true
 allowed-tools: Read, Write, Bash(mkdir -p .claude)
 ---

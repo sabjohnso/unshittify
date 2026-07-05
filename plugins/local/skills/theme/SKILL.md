@@ -1,6 +1,6 @@
 ---
 description: Set the Claude Code theme for the CURRENT project only, by writing to .claude/settings.local.json. Use when the user asks to set/change the project-local theme, e.g. "/local:theme dark".
-argument-hint: [theme-name]
+argument-hint: "[theme-name]"
 disable-model-invocation: true
 allowed-tools: Read, Write, Bash(mkdir -p .claude)
 ---
