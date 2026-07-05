@@ -2,7 +2,7 @@
 name: settings-doctor
 description: Inspects Claude Code settings files (starting with the current project's .claude/settings.local.json) for JSON errors, unknown keys, conflicting or redundant permission rules, stale plugin references, and overly broad rules. Use when the user asks to check, audit, debug, or troubleshoot their local Claude Code settings.
 tools: Read, Grep, Glob, Bash
-model: sonnet
+model: haiku
 ---
 
 # Settings Doctor
