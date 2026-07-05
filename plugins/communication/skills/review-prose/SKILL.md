@@ -27,6 +27,9 @@ Skip trivial or already-terse text; reviewing a one-sentence answer for "buzzwor
 7. **Undefined abbreviations** — any shorthand, code, or acronym used without being spelled out at first use.
 8. **Unverified claims or hallucination** — a number, status, or fact stated without having been checked this session.
 9. **Informal register** — anything that reads as glib or dashed-off where the content calls for formal, explicit prose.
+10. **Throat-clearing transitions** — filler openers that signal a shift in topic without adding content ("That said," "It's worth noting that," "At the end of the day"). Cut them; the sentence should stand on its own.
+11. **Redundant restatement** — a clause that repeats information an earlier word already implies (e.g., "a new dependency, which the repository did not previously have" — "new" already says this). State the fact once.
+12. **Padded verb emphasis** — an auxiliary added for emphasis without adding meaning ("does introduce" instead of "introduces," "did in fact confirm" instead of "confirmed"). Use the plain verb.
 
 ## Examples from past reviews
 
@@ -99,6 +102,28 @@ one of the nine checks.
   that the parser accepts malformed input and returns a value rather than
   erroring. The abstraction reads as more authoritative, but it defers
   the real content — the actual failure mode — to the reader's inference.
+
+### Example 2: build-dependency disclosure
+
+> That said, this does introduce a new build-time dependency on a Python
+> 3 interpreter, which the repository did not previously have. If you
+> would rather this run as a first-party C++ or shell tool to avoid that
+> dependency, tell me and I will rewrite it that way.
+
+**Noted problems with this prose:**
+
+- **A throat-clearing opener adds a sentence with no content.** "That
+  said," signals a shift in topic but states nothing itself; the
+  sentence that follows stands on its own without it.
+- **A padded verb inflates a plain fact.** "Does introduce" is emphasis
+  without meaning; "introduces" says the same thing.
+- **A clause restates what an earlier word already said.** ", which the
+  repository did not previously have" repeats what "new" already states
+  about the dependency — the fact appears twice in one sentence.
+
+Corrected: "This introduces a new build-time dependency on a Python 3
+interpreter. Tell me if you'd rather this run as a first-party C++ or
+shell tool instead, and I'll rewrite it that way."
 
 ## Steps
 
