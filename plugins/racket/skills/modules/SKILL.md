@@ -25,15 +25,15 @@ A require spec is a module path or a wrapper that adjusts which names arrive:
          (for-syntax racket/base))          ; phase 1 (see [[macros]])
 ```
 
-| Wrapper                         | Effect                                         |
-|---------------------------------|------------------------------------------------|
-| `(only-in m id ...)`            | import just those names (renamable)            |
-| `(except-in m id ...)`          | import all but those                           |
-| `(prefix-in p m)`               | prefix every imported name with `p`            |
-| `(rename-in m [old new] ...)`   | import `old` under the name `new`              |
-| `(combine-in m ...)`            | union of several specs                         |
-| `(submod path name ...)`        | a named submodule                              |
-| `(for-syntax m)`                | import at phase 1 (transformer time)           |
+| Wrapper                       | Effect                               |
+|-------------------------------|--------------------------------------|
+| `(only-in m id ...)`          | import just those names (renamable)  |
+| `(except-in m id ...)`        | import all but those                 |
+| `(prefix-in p m)`             | prefix every imported name with `p`  |
+| `(rename-in m [old new] ...)` | import `old` under the name `new`    |
+| `(combine-in m ...)`          | union of several specs               |
+| `(submod path name ...)`      | a named submodule                    |
+| `(for-syntax m)`              | import at phase 1 (transformer time) |
 
 ## provide — exposing names
 

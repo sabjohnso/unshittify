@@ -28,19 +28,19 @@ Run it: `raco test file.rkt`.
 Pick the most specific check — its failure message is only as good as the
 information it has:
 
-| Check                                   | Passes when                              |
-|-----------------------------------------|------------------------------------------|
-| `(check-equal? actual expected [msg])`  | `equal?` — the default for values        |
-| `(check-not-equal? a b)`                | not `equal?`                             |
-| `(check-eqv? a b)` / `(check-eq? a b)`  | `eqv?` / `eq?`                           |
-| `(check-true e)` / `(check-false e)`    | `e` is `#t` / `#f`                       |
-| `(check-pred pred v)`                   | `(pred v)` is true                       |
-| `(check-= a b tol [msg])`               | numbers within `tol`                     |
-| `(check-exn pred-or-rx thunk [msg])`    | `thunk` raises a matching exception      |
-| `(check-not-exn thunk)`                 | `thunk` raises nothing                   |
-| `(check-match v pattern [when-expr])`   | `v` matches the `match` pattern          |
-| `(check-regexp-match rx str)`           | `rx` matches `str`                       |
-| `(check pred a b)` / `(fail)`           | generic / unconditional failure          |
+| Check                                  | Passes when                         |
+|----------------------------------------|-------------------------------------|
+| `(check-equal? actual expected [msg])` | `equal?` — the default for values   |
+| `(check-not-equal? a b)`               | not `equal?`                        |
+| `(check-eqv? a b)` / `(check-eq? a b)` | `eqv?` / `eq?`                      |
+| `(check-true e)` / `(check-false e)`   | `e` is `#t` / `#f`                  |
+| `(check-pred pred v)`                  | `(pred v)` is true                  |
+| `(check-= a b tol [msg])`              | numbers within `tol`                |
+| `(check-exn pred-or-rx thunk [msg])`   | `thunk` raises a matching exception |
+| `(check-not-exn thunk)`                | `thunk` raises nothing              |
+| `(check-match v pattern [when-expr])`  | `v` matches the `match` pattern     |
+| `(check-regexp-match rx str)`          | `rx` matches `str`                  |
+| `(check pred a b)` / `(fail)`          | generic / unconditional failure     |
 
 ```racket
 (check-pred string? (greet "x"))

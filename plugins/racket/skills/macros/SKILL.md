@@ -99,18 +99,18 @@ fails to match — write it as a noun phrase.
 
 ## Pattern language essentials
 
-| Form                         | Matches                                                |
-|------------------------------|--------------------------------------------------------|
-| `x:id` `e:expr` `n:nat`      | one term, validated by a built-in syntax class         |
-| `(p ...)` / `(p ...+)`       | ellipsis: zero-or-more / one-or-more                   |
-| `(~optional p)`              | `p` or nothing; pair with `~?` in the template         |
-| `(~seq a b)`                 | an in-line run of terms (splicing contexts)            |
-| `(~or* p1 p2)`               | alternatives (use `~or*`; bare `~or` is deprecated)    |
-| `(~and pa pb)`               | both patterns against the same term                    |
-| `(~once p)` / `(~between p)` | cardinality constraints within ellipses                |
-| `(~datum x)` / `(~literal x)`| match a literal datum / a literal *binding*            |
-| `#:literals (else =>)`       | declare identifiers matched literally by name          |
-| `(~bind [a #'v])`            | bind an attribute from the clause                      |
+| Form                          | Matches                                             |
+|-------------------------------|-----------------------------------------------------|
+| `x:id` `e:expr` `n:nat`       | one term, validated by a built-in syntax class      |
+| `(p ...)` / `(p ...+)`        | ellipsis: zero-or-more / one-or-more                |
+| `(~optional p)`               | `p` or nothing; pair with `~?` in the template      |
+| `(~seq a b)`                  | an in-line run of terms (splicing contexts)         |
+| `(~or* p1 p2)`                | alternatives (use `~or*`; bare `~or` is deprecated) |
+| `(~and pa pb)`                | both patterns against the same term                 |
+| `(~once p)` / `(~between p)`  | cardinality constraints within ellipses             |
+| `(~datum x)` / `(~literal x)` | match a literal datum / a literal *binding*         |
+| `#:literals (else =>)`        | declare identifiers matched literally by name       |
+| `(~bind [a #'v])`             | bind an attribute from the clause                   |
 
 ## Templates
 

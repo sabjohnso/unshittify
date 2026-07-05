@@ -19,18 +19,18 @@ hashes, ranges, ports, and your own types all flow through the same `for`.
 
 Pick the variant by what you want back:
 
-| Form                      | Result                                            |
-|---------------------------|---------------------------------------------------|
-| `for`                     | `(void)` — run body for effect                    |
-| `for/list`                | a list of body values                             |
-| `for/vector`              | a vector (`#:length` to preallocate)              |
-| `for/hash` `for/hasheq`   | a hash; body returns `(values key val)`           |
-| `for/fold`                | one or more accumulators (below)                  |
-| `for/sum` `for/product`   | numeric reduction of body values                  |
-| `for/and` `for/or`        | boolean reduction (short-circuits)                |
-| `for/first` `for/last`    | the first / last body value                       |
-| `for/lists`               | several parallel lists from a `values` body       |
-| `for/string` `for/bytes`  | a string / byte string                            |
+| Form                     | Result                                      |
+|--------------------------|---------------------------------------------|
+| `for`                    | `(void)` — run body for effect              |
+| `for/list`               | a list of body values                       |
+| `for/vector`             | a vector (`#:length` to preallocate)        |
+| `for/hash` `for/hasheq`  | a hash; body returns `(values key val)`     |
+| `for/fold`               | one or more accumulators (below)            |
+| `for/sum` `for/product`  | numeric reduction of body values            |
+| `for/and` `for/or`       | boolean reduction (short-circuits)          |
+| `for/first` `for/last`   | the first / last body value                 |
+| `for/lists`              | several parallel lists from a `values` body |
+| `for/string` `for/bytes` | a string / byte string                      |
 
 Each has a `for*/…` sibling that nests the clauses (a Cartesian product)
 instead of iterating them in parallel.
@@ -81,17 +81,17 @@ constructor** — `(in-list xs)` not bare `xs` — because `for` then compiles a
 specialized, allocation-free loop; a bare value falls back to the generic
 `sequence?` dispatch.
 
-| Constructor                          | Iterates                                  |
-|--------------------------------------|-------------------------------------------|
-| `(in-range end)` / `(in-range a b step)` | numbers                               |
-| `(in-list xs)` `(in-vector v)` `(in-string s)` `(in-bytes b)` | elements |
-| `(in-hash h)` / `in-hash-keys` / `in-hash-values` | hash entries             |
-| `(in-naturals [start])`              | `0,1,2,…` — a counter to pair in parallel |
-| `(in-cycle seq …)`                   | the sequence(s), forever                  |
-| `(in-value v)`                       | exactly one element (`v`)                 |
-| `(in-indexed seq)`                   | `(values element index)`                  |
-| `(in-sequences s …)` / `(in-parallel s …)` | concatenate / zip                   |
-| `(in-port read p)` `(in-lines p)`    | a port's data                             |
+| Constructor                                                   | Iterates                                  |
+|---------------------------------------------------------------|-------------------------------------------|
+| `(in-range end)` / `(in-range a b step)`                      | numbers                                   |
+| `(in-list xs)` `(in-vector v)` `(in-string s)` `(in-bytes b)` | elements                                  |
+| `(in-hash h)` / `in-hash-keys` / `in-hash-values`             | hash entries                              |
+| `(in-naturals [start])`                                       | `0,1,2,…` — a counter to pair in parallel |
+| `(in-cycle seq …)`                                            | the sequence(s), forever                  |
+| `(in-value v)`                                                | exactly one element (`v`)                 |
+| `(in-indexed seq)`                                            | `(values element index)`                  |
+| `(in-sequences s …)` / `(in-parallel s …)`                    | concatenate / zip                         |
+| `(in-port read p)` `(in-lines p)`                             | a port's data                             |
 
 `in-naturals` paired with another sequence is the idiomatic index counter.
 

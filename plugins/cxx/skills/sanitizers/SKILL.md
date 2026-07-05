@@ -14,13 +14,13 @@ prefer a sanitizer over guessing from a crash's symptoms.
 
 ## Which sanitizer for which bug
 
-| Sanitizer | Flag | Catches |
-|---|---|---|
-| AddressSanitizer (ASan) | `-fsanitize=address` | heap/stack/global buffer overflow, use-after-free, use-after-return, double-free |
-| UndefinedBehaviorSanitizer (UBSan) | `-fsanitize=undefined` | signed integer overflow, null-pointer dereference, misaligned access, invalid enum values, out-of-bounds array index (with `-fsanitize=bounds`) |
-| ThreadSanitizer (TSan) | `-fsanitize=thread` | data races, lock-order inversions |
-| MemorySanitizer (MSan) | `-fsanitize=memory` | reads of uninitialized memory (Clang only) |
-| LeakSanitizer (LSan) | `-fsanitize=leak`, or bundled into ASan | memory leaks |
+| Sanitizer                          | Flag                                    | Catches                                                                                                                                         |
+|------------------------------------|-----------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------|
+| AddressSanitizer (ASan)            | `-fsanitize=address`                    | heap/stack/global buffer overflow, use-after-free, use-after-return, double-free                                                                |
+| UndefinedBehaviorSanitizer (UBSan) | `-fsanitize=undefined`                  | signed integer overflow, null-pointer dereference, misaligned access, invalid enum values, out-of-bounds array index (with `-fsanitize=bounds`) |
+| ThreadSanitizer (TSan)             | `-fsanitize=thread`                     | data races, lock-order inversions                                                                                                               |
+| MemorySanitizer (MSan)             | `-fsanitize=memory`                     | reads of uninitialized memory (Clang only)                                                                                                      |
+| LeakSanitizer (LSan)               | `-fsanitize=leak`, or bundled into ASan | memory leaks                                                                                                                                    |
 
 ## Compiling
 

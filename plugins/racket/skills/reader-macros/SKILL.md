@@ -49,12 +49,12 @@ call `read` — a 2-only procedure is a contract violation.
 `base-readtable` is `#f` for the standard readtable, or an existing one to
 extend. Triples repeat. `mode` selects the behavior:
 
-| `mode`                   | `action`        | Effect                                              |
-|--------------------------|-----------------|-----------------------------------------------------|
-| `'terminating-macro`     | proc            | `char` fires and **ends** any preceding token       |
-| `'non-terminating-macro` | proc            | fires only at token start; mid-token it's a constituent |
-| `'dispatch-macro`        | proc            | `char` fires only after `#` (e.g. `#$...`)           |
-| a character `c`          | readtable or `#f` | `char` now parses **like** `c` (e.g. `{` like `(`)  |
+| `mode`                   | `action`          | Effect                                                  |
+|--------------------------|-------------------|---------------------------------------------------------|
+| `'terminating-macro`     | proc              | `char` fires and **ends** any preceding token           |
+| `'non-terminating-macro` | proc              | fires only at token start; mid-token it's a constituent |
+| `'dispatch-macro`        | proc              | `char` fires only after `#` (e.g. `#$...`)              |
+| a character `c`          | readtable or `#f` | `char` now parses **like** `c` (e.g. `{` like `(`)      |
 
 Terminating vs non-terminating, demonstrated (`%` bound to a proc):
 

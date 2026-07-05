@@ -67,16 +67,16 @@ Any predicate of one argument is already a flat contract: `number?`,
 `string?`, `account?`, or your own `(lambda (x) ...)`. Build richer ones with
 combinators:
 
-| Combinator                      | Means                                   |
-|---------------------------------|-----------------------------------------|
-| `(or/c c ...)` / `(and/c c ...)`| disjunction / conjunction               |
-| `(not/c c)`                     | negation                                |
-| `(one-of/c v ...)`              | `eqv?` to one of the listed values      |
-| `'sym` / `42` / `"s"`           | a literal datum is its own contract     |
-| `(=/c n)` `(>/c n)` `(<=/c n)` …| numeric comparison                      |
-| `(between/c lo hi)`             | real in `[lo, hi]`                       |
-| `(integer-in lo hi)`            | exact integer in range                  |
-| `(string-len/c n)`              | string shorter than `n`                 |
+| Combinator                       | Means                               |
+|----------------------------------|-------------------------------------|
+| `(or/c c ...)` / `(and/c c ...)` | disjunction / conjunction           |
+| `(not/c c)`                      | negation                            |
+| `(one-of/c v ...)`               | `eqv?` to one of the listed values  |
+| `'sym` / `42` / `"s"`            | a literal datum is its own contract |
+| `(=/c n)` `(>/c n)` `(<=/c n)` … | numeric comparison                  |
+| `(between/c lo hi)`              | real in `[lo, hi]`                  |
+| `(integer-in lo hi)`             | exact integer in range              |
+| `(string-len/c n)`               | string shorter than `n`             |
 
 `(or/c 'a 'b)` is the idiomatic "enum"; quoted symbols compare by value.
 

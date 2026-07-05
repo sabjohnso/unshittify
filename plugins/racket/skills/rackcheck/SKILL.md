@@ -32,18 +32,18 @@ alongside ordinary checks (see [[modules]], [[rackunit]]).
 
 A generator (`gen:…`) describes how to produce — and shrink — random values.
 
-| Generator                          | Produces                                  |
-|------------------------------------|-------------------------------------------|
-| `gen:natural`                      | naturals `0, 1, 2, …`                     |
-| `(gen:integer-in lo hi)`           | integers in `[lo, hi]`                    |
-| `gen:real`                         | reals                                     |
-| `gen:boolean`                      | `#t` / `#f`                               |
-| `gen:char` `gen:char-letter` `gen:char-digit` `gen:char-alphanumeric` | characters |
-| `(gen:string g)` `gen:symbol` `gen:bytes` | text from a char generator         |
-| `(gen:list g [#:max-length n])`    | lists of `g` values                       |
-| `(gen:vector g)` `(gen:hash kg vg)` | other collections                        |
-| `(gen:tuple g ...)`                | a fixed-length list, one per generator    |
-| `(gen:const v)`                    | always `v`                                |
+| Generator                                                             | Produces                               |
+|-----------------------------------------------------------------------|----------------------------------------|
+| `gen:natural`                                                         | naturals `0, 1, 2, …`                  |
+| `(gen:integer-in lo hi)`                                              | integers in `[lo, hi]`                 |
+| `gen:real`                                                            | reals                                  |
+| `gen:boolean`                                                         | `#t` / `#f`                            |
+| `gen:char` `gen:char-letter` `gen:char-digit` `gen:char-alphanumeric` | characters                             |
+| `(gen:string g)` `gen:symbol` `gen:bytes`                             | text from a char generator             |
+| `(gen:list g [#:max-length n])`                                       | lists of `g` values                    |
+| `(gen:vector g)` `(gen:hash kg vg)`                                   | other collections                      |
+| `(gen:tuple g ...)`                                                   | a fixed-length list, one per generator |
+| `(gen:const v)`                                                       | always `v`                             |
 
 Combine and transform them:
 

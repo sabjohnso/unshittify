@@ -20,11 +20,11 @@ mutable). It is built into `racket/base` — no require needed.
 This is the first decision, because it governs equality, printing, and
 serialization:
 
-| Mode            | `equal?`              | Prints as        | Use for                              |
-|-----------------|-----------------------|------------------|--------------------------------------|
-| opaque (default)| identity (`eq?`)      | `#<posn>`        | encapsulated state, hidden invariants|
-| `#:transparent` | structural (by field) | `#(struct:posn 3 4)` | value types, test data, most cases |
-| `#:prefab`      | structural            | `#s(posn 3 4)`   | data that must `read`/serialize      |
+| Mode             | `equal?`              | Prints as            | Use for                               |
+|------------------|-----------------------|----------------------|---------------------------------------|
+| opaque (default) | identity (`eq?`)      | `#<posn>`            | encapsulated state, hidden invariants |
+| `#:transparent`  | structural (by field) | `#(struct:posn 3 4)` | value types, test data, most cases    |
+| `#:prefab`       | structural            | `#s(posn 3 4)`       | data that must `read`/serialize       |
 
 ```racket
 (equal? (posn 1 2) (posn 1 2))   ; #f when opaque, #t when transparent/prefab

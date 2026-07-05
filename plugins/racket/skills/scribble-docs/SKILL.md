@@ -53,16 +53,16 @@ Matching `info.rkt`:
 All three parts are optional; `[...]` is Racket mode, `{...}` is text mode,
 and they nest.
 
-| Source                  | Reads as                     |
-|-------------------------|------------------------------|
-| `@foo{blah}`            | `(foo "blah")`               |
-| `@foo[1 #:k 2]{blah}`   | `(foo 1 #:k 2 "blah")`       |
-| `@foo`                  | `foo`                        |
-| `@(+ 1 2)`              | `(+ 1 2)` (escape to Racket) |
-| `@|name|`               | `name`, delimited inline     |
-| `@"@"`                  | literal `@`                  |
-| `@;{ ... }`             | block comment                |
-| `@;`                    | comment to EOL, joins lines  |
+| Source                | Reads as                     |
+|-----------------------|------------------------------|
+| `@foo{blah}`          | `(foo "blah")`               |
+| `@foo[1 #:k 2]{blah}` | `(foo 1 #:k 2 "blah")`       |
+| `@foo`                | `foo`                        |
+| `@(+ 1 2)`            | `(+ 1 2)` (escape to Racket) |
+| `@|name|`             | `name`, delimited inline     |
+| `@"@"`                | literal `@`                  |
+| `@;{ ... }`           | block comment                |
+| `@;`                  | comment to EOL, joins lines  |
 
 Multi-line `{...}` bodies become multiple string arguments with `"\n"`
 between them; indentation relative to the leftmost line is preserved.

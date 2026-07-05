@@ -13,12 +13,12 @@ You take a markdown table with misaligned pipes and hand back the same table wit
 
 The row directly under the header is the separator row; the colons in each column's dashes set that column's alignment, not any per-cell markup:
 
-| Separator cell | Alignment |
-|---|---|
-| `---` | left (default) |
-| `:---` | left (explicit) |
-| `:---:` | center |
-| `---:` | right |
+| Separator cell | Alignment       |
+|----------------|-----------------|
+| `---`          | left (default)  |
+| `:---`         | left (explicit) |
+| `:---:`        | center          |
+| `---:`         | right           |
 
 Read this row before touching any cell — it is the single source of truth for how to pad each column, and the rewritten separator row must reproduce the same colons.
 

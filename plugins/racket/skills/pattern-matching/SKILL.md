@@ -19,26 +19,26 @@ form, read `reference.md` in this skill directory.
 
 ## Pattern catalog
 
-| Pattern                         | Matches / binds                                          |
-|---------------------------------|----------------------------------------------------------|
-| `_`                             | anything, binds nothing                                  |
-| `id`                            | anything, binds `id` to it                               |
-| `42` `"s"` `#t` `'sym`          | that literal (by `equal?`)                               |
-| `(list p ...)`                  | a list of exactly those elements                         |
-| `(list p ... pn ...)` (ellipsis)| `pn ...` matches zero or more; binds each var to a list  |
-| `(list* p ... rest)`            | fixed head, `rest` bound to the tail                     |
-| `(cons a d)` `(vector p ...)`   | pair / vector by position                                |
-| `(struct id (p ...))`           | a `id` instance, fields by position                      |
-| `(struct* id ([field p] ...))`  | a `id` instance, fields by name (any subset)             |
-| `(? pred p ...)`                | value satisfies `pred`, then also matches `p ...`        |
-| `(and p ...)` `(or p ...)`      | all / any (each `or` arm must bind the same vars)        |
-| `(not p ...)`                   | none of `p ...` match                                    |
-| `(app fn p)`                    | apply `fn` to the value, match result against `p`        |
-| `(== expr)`                     | value is `equal?` to `expr` (a *value*, not a pattern)   |
-| `` `(a ,x ,@xs) ``              | quasiquote: literals match, `,x`/`,@xs` bind             |
-| `(regexp rx)` / `(regexp rx p)` | string matches `rx`; second form matches the match-list  |
-| `(hash-table (key p) ...)`      | hash with those keys, values matched by `p`              |
-| `(list-no-order p ...)`         | a list containing those elements in any order            |
+| Pattern                          | Matches / binds                                         |
+|----------------------------------|---------------------------------------------------------|
+| `_`                              | anything, binds nothing                                 |
+| `id`                             | anything, binds `id` to it                              |
+| `42` `"s"` `#t` `'sym`           | that literal (by `equal?`)                              |
+| `(list p ...)`                   | a list of exactly those elements                        |
+| `(list p ... pn ...)` (ellipsis) | `pn ...` matches zero or more; binds each var to a list |
+| `(list* p ... rest)`             | fixed head, `rest` bound to the tail                    |
+| `(cons a d)` `(vector p ...)`    | pair / vector by position                               |
+| `(struct id (p ...))`            | a `id` instance, fields by position                     |
+| `(struct* id ([field p] ...))`   | a `id` instance, fields by name (any subset)            |
+| `(? pred p ...)`                 | value satisfies `pred`, then also matches `p ...`       |
+| `(and p ...)` `(or p ...)`       | all / any (each `or` arm must bind the same vars)       |
+| `(not p ...)`                    | none of `p ...` match                                   |
+| `(app fn p)`                     | apply `fn` to the value, match result against `p`       |
+| `(== expr)`                      | value is `equal?` to `expr` (a *value*, not a pattern)  |
+| `` `(a ,x ,@xs) ``               | quasiquote: literals match, `,x`/`,@xs` bind            |
+| `(regexp rx)` / `(regexp rx p)`  | string matches `rx`; second form matches the match-list |
+| `(hash-table (key p) ...)`       | hash with those keys, values matched by `p`             |
+| `(list-no-order p ...)`          | a list containing those elements in any order           |
 
 Ellipsis depth: `(list (list x y) ...)` binds `x` and `y` to *lists*, one
 element per inner pair. `(list p ..3)` requires at least three.
