@@ -1,0 +1,15 @@
+{
+  "name": "unshittify",
+  "owner": {
+    "name": "Samuel Bryant Johnson",
+    "email": "samuel.bryant.johnson@gmail.com"
+  },
+  "description": "A collection of plugins that fix Claude Code annoyances.",
+  "plugins": [
+    {
+      "name": "local",
+      "source": "./plugins/local",
+      "description": "Set project-local Claude Code settings (theme, model) via .claude/settings.local.json"
+    }
+  ]
+}

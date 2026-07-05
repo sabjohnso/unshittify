@@ -1,0 +1,9 @@
+{
+  "name": "local",
+  "description": "Manage project-local Claude Code settings (.claude/settings.local.json) that /config and the settings UI don't expose per-project.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Samuel Bryant Johnson",
+    "email": "samuel.bryant.johnson@gmail.com"
+  }
+}
