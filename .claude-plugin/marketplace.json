@@ -10,6 +10,11 @@
       "name": "local",
       "source": "./plugins/local",
       "description": "Set project-local Claude Code settings (theme, model) via .claude/settings.local.json"
+    },
+    {
+      "name": "racket",
+      "source": "./plugins/racket",
+      "description": "Claude Code skills for working in Racket: classes, contracts, macros, concurrency, GUI, drawing, testing, packaging, and more."
     }
   ]
 }

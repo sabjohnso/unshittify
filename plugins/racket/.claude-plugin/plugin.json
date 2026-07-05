@@ -1,0 +1,9 @@
+{
+  "name": "racket",
+  "description": "Claude Code skills for working in Racket: classes, contracts, macros, concurrency, GUI, drawing, testing, packaging, and more.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Samuel Bryant Johnson",
+    "email": "samuel.bryant.johnson@gmail.com"
+  }
+}
