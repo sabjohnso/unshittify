@@ -1,5 +1,4 @@
 ---
-name: profiling
 description: Profile and time Racket code — time/time-apply for quick cpu/real/gc numbers, the statistical profiler (profile, profile-thunk, raco profile) to find hot spots, contract-profile for contract overhead, and current-memory-use for allocation. Use when code is slow and you need evidence of where time goes before optimizing, reading a profiler report, or measuring contract/GC cost.
 ---
 

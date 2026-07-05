@@ -1,5 +1,4 @@
 ---
-name: canvas-animation
 description: Animate a racket/gui canvas% — the timer-driven update/render loop, frame-rate-independent motion with dt timing, flicker-free drawing (double buffering, refresh vs refresh-now, suspend-flush/resume-flush, offscreen bitmaps), input-driven animation, and testing animation by splitting model from view. Use when building a game loop, animating graphics, achieving smooth motion, or fixing canvas flicker.
 ---
 

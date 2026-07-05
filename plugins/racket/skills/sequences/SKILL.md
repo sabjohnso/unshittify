@@ -1,5 +1,4 @@
 ---
-name: sequences
 description: Iterate and build data with Racket for-loops and sequences — the for family (for/list, for/vector, for/hash, for/fold, for/sum), iteration clauses (#:when, #:break, #:final, parallel bindings), sequence constructors (in-range, in-list, in-vector, in-hash, in-naturals), racket/sequence operations, and the three ways to define new sequences (prop:sequence, make-do-sequence, define-sequence-syntax). Use when writing a loop or comprehension, choosing a sequence constructor, or making a value iterable.
 ---
 

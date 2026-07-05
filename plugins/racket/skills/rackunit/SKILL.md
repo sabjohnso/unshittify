@@ -1,5 +1,4 @@
 ---
-name: rackunit
 description: Write Racket tests with rackunit — the check vocabulary (check-equal?, check-pred, check-=, check-exn, check-match), grouping with test-case and test-suite (#:before/#:after), running via raco test or run-tests, custom failure context with with-check-info, and BDD-style describe/context/it from rackunit/spec. Use when writing or organizing Racket tests, adding a test submodule, choosing a check, or structuring specs.
 ---
 

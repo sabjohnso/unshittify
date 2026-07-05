@@ -1,5 +1,4 @@
 ---
-name: rackcheck
 description: Property-based testing in Racket with rackcheck — write laws over generated inputs with property/check-property, build inputs from generators (gen:natural, gen:list, gen:let, gen:filter, gen:choice, gen:frequency), reproduce failures by seed via make-config, read shrunk minimal counterexamples, and classify inputs with label!. Use when testing invariants/algebraic laws instead of fixed examples, writing generators, or debugging a shrunk counterexample.
 ---
 

@@ -1,5 +1,4 @@
 ---
-name: modules
 description: Organize Racket code with modules and submodules — require sub-forms (only-in, except-in, prefix-in, rename-in, submod), provide forms (rename-out, struct-out, contract-out, all-defined-out, all-from-out, for-syntax), and the three submodule kinds (module+, module, module*) including the main/test idiom. Use when structuring code across files, controlling exports/imports, adding in-file tests or a script entry point, or accessing a submodule with submod/dynamic-require.
 ---
 

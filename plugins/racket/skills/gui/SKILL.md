@@ -1,5 +1,4 @@
 ---
-name: gui
 description: Build desktop GUIs in Racket with racket/gui — windows and widgets (frame%, panels, button%, text-field%, canvas%), the box-model layout, control callbacks, custom drawing with canvas%/dc<%>/racket-draw, mouse/keyboard input, the eventspace event loop, keeping the UI responsive with threads and queue-callback, and dialogs. Use when writing a windowed application, drawing custom graphics, handling input events, or testing GUI code headlessly.
 ---
 

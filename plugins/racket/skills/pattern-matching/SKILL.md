@@ -1,5 +1,4 @@
 ---
-name: pattern-matching
 description: Destructure and dispatch on data shape with racket/match — match and match*, the pattern catalog (list, struct, ?, and/or, app, ==, quasiquote, regexp, hash-table, ellipsis), binding forms (match-define, match-let, match-lambda), guards and the => failure escape, and define-match-expander. Use when writing a match expression, destructuring a struct/list/hash, choosing a match binding form, or fixing a non-exhaustive-match error.
 ---
 

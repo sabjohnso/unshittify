@@ -1,5 +1,4 @@
 ---
-name: concurrency
 description: Concurrency and parallelism in Racket — green threads, synchronous channels and thread mailboxes, async-channels, semaphores, the synchronizable-event system (sync, handle-evt, choice-evt, alarm-evt), real parallelism with futures and places, and resource lifecycle with custodians. Use when coordinating threads, choosing a communication mechanism, waiting on multiple events, parallelizing CPU work, or cleaning up groups of threads/ports.
 ---
 

@@ -1,5 +1,4 @@
 ---
-name: networking
 description: Networking and web servers in Racket — TCP/UDP sockets (racket/tcp, racket/udp), HTTP clients (net/url, net/http-client), JSON (json), and the web-server stack (serve/servlet, dispatch-rules routing, request/response, response/xexpr). Use when writing a network client or server, calling an HTTP API, parsing/producing JSON, building a web app or REST endpoint, or testing servers headlessly.
 ---
 

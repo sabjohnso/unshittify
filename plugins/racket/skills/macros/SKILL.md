@@ -1,5 +1,4 @@
 ---
-name: macros
 description: Write Racket macros with syntax-parse — pattern matching on syntax, syntax classes, ellipses, hygiene, phase levels, and good compile-time error messages. Covers define-syntax, syntax-parse, define-syntax-parse-rule, define-syntax-class/define-splicing-syntax-class, templates (#', ~?, ~@), format-id, and raise-syntax-error. Use when writing or debugging a Racket macro, designing new syntactic forms, or choosing between syntax-rules and syntax-parse.
 ---
 

@@ -1,5 +1,4 @@
 ---
-name: packages
 description: Build, develop, and distribute Racket code with raco and packages — collections vs packages, the info.rkt manifest (deps/build-deps/version/scribblings), scaffolding with raco pkg new, in-place development with raco pkg install --link, building with raco make/setup/test, standalone executables with raco exe, and publishing to the package catalog. Use when structuring a package, editing info.rkt, fixing dependency-check errors, or shipping a Racket library or app.
 ---
 

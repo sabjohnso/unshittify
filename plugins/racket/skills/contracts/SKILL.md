@@ -1,5 +1,4 @@
 ---
-name: contracts
 description: Add Racket contracts with racket/contract — function contracts (->, ->*, ->i, case->), contract-out on module exports, struct and data-structure contracts (listof, hash/c, struct/c, recursive-contract), combinators (or/c, and/c, between/c), and reading blame. Use when contracting a module boundary, specifying argument/result constraints, debugging a contract violation / blame message, or choosing between contract-out and define/contract.
 ---
 

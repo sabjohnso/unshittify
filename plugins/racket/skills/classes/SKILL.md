@@ -1,5 +1,4 @@
 ---
-name: classes
 description: Object-oriented programming in Racket with racket/class — define classes over object%, create objects with new/make-object and message them with send, inheritance (super, override, the pubment/augment/inner hole), interfaces (interface, is-a?), composition via mixins and traits, abstract methods, and class/object contracts (class/c, object/c, is-a?/c, ->m). Use when writing stateful objects, working with racket/gui, or extending classes through mixins and interfaces.
 ---
 

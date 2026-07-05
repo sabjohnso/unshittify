@@ -1,5 +1,4 @@
 ---
-name: reader-macros
 description: Write Racket reader macros and work with readtables — make-readtable, terminating/non-terminating/dispatch macros, character remapping, comment-like macros, #reader, and custom #lang readers via syntax/module-reader. Use when extending Racket's reader, adding new lexical syntax, mapping characters like { to (, or building a #lang whose surface syntax differs from s-expressions.
 ---
 

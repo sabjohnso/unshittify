@@ -1,5 +1,4 @@
 ---
-name: structs
 description: Define and use Racket structs — the struct form and its options (#:transparent, #:mutable, #:prefab, #:guard, #:auto, #:constructor-name), inheritance and subtype predicates, struct-copy functional update, and generic interfaces via #:methods (gen:custom-write, gen:equal+hash, prop:procedure). Use when defining a struct, choosing transparent/opaque/prefab, controlling construction, customizing printing or equality, or deciding struct vs list/hash.
 ---
 

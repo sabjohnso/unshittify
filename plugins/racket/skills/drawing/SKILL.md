@@ -1,5 +1,4 @@
 ---
-name: drawing
 description: Draw graphics in Racket with racket/draw and pict — imperative drawing on a dc<%> (bitmaps, SVG/PDF/PS files, pens/brushes/paths/transforms) and functional, composable pictures with pict (circle/text/append/superimpose, colorize/scale/rotate, pin-line connectors, pict->bitmap). Use when rendering images, building diagrams, composing pictures, producing vector output, or drawing custom graphics outside or inside a GUI.
 ---
 

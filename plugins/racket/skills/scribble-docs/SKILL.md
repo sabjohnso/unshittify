@@ -1,5 +1,4 @@
 ---
-name: scribble-docs
 description: Write or edit Scribble documentation for Racket packages — .scrbl manuals, defproc/defform API docs, live examples, info.rkt scribblings entries, and building docs with raco setup. Use when documenting a Racket library, editing a .scrbl file, or fixing doc-build errors (unlinked identifiers, sandbox failures, dependency warnings).
 ---
 
