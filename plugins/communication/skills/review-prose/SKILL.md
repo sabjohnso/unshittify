@@ -105,5 +105,7 @@ one of the nine checks.
 1. Obtain the text: if the argument is a file path, read it; if it's pasted or drafted text, use it directly.
 2. Walk the checklist above, and the examples catalogue, against the text, quoting each offending phrase and naming which check it fails.
 3. Revise the text to fix every confirmed problem. Preserve the original meaning, facts, and numbers — this is a register and precision pass, not a rewrite of content.
-4. Apply the fix: if the source was a file, edit it in place and report which lines changed; if the source was a response about to be sent to the user, the corrected text becomes that response — do not send the flagged draft.
+4. Apply the fix and report:
+   - If the source was a drafted chat response about to be sent to the user, do not print the problem list from step 2 or the flagged draft — the corrected text simply becomes the response, with no review commentary around it.
+   - If the source was a file or text the user explicitly asked to critique, edit the file in place (or return the corrected text) along with the problem list from step 2, so the user can see what was wrong and why.
 5. If nothing was wrong, say so rather than inventing a rewrite to justify the review.

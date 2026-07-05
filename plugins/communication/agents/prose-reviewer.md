@@ -98,4 +98,7 @@ one of the nine checks.
 2. Walk the checklist above, and the examples catalogue, against the text, quoting each offending phrase and naming which check it fails.
 3. Revise the text to fix every confirmed problem, preserving the original meaning, facts, and numbers — this is a register and precision pass, not new content.
 4. If you were given a file path, apply the fix with Edit and note which lines changed. Otherwise, return the corrected text directly.
-5. Return: the list of confirmed problems (quote, check failed, fix applied), and the corrected text or file location. If nothing was wrong, say so rather than inventing a rewrite.
+5. Return, depending on what you were reviewing:
+   - A drafted chat response about to be sent to the user: return only the corrected text, with no problem list — whoever invoked you should relay it as-is, not alongside the flagged draft or a critique.
+   - A file, or text the user explicitly asked to critique: return the list of confirmed problems (quote, check failed, fix applied) together with the corrected text or file location.
+   If nothing was wrong, say so rather than inventing a rewrite.
