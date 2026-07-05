@@ -9,7 +9,7 @@
     {
       "name": "local",
       "source": "./plugins/local",
-      "description": "Set project-local Claude Code settings (theme, model) via .claude/settings.local.json"
+      "description": "Manage project-local Claude Code settings (.claude/settings.local.json) that /config and the settings UI don't expose per-project."
     },
     {
       "name": "racket",
