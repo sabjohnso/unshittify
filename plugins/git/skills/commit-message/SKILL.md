@@ -1,13 +1,12 @@
 ---
-description: Draft and apply a git commit message in this repo's format — emoji, [module] summary, Problem/Solution bullets, and a closing haiku. Use when the user asks to commit staged or working-tree changes.
+description: Draft and apply a git commit message in this repo's format — emoji, [module] summary, Problem/Solution bullets, and a closing haiku. This is the required path for every commit in this repository — invoke it whenever the user asks to commit staged or working-tree changes, even when the request is phrased conversationally (e.g. "commit this") rather than as the literal slash command. Skip it only if the user explicitly says not to use the template or asks for a freehand message.
 argument-hint: "[module hint]"
-disable-model-invocation: true
 allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git add:*), Bash(git commit:*)
 ---
 
 # Write a commit message in this repo's format
 
-Goal: produce a commit message that follows the template below, then create the commit. Only run this skill in direct response to an explicit request to commit — never chain into it off the back of finishing an unrelated task.
+Goal: produce a commit message that follows the template below, then create the commit. Only run this skill in direct response to an explicit request to commit — never chain into it off the back of finishing an unrelated task. Within that constraint, treat this skill as the default: any explicit commit request in this repository should go through it rather than being freehanded, unless the user has explicitly said to skip the template.
 
 ## Template
 
