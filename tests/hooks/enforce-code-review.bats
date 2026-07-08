@@ -12,9 +12,9 @@ load helpers
 TDD_SKILL="development:review-tdd"
 NST_SKILL="development:review-nst"
 PROPTEST_SKILL="development:review-property-tests"
-TDD_AGENT="tdd-reviewer"
-NST_AGENT="nst-reviewer"
-PROPTEST_AGENT="property-test-reviewer"
+TDD_AGENT="development:tdd-reviewer"
+NST_AGENT="development:nst-reviewer"
+PROPTEST_AGENT="development:property-test-reviewer"
 
 setup() {
   SCRIPT="${HOOKS_DIR}/enforce-code-review.sh"
@@ -174,6 +174,22 @@ all_reviews_via_agents() {
     "$(tool_use_event Agent subagent_type="$PROPTEST_AGENT")" \
     "$(last_prompt_marker)" \
     "$(tool_use_event Edit)")")"
+  stdin="$(stdin_payload transcript_path="$transcript")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "an agent invocation recorded with its plugin prefix satisfies the requirement" {
+  # Real transcripts record subagent_type with the plugin prefix
+  # (development:tdd-reviewer), not the bare name. All three, prefixed and
+  # after a code edit, must satisfy the requirement.
+  transcript="$(write_transcript "$(printf '%s\n%s\n%s\n%s\n%s\n' \
+    "$(last_prompt_marker)" \
+    "$(tool_use_event Edit)" \
+    "$(tool_use_event Agent subagent_type=development:tdd-reviewer)" \
+    "$(tool_use_event Agent subagent_type=development:nst-reviewer)" \
+    "$(tool_use_event Agent subagent_type=development:property-test-reviewer)")")"
   stdin="$(stdin_payload transcript_path="$transcript")"
   run_hook "$SCRIPT" "$stdin"
   [ "$status" -eq 0 ]

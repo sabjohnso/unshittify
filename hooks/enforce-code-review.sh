@@ -6,11 +6,14 @@
 # require a new review, no other code changes needed.
 set -euo pipefail
 
-# skill-name|agent-name pairs. Either satisfies the requirement.
+# Fully-qualified skill-name|agent-name pairs; either satisfies the
+# requirement. Both carry the plugin prefix exactly as the transcript records
+# them - the harness stores an agent's subagent_type as development:tdd-reviewer,
+# not the bare tdd-reviewer, so the agent name must be qualified to match.
 REQUIRED_REVIEWS=(
-  "development:review-tdd|tdd-reviewer"
-  "development:review-nst|nst-reviewer"
-  "development:review-property-tests|property-test-reviewer"
+  "development:review-tdd|development:tdd-reviewer"
+  "development:review-nst|development:nst-reviewer"
+  "development:review-property-tests|development:property-test-reviewer"
 )
 
 CODE_CHANGE_TOOL_NAMES='^(Edit|Write|NotebookEdit)$'
@@ -76,7 +79,7 @@ missing_reviews() {
     skill_name="${entry%%|*}"
     agent_name="${entry##*|}"
     if ! review_satisfied "$events" "$skill_name" "$agent_name"; then
-      echo "${skill_name} (skill) or development:${agent_name} (agent)"
+      echo "${skill_name} (skill) or ${agent_name} (agent)"
     fi
   done
 }
