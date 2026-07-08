@@ -162,6 +162,24 @@ all_reviews_via_agents() {
   [ -z "$output" ]
 }
 
+@test "reviews invoked this turn are still detected when a last-prompt marker is appended after them" {
+  # The genuine prompt, this turn's reviews, then a last-prompt marker the
+  # harness appends out of order (after the reviews), then a later edit.
+  # Anchoring on the marker sees the edit but not the reviews and wrongly
+  # blocks a turn that was in fact fully reviewed.
+  transcript="$(write_transcript "$(printf '%s\n%s\n%s\n%s\n%s\n%s\n' \
+    "$(user_prompt_event 'implement and review the feature')" \
+    "$(tool_use_event Agent subagent_type="$TDD_AGENT")" \
+    "$(tool_use_event Agent subagent_type="$NST_AGENT")" \
+    "$(tool_use_event Agent subagent_type="$PROPTEST_AGENT")" \
+    "$(last_prompt_marker)" \
+    "$(tool_use_event Edit)")")"
+  stdin="$(stdin_payload transcript_path="$transcript")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
 @test "stop_hook_active guard suppresses a would-be second block" {
   transcript="$(write_transcript "$(printf '%s\n%s\n' \
     "$(last_prompt_marker)" \

@@ -48,17 +48,17 @@ setup() {
   [[ "$after_missing" != *"review-tdd (skill)"* ]]
 }
 
-@test "find_last_prompt_line warns on stderr when the marker is absent from a non-empty transcript" {
+@test "find_turn_start_line warns on stderr when no prompt or marker is present in a non-empty transcript" {
   transcript="$(write_transcript "$(tool_use_event Edit)")"
-  run find_last_prompt_line "$transcript"
+  run find_turn_start_line "$transcript"
   [ "$status" -eq 1 ]
-  [[ "$output" == *"no last-prompt marker found in non-empty transcript"* ]]
+  [[ "$output" == *"no user prompt or last-prompt marker in non-empty transcript"* ]]
 }
 
-@test "find_last_prompt_line is silent (no warning) for a genuinely empty transcript" {
+@test "find_turn_start_line is silent (no warning) for a genuinely empty transcript" {
   transcript="$(mktemp "${BATS_TMPDIR:-/tmp}/empty.XXXXXX.jsonl")"
   : > "$transcript"
-  run find_last_prompt_line "$transcript"
+  run find_turn_start_line "$transcript"
   [ "$status" -eq 1 ]
   [ -z "$output" ]
 }

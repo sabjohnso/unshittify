@@ -15,6 +15,9 @@ REQUIRED_REVIEWS=(
 
 CODE_CHANGE_TOOL_NAMES='^(Edit|Write|NotebookEdit)$'
 
+# shellcheck source=lib/transcript.sh disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/lib/transcript.sh"
+
 # stop_hook_active_from <input-json>
 #
 # Don't re-block a stop that was itself forced by this hook - avoids an
@@ -27,55 +30,10 @@ transcript_path_from() {
   printf '%s' "$1" | jq -r '.transcript_path // empty'
 }
 
-# find_last_prompt_line <transcript-file>
-#
-# Prints the 1-based line number of the last "type":"last-prompt" marker in
-# the transcript. Returns 1 (nothing printed) if no marker is present. Emits
-# a stderr note when the transcript is non-empty but no marker was found,
-# since that's a schema anomaly, not the ordinary "hook fired before any
-# prompt was ever recorded" case - the two used to be silently identical.
-find_last_prompt_line() {
-  local transcript="$1"
-  local line
-  line=$(grep -n '"type":"last-prompt"' "$transcript" | tail -1 | cut -d: -f1)
-  if [ -z "$line" ]; then
-    if [ -s "$transcript" ]; then
-      echo "enforce-code-review: warning: no last-prompt marker found in non-empty transcript: ${transcript}" >&2
-    fi
-    return 1
-  fi
-  printf '%s\n' "$line"
-}
-
-# tool_use_events_since_last_prompt <transcript-file>
-#
-# The single place that knows the raw JSONL transcript schema. Prints one
-# compact JSON object per tool_use event found from the last "last-prompt"
-# marker onward, each shaped as {name, skill, subagent_type} (skill/
-# subagent_type are null when not applicable to that tool). Every other
-# function in this script consumes this shape instead of re-deriving it
-# from the raw transcript.
-#
-# Prints nothing (and, on a genuine parse failure, warns on stderr instead
-# of silently reporting zero events) if no last-prompt marker is found.
-tool_use_events_since_last_prompt() {
-  local transcript="$1"
-  local start_line
-  start_line=$(find_last_prompt_line "$transcript") || return 0
-
-  local events jq_status=0
-  events=$(tail -n +"$start_line" "$transcript" \
-    | jq -c 'select(.type=="assistant") | .message.content[]? | select(.type=="tool_use") |
-        {name, skill: (.input.skill // null), subagent_type: (.input.subagent_type // null)}' \
-        2>&1) || jq_status=$?
-
-  if [ "$jq_status" -ne 0 ]; then
-    echo "enforce-code-review: warning: failed to parse transcript tool_use events (jq exit ${jq_status}): ${events}" >&2
-    return 0
-  fi
-
-  printf '%s\n' "$events"
-}
+# The turn boundary and the tool_use event schema live in the shared library
+# (find_turn_start_line, tool_use_events_since_turn_start), so this hook and
+# enforce-prose-review.sh agree on where a turn begins and how events are
+# shaped.
 
 # code_was_edited <events-jsonl>
 #
@@ -125,16 +83,15 @@ missing_reviews() {
 
 # missing_reviews_for_transcript <transcript-file>
 #
-# Composes find_last_prompt_line + tool_use_events_since_last_prompt +
-# code_was_edited + missing_reviews against a real transcript file, so this
-# single function is what tests exercise directly with synthetic transcript
-# fixtures instead of only end-to-end via stdin. Prints nothing if no code
-# was edited since the last prompt, or if all required reviews were
-# satisfied.
+# Composes tool_use_events_since_turn_start + code_was_edited +
+# missing_reviews against a real transcript file, so this single function is
+# what tests exercise directly with synthetic transcript fixtures instead of
+# only end-to-end via stdin. Prints nothing if no code was edited since the
+# turn start, or if all required reviews were satisfied.
 missing_reviews_for_transcript() {
   local transcript="$1"
   local events
-  events=$(tool_use_events_since_last_prompt "$transcript")
+  events=$(tool_use_events_since_turn_start "$transcript")
   code_was_edited "$events" || return 0
   missing_reviews "$events"
 }
