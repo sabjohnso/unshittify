@@ -128,6 +128,32 @@ setup() {
   [[ "$(reason_field "$output")" == *"review-prose"* ]]
 }
 
+@test "a near-miss skill name containing review-prose as a substring does not satisfy the requirement" {
+  # Exact-name match, not substring: a skill merely *containing* "review-prose"
+  # (here communication:review-prose-preview) must not count as the review.
+  transcript="$(write_transcript "$(printf '%s\n%s\n' \
+    "$(user_prompt_event 'please explain this at length')" \
+    "$(tool_use_event Skill skill=communication:review-prose-preview)")")"
+  stdin="$(stdin_payload last_assistant_message="$LONG_MSG" transcript_path="$transcript")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$status" -eq 0 ]
+  [ "$(decision_field "$output")" = "block" ]
+  [[ "$(reason_field "$output")" == *"review-prose"* ]]
+}
+
+@test "the exact-name match is case-sensitive: an uppercase variant does not satisfy it" {
+  # Dropping grep's -i was deliberate: skill names are canonically lowercase,
+  # so a case variant is a different skill and must not count as the review.
+  transcript="$(write_transcript "$(printf '%s\n%s\n' \
+    "$(user_prompt_event 'please explain this at length')" \
+    "$(tool_use_event Skill skill=Communication:Review-Prose)")")"
+  stdin="$(stdin_payload last_assistant_message="$LONG_MSG" transcript_path="$transcript")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$status" -eq 0 ]
+  [ "$(decision_field "$output")" = "block" ]
+  [[ "$(reason_field "$output")" == *"review-prose"* ]]
+}
+
 @test "review before the current prompt does not count for the current turn" {
   transcript="$(write_transcript "$(printf '%s\n%s\n%s\n%s\n' \
     "$(user_prompt_event 'first turn asks for a review')" \

@@ -5,6 +5,9 @@
 set -euo pipefail
 
 MIN_WORDS=50
+# The skill that satisfies this check, matched by exact name (not substring):
+# a near-miss like "communication:review-prose-preview" must not count.
+REVIEW_SKILL="communication:review-prose"
 
 input=$(cat)
 
@@ -53,9 +56,9 @@ fi
 
 reviewed=$(tail -n +"$last_prompt_line" "$transcript" \
   | jq -r 'select(.type=="assistant") | .message.content[]? | select(.type=="tool_use" and .name=="Skill") | .input.skill // empty' 2>/dev/null \
-  | grep -ci 'review-prose' || true)
+  | grep -Fxc "$REVIEW_SKILL" || true)
 
 if [ "$reviewed" -eq 0 ]; then
-  jq -n --arg reason "This response is substantial prose (${word_count} words) and communication:review-prose has not been invoked on it this turn. Run the review-prose skill against the draft, fix any flagged issues, and send the corrected text instead." \
+  jq -n --arg reason "This response is substantial prose (${word_count} words) and ${REVIEW_SKILL} has not been invoked on it this turn. Run the ${REVIEW_SKILL} skill against the draft, fix any flagged issues, and send the corrected text instead." \
     '{decision:"block", reason:$reason}'
 fi
