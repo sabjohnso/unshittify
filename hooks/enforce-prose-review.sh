@@ -9,6 +9,9 @@ MIN_WORDS=50
 # a near-miss like "communication:review-prose-preview" must not count.
 REVIEW_SKILL="communication:review-prose"
 
+# shellcheck source=lib/transcript.sh disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/lib/transcript.sh"
+
 input=$(cat)
 
 # Don't re-block a stop that was itself forced by this hook - avoids an
@@ -27,35 +30,16 @@ if [ "$word_count" -lt "$MIN_WORDS" ] || [ -z "$transcript" ] || [ ! -f "$transc
   exit 0
 fi
 
-# Find the line that starts the current turn: the last *genuine* user prompt.
-# A genuine prompt is a user message with string (or plain-text) content -
-# not a tool_result (array with a tool_result block) and not an isMeta
-# skill/system injection. Anchoring here, rather than on a "last-prompt"
-# marker, is what makes an in-turn review detectable: the harness appends
-# those markers out of chronological order, sometimes after the very tool
-# calls (including the review) that belong to the turn the marker names.
-# jq emits one line per input object, so grep -n recovers the file line.
-last_prompt_line=$(jq -r '
-    if (.type == "user"
-        and ((.isMeta // false) != true)
-        and (((.message.content | type) == "string")
-             or ((.message.content | type) == "array"
-                 and (all(.message.content[]?; (.type? // "") != "tool_result")))))
-    then "PROMPT" else "." end' "$transcript" 2>/dev/null \
-  | grep -n '^PROMPT$' | tail -1 | cut -d: -f1 || true)
+# No genuine user prompt (and no fallback marker) means there is no turn to
+# judge - stay silent. find_turn_start_line encapsulates the turn-boundary
+# rule, shared with enforce-code-review.sh so the two cannot drift.
+find_turn_start_line "$transcript" >/dev/null || exit 0
 
-# Fall back to the legacy last-prompt marker for transcripts with no
-# recognizable user prompt (keeps older/synthetic transcripts working).
-if [ -z "$last_prompt_line" ]; then
-  last_prompt_line=$(grep -n '"type":"last-prompt"' "$transcript" | tail -1 | cut -d: -f1 || true)
-fi
-
-if [ -z "$last_prompt_line" ]; then
-  exit 0
-fi
-
-reviewed=$(tail -n +"$last_prompt_line" "$transcript" \
-  | jq -r 'select(.type=="assistant") | .message.content[]? | select(.type=="tool_use" and .name=="Skill") | .input.skill // empty' 2>/dev/null \
+# Count exact-name invocations of the review skill among this turn's tool_use
+# events. grep -Fxc is a whole-line match, so a near-miss like
+# "communication:review-prose-preview" does not satisfy the requirement.
+reviewed=$(tool_use_events_since_turn_start "$transcript" \
+  | jq -r 'select(.name=="Skill") | .skill // empty' 2>/dev/null \
   | grep -Fxc "$REVIEW_SKILL" || true)
 
 if [ "$reviewed" -eq 0 ]; then
