@@ -1,11 +1,11 @@
 ---
-description: Inspect the user's global Claude Code settings (~/.claude/settings.json) for JSON errors, unknown keys, conflicting or redundant permission rules, stale plugin/marketplace references, insecure file permissions, and overly broad rules. Use when the user asks to check, audit, debug, or troubleshoot their global Claude Code settings.
-allowed-tools: Read, Grep, Glob, Bash(claude plugin list:*), Bash(stat:*)
+description: Inspect the user's global Claude Code settings (~/.claude/settings.json) for JSON errors, unknown keys, conflicting or redundant permission rules, stale plugin/marketplace references, insecure file permissions, and overly broad rules, and — only with the user's explicit approval — add missing repository hook wiring back into the file. Use when the user asks to check, audit, debug, troubleshoot, or repair their global Claude Code settings.
+allowed-tools: Read, Grep, Glob, Bash(claude plugin list:*), Bash(stat:*), Bash(jq:*), Bash(cp:*), Bash(mv:*)
 ---
 
 # Check global Claude Code settings
 
-Goal: diagnose problems in `~/.claude/settings.json` and report them. Never edit the file — the user decides what to fix.
+Goal: diagnose problems in `~/.claude/settings.json` and report them. As part of an audit, do not edit the file — the user decides what to fix. The one exception is repairing missing repository hook wiring (check 9): you may add it, but only after showing the exact change and getting the user's explicit approval, per the "Repairing missing hook wiring" section below.
 
 ## Scope
 
@@ -23,10 +23,22 @@ This is the lowest-precedence settings scope: enterprise managed settings, CLI f
 6. **Stale marketplace references** — if `extraKnownMarketplaces` appears, check that each entry's `source.path` (for `"source": "directory"` entries) still exists on disk. Flag any that don't.
 7. **Hook exposure** — for each entry under `hooks`, surface the command verbatim in the report. These commands run automatically and unattended for every matching tool call across every project; call out anything that looks like it embeds a credential, token, or overly permissive shell logic (e.g. missing quoting around `$(...)` substitutions).
 8. **File permissions** — run `stat -c '%a %U:%G' ~/.claude/settings.json` (or `stat -f '%Lp %Su:%Sg'` on macOS). Flag the file if it is group- or world-writable: anyone else with access to the machine could alter auto-executing hooks.
-9. **Repository hook wiring** — for each `extraKnownMarketplaces` entry whose `source.path` contains a `hooks/` directory, check for `enforce-prose-review.sh`, `enforce-code-review.sh`, and `confirm-git-commit-push.sh`. For each one present on disk, confirm it is wired into the top-level `hooks` key: `enforce-prose-review.sh` and `enforce-code-review.sh` must appear as a `command` under `hooks.Stop`; `confirm-git-commit-push.sh` must appear under `hooks.PreToolUse` with a `matcher` of `Bash`. Flag any script found on disk but missing from `hooks`, wired under the wrong event, or missing the expected matcher. Skip silently if no marketplace path contains a `hooks/` directory with these scripts.
+9. **Repository hook wiring** — for each `extraKnownMarketplaces` entry whose `source.path` contains a `hooks/` directory, check for `enforce-prose-review.sh`, `enforce-code-review.sh`, and `confirm-git-commit-push.sh`. For each one present on disk, confirm it is wired into the top-level `hooks` key: `enforce-prose-review.sh` and `enforce-code-review.sh` must appear as a `command` under `hooks.Stop`; `confirm-git-commit-push.sh` must appear under `hooks.PreToolUse` with a `matcher` of `Bash`. Flag any script found on disk but missing from `hooks`, wired under the wrong event, or missing the expected matcher. When a script is missing or mis-wired, offer to repair it per the "Repairing missing hook wiring" section below. Skip silently if no marketplace path contains a `hooks/` directory with these scripts.
 
 ## Steps
 
 1. Read `~/.claude/settings.json`. If a project directory is available, also read its `.claude/settings.json` and `.claude/settings.local.json` for cross-scope context.
 2. Walk each check above against the file's contents, running `claude plugin list --json` and `stat` only when a check needs them.
 3. Report findings grouped by check, each with the offending key/entry, what's wrong, and why it matters. If nothing is wrong, say so plainly — do not invent issues to fill the report.
+4. If check 9 found a script missing or mis-wired, follow the "Repairing missing hook wiring" section — but only after the report is shown, and never without the user's explicit approval.
+
+## Repairing missing hook wiring
+
+This is the only change this skill may make to the file, and only for check 9. The skill stays model-invocable so an audit runs whenever asked, but this repair must never run as a side effect of an audit: make it only after the report is shown and the user has explicitly approved this specific change — the same explicit-instruction gate the `git:commit-message` skill relies on.
+
+1. **Assemble the correct entry.** The command is `bash <path>/hooks/<script>`, where `<path>` is the `extraKnownMarketplaces` `source.path` that contains the `hooks/` directory (derive it from the file — never hardcode an absolute path). `enforce-prose-review.sh` and `enforce-code-review.sh` are `command` hooks under `hooks.Stop`; `confirm-git-commit-push.sh` is a `command` hook under `hooks.PreToolUse` with `"matcher": "Bash"`.
+2. **Show and ask.** Present the exact JSON that would be added and ask whether to add it. Proceed only on an explicit yes. If the user declines, leave the file untouched and say so.
+3. **Add only what is missing.** Never remove, reorder, or alter anything already present, and never create a second copy of a command that is already wired. Append a missing `Stop` command to an existing `hooks.Stop` entry's `hooks` array (or create the `Stop` array if absent); append a missing `PreToolUse` command to an existing entry whose `matcher` is `Bash` (or create one).
+4. **Write safely, validating before the live file is touched.** Back the file up first (`cp ~/.claude/settings.json ~/.claude/settings.json.bak`). Build the merged JSON with `jq` into a temp file, then validate the temp file (`jq empty <temp>`); only once it is valid, `mv` it into place. If the merge or validation fails, leave the live file untouched and report the failure; if anything goes wrong after the move, restore from `~/.claude/settings.json.bak`. `cp` and `mv` here operate only on `~/.claude/settings.json`, its `.bak`, and the temp file — nothing else.
+5. **Mis-wired, not just missing.** If a script is present but under the wrong event or missing its matcher, describe the correction and ask before changing it; do not silently move an existing entry.
+6. **Report** exactly which commands were added and confirm the file is still valid JSON.

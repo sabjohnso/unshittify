@@ -1,7 +1,7 @@
 {
   "name": "global",
   "description": "Inspect and manage the user's global Claude Code settings (~/.claude/settings.json).",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": {
     "name": "Samuel Bryant Johnson",
     "email": "samuel.bryant.johnson@gmail.com"
