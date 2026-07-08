@@ -105,3 +105,44 @@ tool_use_event() {
 last_prompt_marker() {
   printf '%s' '{"type":"last-prompt"}'
 }
+
+# user_prompt_event [text]
+#
+# Prints one compact-JSON transcript line for a genuine user prompt message
+# (string content) — as distinct from a tool_result user message (array
+# content) or a skill/system injection (isMeta:true). This is the reliable
+# turn boundary, unlike a last-prompt marker, which the harness appends out
+# of chronological order relative to the turn's own tool calls.
+user_prompt_event() {
+  local text="${1:-a user prompt with several plain words in it}"
+  jq -nc --arg text "$text" '{type:"user", message:{role:"user", content:$text}}'
+}
+
+# user_prompt_array_event [text]
+#
+# Prints one compact-JSON transcript line for a genuine user prompt whose
+# content is an array of text blocks (the shape a prompt takes when it carries
+# an attachment) rather than a bare string. Still a genuine prompt: it must act
+# as a boundary, which distinguishes it from a tool_result array.
+user_prompt_array_event() {
+  local text="${1:-a genuine prompt delivered as an array of text blocks here}"
+  jq -nc --arg text "$text" '{type:"user", message:{role:"user", content:[{type:"text", text:$text}]}}'
+}
+
+# tool_result_event
+#
+# Prints one compact-JSON transcript line for a user-role tool_result message
+# (array content). Not a genuine prompt, so it must never act as a boundary.
+tool_result_event() {
+  printf '%s' '{"type":"user","message":{"role":"user","content":[{"type":"tool_result","content":"ok"}]}}'
+}
+
+# meta_injection_event [text]
+#
+# Prints one compact-JSON transcript line for an isMeta:true user message —
+# how a skill's injected instructions are recorded. Not a genuine prompt, so
+# it must never act as a boundary.
+meta_injection_event() {
+  local text="${1:-injected skill instructions}"
+  jq -nc --arg text "$text" '{type:"user", isMeta:true, message:{role:"user", content:[{type:"text", text:$text}]}}'
+}
