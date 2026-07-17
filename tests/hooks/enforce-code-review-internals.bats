@@ -26,10 +26,10 @@ setup() {
   [ -z "$result" ]
 }
 
-@test "missing_reviews_for_transcript: code change with nothing invoked yields all three" {
+@test "missing_reviews_for_transcript: code change with nothing invoked yields all four" {
   transcript="$(write_transcript "$(printf '%s\n%s\n' "$(last_prompt_marker)" "$(tool_use_event Edit)")")"
   result="$(missing_reviews_for_transcript "$transcript")"
-  [ "$(printf '%s\n' "$result" | wc -l)" -eq 3 ]
+  [ "$(printf '%s\n' "$result" | wc -l)" -eq 4 ]
 }
 
 @test "monotonicity: appending a satisfying event shrinks the missing set, never grows it" {

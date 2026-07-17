@@ -14,6 +14,7 @@ REQUIRED_REVIEWS=(
   "development:review-tdd|development:tdd-reviewer"
   "development:review-nst|development:nst-reviewer"
   "development:review-property-tests|development:property-test-reviewer"
+  "development:review-efficiency|development:efficiency-reviewer"
 )
 
 CODE_CHANGE_TOOL_NAMES='^(Edit|Write|NotebookEdit)$'

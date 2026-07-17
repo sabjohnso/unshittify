@@ -12,26 +12,30 @@ load helpers
 TDD_SKILL="development:review-tdd"
 NST_SKILL="development:review-nst"
 PROPTEST_SKILL="development:review-property-tests"
+EFF_SKILL="development:review-efficiency"
 TDD_AGENT="development:tdd-reviewer"
 NST_AGENT="development:nst-reviewer"
 PROPTEST_AGENT="development:property-test-reviewer"
+EFF_AGENT="development:efficiency-reviewer"
 
 setup() {
   SCRIPT="${HOOKS_DIR}/enforce-code-review.sh"
 }
 
 all_reviews_via_skills() {
-  printf '%s\n%s\n%s\n' \
+  printf '%s\n%s\n%s\n%s\n' \
     "$(tool_use_event Skill skill="$TDD_SKILL")" \
     "$(tool_use_event Skill skill="$NST_SKILL")" \
-    "$(tool_use_event Skill skill="$PROPTEST_SKILL")"
+    "$(tool_use_event Skill skill="$PROPTEST_SKILL")" \
+    "$(tool_use_event Skill skill="$EFF_SKILL")"
 }
 
 all_reviews_via_agents() {
-  printf '%s\n%s\n%s\n' \
+  printf '%s\n%s\n%s\n%s\n' \
     "$(tool_use_event Agent subagent_type="$TDD_AGENT")" \
     "$(tool_use_event Agent subagent_type="$NST_AGENT")" \
-    "$(tool_use_event Agent subagent_type="$PROPTEST_AGENT")"
+    "$(tool_use_event Agent subagent_type="$PROPTEST_AGENT")" \
+    "$(tool_use_event Agent subagent_type="$EFF_AGENT")"
 }
 
 @test "stop_hook_active=true suppresses the check regardless of content" {
@@ -73,7 +77,7 @@ all_reviews_via_agents() {
   [ -z "$output" ]
 }
 
-@test "code changed, no reviews invoked: blocks naming all three" {
+@test "code changed, no reviews invoked: blocks naming all four" {
   transcript="$(write_transcript "$(printf '%s\n%s\n' \
     "$(last_prompt_marker)" \
     "$(tool_use_event Edit)")")"
@@ -85,6 +89,7 @@ all_reviews_via_agents() {
   [[ "$reason" == *"review-tdd"* ]]
   [[ "$reason" == *"review-nst"* ]]
   [[ "$reason" == *"review-property-tests"* ]]
+  [[ "$reason" == *"review-efficiency"* ]]
 }
 
 @test "code changed, all reviews satisfied via skills: no block" {
@@ -110,19 +115,20 @@ all_reviews_via_agents() {
 }
 
 @test "code changed, reviews satisfied via a mix of skill and agent: no block" {
-  transcript="$(write_transcript "$(printf '%s\n%s\n%s\n%s\n%s' \
+  transcript="$(write_transcript "$(printf '%s\n%s\n%s\n%s\n%s\n%s' \
     "$(last_prompt_marker)" \
     "$(tool_use_event Write)" \
     "$(tool_use_event Skill skill="$TDD_SKILL")" \
     "$(tool_use_event Agent subagent_type="$NST_AGENT")" \
-    "$(tool_use_event Skill skill="$PROPTEST_SKILL")")")"
+    "$(tool_use_event Skill skill="$PROPTEST_SKILL")" \
+    "$(tool_use_event Agent subagent_type="$EFF_AGENT")")")"
   stdin="$(stdin_payload transcript_path="$transcript")"
   run_hook "$SCRIPT" "$stdin"
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }
 
-@test "code changed, only TDD review satisfied: blocks naming the remaining two" {
+@test "code changed, only TDD review satisfied: blocks naming the remaining three" {
   transcript="$(write_transcript "$(printf '%s\n%s\n%s' \
     "$(last_prompt_marker)" \
     "$(tool_use_event NotebookEdit)" \
@@ -135,6 +141,7 @@ all_reviews_via_agents() {
   [[ "$reason" != *"review-tdd"* ]]
   [[ "$reason" == *"review-nst"* ]]
   [[ "$reason" == *"review-property-tests"* ]]
+  [[ "$reason" == *"review-efficiency"* ]]
 }
 
 @test "duplicate-insensitivity: invoking the same review skill twice still leaves it satisfied once" {
@@ -167,11 +174,12 @@ all_reviews_via_agents() {
   # harness appends out of order (after the reviews), then a later edit.
   # Anchoring on the marker sees the edit but not the reviews and wrongly
   # blocks a turn that was in fact fully reviewed.
-  transcript="$(write_transcript "$(printf '%s\n%s\n%s\n%s\n%s\n%s\n' \
+  transcript="$(write_transcript "$(printf '%s\n%s\n%s\n%s\n%s\n%s\n%s\n' \
     "$(user_prompt_event 'implement and review the feature')" \
     "$(tool_use_event Agent subagent_type="$TDD_AGENT")" \
     "$(tool_use_event Agent subagent_type="$NST_AGENT")" \
     "$(tool_use_event Agent subagent_type="$PROPTEST_AGENT")" \
+    "$(tool_use_event Agent subagent_type="$EFF_AGENT")" \
     "$(last_prompt_marker)" \
     "$(tool_use_event Edit)")")"
   stdin="$(stdin_payload transcript_path="$transcript")"
@@ -184,12 +192,13 @@ all_reviews_via_agents() {
   # Real transcripts record subagent_type with the plugin prefix
   # (development:tdd-reviewer), not the bare name. All three, prefixed and
   # after a code edit, must satisfy the requirement.
-  transcript="$(write_transcript "$(printf '%s\n%s\n%s\n%s\n%s\n' \
+  transcript="$(write_transcript "$(printf '%s\n%s\n%s\n%s\n%s\n%s\n' \
     "$(last_prompt_marker)" \
     "$(tool_use_event Edit)" \
     "$(tool_use_event Agent subagent_type=development:tdd-reviewer)" \
     "$(tool_use_event Agent subagent_type=development:nst-reviewer)" \
-    "$(tool_use_event Agent subagent_type=development:property-test-reviewer)")")"
+    "$(tool_use_event Agent subagent_type=development:property-test-reviewer)" \
+    "$(tool_use_event Agent subagent_type=development:efficiency-reviewer)")")"
   stdin="$(stdin_payload transcript_path="$transcript")"
   run_hook "$SCRIPT" "$stdin"
   [ "$status" -eq 0 ]

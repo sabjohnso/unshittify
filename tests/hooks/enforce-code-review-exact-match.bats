@@ -59,3 +59,17 @@ setup() {
   reason="$(reason_field "$output")"
   [[ "$reason" == *"development:nst-reviewer (agent)"* ]]
 }
+
+@test "a near-miss skill name does not satisfy the review-efficiency requirement" {
+  transcript="$(write_transcript "$(printf '%s\n%s\n%s\n%s\n' \
+    "$(last_prompt_marker)" \
+    "$(tool_use_event Edit)" \
+    "$(tool_use_event Skill skill=development:review-efficiency-v2)" \
+    "$(tool_use_event Skill skill=development:review-tdd)")")"
+  stdin="$(stdin_payload transcript_path="$transcript")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$status" -eq 0 ]
+  [ "$(decision_field "$output")" = "block" ]
+  reason="$(reason_field "$output")"
+  [[ "$reason" == *"development:review-efficiency (skill)"* ]]
+}
