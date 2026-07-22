@@ -28,7 +28,7 @@ For `hooks/`, see the next section.
 
 `hooks/` holds personal Claude Code hook scripts (bash) — not a plugin, and not loaded by the marketplace manifest. They are wired into `~/.claude/settings.json` by absolute path, so they take effect globally, in every project, regardless of which repository is the current working directory:
 
-- `hooks/enforce-prose-review.sh` (`Stop`) — blocks ending a turn if the final assistant message is substantial prose and the `communication:review-prose` skill was not invoked on it this turn.
+- `hooks/enforce-prose-review.sh` (`Stop`) — blocks ending a turn if the final assistant message is substantial prose and the `communication:prose-reviewer` agent was not invoked on it this turn.
 - `hooks/enforce-code-review.sh` (`Stop`) — blocks ending a turn if code was written or edited this turn but the required reviews (TDD, NST, property-tests — each satisfiable via its skill or its matching subagent) were not all invoked since the user's last message.
 - `hooks/confirm-git-commit-push.sh` (`PreToolUse`, matcher `Bash`) — asks for confirmation before a `git commit` or `git push` runs, since those require an explicit instruction in the current turn.
 

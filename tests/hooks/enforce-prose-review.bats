@@ -45,17 +45,17 @@ setup() {
   [ -z "$output" ]
 }
 
-@test "long message, review-prose invoked since last prompt does not block" {
+@test "long message, prose-reviewer agent invoked since last prompt does not block" {
   transcript="$(write_transcript "$(printf '%s\n%s\n' \
     "$(last_prompt_marker)" \
-    "$(tool_use_event Skill skill=communication:review-prose)")")"
+    "$(tool_use_event Task subagent_type=communication:prose-reviewer)")")"
   stdin="$(stdin_payload last_assistant_message="$LONG_MSG" transcript_path="$transcript")"
   run_hook "$SCRIPT" "$stdin"
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }
 
-@test "long message, review-prose NOT invoked since last prompt blocks" {
+@test "long message, prose-reviewer agent NOT invoked since last prompt blocks" {
   transcript="$(write_transcript "$(printf '%s\n%s\n' \
     "$(last_prompt_marker)" \
     "$(tool_use_event Edit)")")"
@@ -63,17 +63,30 @@ setup() {
   run_hook "$SCRIPT" "$stdin"
   [ "$status" -eq 0 ]
   [ "$(decision_field "$output")" = "block" ]
-  [[ "$(reason_field "$output")" == *"review-prose"* ]]
+  [[ "$(reason_field "$output")" == *"prose-reviewer"* ]]
 }
 
-@test "review-prose invoked this turn is still detected when a last-prompt marker is appended after it" {
+@test "the review-prose skill no longer satisfies the requirement" {
+  # The check was deliberately switched from the skill to the agent: invoking
+  # only the communication:review-prose skill must now block, not pass.
+  transcript="$(write_transcript "$(printf '%s\n%s\n' \
+    "$(last_prompt_marker)" \
+    "$(tool_use_event Skill skill=communication:review-prose)")")"
+  stdin="$(stdin_payload last_assistant_message="$LONG_MSG" transcript_path="$transcript")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$status" -eq 0 ]
+  [ "$(decision_field "$output")" = "block" ]
+  [[ "$(reason_field "$output")" == *"prose-reviewer"* ]]
+}
+
+@test "prose-reviewer agent invoked this turn is still detected when a last-prompt marker is appended after it" {
   # Reproduces the real transcript shape: the genuine user prompt, then the
-  # turn's own review-prose call, then a last-prompt marker the harness
+  # turn's own prose-reviewer call, then a last-prompt marker the harness
   # appends *after* the tool call. Anchoring on the marker's line position
   # skips the review and blocks a turn that was in fact reviewed.
   transcript="$(write_transcript "$(printf '%s\n%s\n%s\n' \
     "$(user_prompt_event 'Do you think that change will work?')" \
-    "$(tool_use_event Skill skill=communication:review-prose)" \
+    "$(tool_use_event Task subagent_type=communication:prose-reviewer)" \
     "$(last_prompt_marker)")")"
   stdin="$(stdin_payload last_assistant_message="$LONG_MSG" transcript_path="$transcript")"
   run_hook "$SCRIPT" "$stdin"
@@ -84,7 +97,7 @@ setup() {
 @test "a tool_result user message after the review is not mistaken for a new prompt boundary" {
   transcript="$(write_transcript "$(printf '%s\n%s\n%s\n' \
     "$(user_prompt_event 'Do you think that change will work?')" \
-    "$(tool_use_event Skill skill=communication:review-prose)" \
+    "$(tool_use_event Task subagent_type=communication:prose-reviewer)" \
     "$(tool_result_event)")")"
   stdin="$(stdin_payload last_assistant_message="$LONG_MSG" transcript_path="$transcript")"
   run_hook "$SCRIPT" "$stdin"
@@ -95,7 +108,7 @@ setup() {
 @test "a skill-injected isMeta message after the review is not mistaken for a new prompt boundary" {
   transcript="$(write_transcript "$(printf '%s\n%s\n%s\n' \
     "$(user_prompt_event 'Do you think that change will work?')" \
-    "$(tool_use_event Skill skill=communication:review-prose)" \
+    "$(tool_use_event Task subagent_type=communication:prose-reviewer)" \
     "$(meta_injection_event)")")"
   stdin="$(stdin_payload last_assistant_message="$LONG_MSG" transcript_path="$transcript")"
   run_hook "$SCRIPT" "$stdin"
@@ -111,7 +124,7 @@ setup() {
   run_hook "$SCRIPT" "$stdin"
   [ "$status" -eq 0 ]
   [ "$(decision_field "$output")" = "block" ]
-  [[ "$(reason_field "$output")" == *"review-prose"* ]]
+  [[ "$(reason_field "$output")" == *"prose-reviewer"* ]]
 }
 
 @test "an array-content genuine prompt is recognized as a boundary (blocks when unreviewed)" {
@@ -125,39 +138,53 @@ setup() {
   run_hook "$SCRIPT" "$stdin"
   [ "$status" -eq 0 ]
   [ "$(decision_field "$output")" = "block" ]
-  [[ "$(reason_field "$output")" == *"review-prose"* ]]
+  [[ "$(reason_field "$output")" == *"prose-reviewer"* ]]
 }
 
-@test "a near-miss skill name containing review-prose as a substring does not satisfy the requirement" {
-  # Exact-name match, not substring: a skill merely *containing* "review-prose"
-  # (here communication:review-prose-preview) must not count as the review.
+@test "a near-miss agent name containing prose-reviewer as a substring does not satisfy the requirement" {
+  # Exact-name match, not substring: an agent merely *containing* "prose-reviewer"
+  # (here communication:prose-reviewer-preview) must not count as the review.
   transcript="$(write_transcript "$(printf '%s\n%s\n' \
     "$(user_prompt_event 'please explain this at length')" \
-    "$(tool_use_event Skill skill=communication:review-prose-preview)")")"
+    "$(tool_use_event Task subagent_type=communication:prose-reviewer-preview)")")"
   stdin="$(stdin_payload last_assistant_message="$LONG_MSG" transcript_path="$transcript")"
   run_hook "$SCRIPT" "$stdin"
   [ "$status" -eq 0 ]
   [ "$(decision_field "$output")" = "block" ]
-  [[ "$(reason_field "$output")" == *"review-prose"* ]]
+  [[ "$(reason_field "$output")" == *"prose-reviewer"* ]]
+}
+
+@test "a bare, unprefixed agent name does not satisfy the qualified requirement" {
+  # The harness records the agent's subagent_type with its plugin prefix
+  # (communication:prose-reviewer). A bare prose-reviewer is a prefix-truncated
+  # near-miss and must not count - the prefix is load-bearing.
+  transcript="$(write_transcript "$(printf '%s\n%s\n' \
+    "$(user_prompt_event 'please explain this at length')" \
+    "$(tool_use_event Task subagent_type=prose-reviewer)")")"
+  stdin="$(stdin_payload last_assistant_message="$LONG_MSG" transcript_path="$transcript")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$status" -eq 0 ]
+  [ "$(decision_field "$output")" = "block" ]
+  [[ "$(reason_field "$output")" == *"prose-reviewer"* ]]
 }
 
 @test "the exact-name match is case-sensitive: an uppercase variant does not satisfy it" {
-  # Dropping grep's -i was deliberate: skill names are canonically lowercase,
-  # so a case variant is a different skill and must not count as the review.
+  # Agent names are canonically lowercase, so a case variant is a different
+  # agent and must not count as the review.
   transcript="$(write_transcript "$(printf '%s\n%s\n' \
     "$(user_prompt_event 'please explain this at length')" \
-    "$(tool_use_event Skill skill=Communication:Review-Prose)")")"
+    "$(tool_use_event Task subagent_type=Communication:Prose-Reviewer)")")"
   stdin="$(stdin_payload last_assistant_message="$LONG_MSG" transcript_path="$transcript")"
   run_hook "$SCRIPT" "$stdin"
   [ "$status" -eq 0 ]
   [ "$(decision_field "$output")" = "block" ]
-  [[ "$(reason_field "$output")" == *"review-prose"* ]]
+  [[ "$(reason_field "$output")" == *"prose-reviewer"* ]]
 }
 
 @test "review before the current prompt does not count for the current turn" {
   transcript="$(write_transcript "$(printf '%s\n%s\n%s\n%s\n' \
     "$(user_prompt_event 'first turn asks for a review')" \
-    "$(tool_use_event Skill skill=communication:review-prose)" \
+    "$(tool_use_event Task subagent_type=communication:prose-reviewer)" \
     "$(user_prompt_event 'second turn is a fresh prose request')" \
     "$(tool_use_event Edit)")")"
   stdin="$(stdin_payload last_assistant_message="$LONG_MSG" transcript_path="$transcript")"

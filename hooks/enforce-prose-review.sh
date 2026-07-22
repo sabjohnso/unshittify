@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
 # Stop hook: blocks ending the turn if the final assistant message looks like
-# substantial prose and communication:review-prose was never invoked since
-# the user's last message.
+# substantial prose and the communication:prose-reviewer agent was never
+# invoked since the user's last message.
 set -euo pipefail
 
 MIN_WORDS=50
-# The skill that satisfies this check, matched by exact name (not substring):
-# a near-miss like "communication:review-prose-preview" must not count.
-REVIEW_SKILL="communication:review-prose"
+# The agent that satisfies this check, matched by exact subagent_type name
+# (not substring): a near-miss like "communication:prose-reviewer-preview"
+# must not count. The name carries the plugin prefix exactly as the transcript
+# records it - the harness stores an agent's subagent_type as
+# communication:prose-reviewer, not the bare prose-reviewer.
+REVIEW_AGENT="communication:prose-reviewer"
 
 # shellcheck source=lib/transcript.sh disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/lib/transcript.sh"
@@ -35,14 +38,14 @@ fi
 # rule, shared with enforce-code-review.sh so the two cannot drift.
 find_turn_start_line "$transcript" >/dev/null || exit 0
 
-# Count exact-name invocations of the review skill among this turn's tool_use
+# Count exact-name invocations of the review agent among this turn's tool_use
 # events. grep -Fxc is a whole-line match, so a near-miss like
-# "communication:review-prose-preview" does not satisfy the requirement.
+# "communication:prose-reviewer-preview" does not satisfy the requirement.
 reviewed=$(tool_use_events_since_turn_start "$transcript" \
-  | jq -r 'select(.name=="Skill") | .skill // empty' 2>/dev/null \
-  | grep -Fxc "$REVIEW_SKILL" || true)
+  | jq -r '.subagent_type // empty' 2>/dev/null \
+  | grep -Fxc "$REVIEW_AGENT" || true)
 
 if [ "$reviewed" -eq 0 ]; then
-  jq -n --arg reason "This response is substantial prose (${word_count} words) and ${REVIEW_SKILL} has not been invoked on it this turn. Run the ${REVIEW_SKILL} skill against the draft, fix any flagged issues, and send the corrected text instead." \
+  jq -n --arg reason "This response is substantial prose (${word_count} words) and the ${REVIEW_AGENT} agent has not been invoked on it this turn. Delegate the draft to the ${REVIEW_AGENT} subagent, fix any flagged issues, and send the corrected text instead." \
     '{decision:"block", reason:$reason}'
 fi
