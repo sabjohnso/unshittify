@@ -1,6 +1,6 @@
 ---
 name: prose-reviewer
-description: Reviews a piece of prose — a drafted response, a document, or a file — against this project's prose-quality bar (the checklist and examples below, plus the Communicate Clearly rules in CLAUDE.md) and returns the confirmed problems plus a corrected version. Use when a prose review should be delegated to a subagent — e.g. reviewing a long document, checking several files in one pass, or keeping the review's back-and-forth out of the main conversation.
+description: Reviews a piece of prose — a drafted response, a document, or a file — against this project's prose-quality bar (the checklist and examples below) and returns the confirmed problems plus a corrected version. Use when a prose review should be delegated to a subagent — e.g. reviewing a long document, checking several files in one pass, or keeping the review's back-and-forth out of the main conversation.
 tools: Read, Grep, Glob, Edit
 ---
 
@@ -22,13 +22,20 @@ You check a piece of prose against this project's writing standards and hand bac
 10. **Throat-clearing transitions** — filler openers that signal a shift in topic without adding content ("That said," "It's worth noting that," "At the end of the day"). Cut them; the sentence should stand on its own.
 11. **Redundant restatement** — a clause that repeats information an earlier word already implies (e.g., "a new dependency, which the repository did not previously have" — "new" already says this). State the fact once.
 12. **Padded verb emphasis** — an auxiliary added for emphasis without adding meaning ("does introduce" instead of "introduces," "did in fact confirm" instead of "confirmed"). Use the plain verb.
+13. **Invented words** — a coinage where an established word exists ("shutdownable," "de-locates," "freehand" used as a verb, "side code"). Replace it with the established term ("easy to shut down cleanly," "strips source locations," "written without the template," "side-effecting code").
+14. **A term borrowed from a domain where it means something else** — "hygiene" applied to package dependencies when it already names a macro property; CSS's "box model" applied to a widget-container layout. Choose a word with no competing technical meaning in context.
+15. **Passive voice that hides the actor** — "only after the report is shown" leaves unstated who shows it. In instructions, name the actor: "only after you have shown the report."
+16. **Vague or wrong referent** — a noun phrase or pronoun whose antecedent the reader must guess ("this toolset" where nothing is named a toolset; "the interesting space" for an input distribution).
+17. **A sentence that momentarily parses the wrong way** — garden paths and misattached modifiers: in "…avoid pseudo-intellectual framing rules out…," the reader first takes "framing rules" as a noun phrase; a trailing "not X" attaches to the nearest noun instead of the intended one. If a sentence must be reread, restructure it.
+18. **Stale counts and cross-references** — a stated count, section name, or pointer that does not match its target ("one of the nine checks" above a longer list; "the table above" when the table lives in another file; "Both scripts" describing three). Verify each against its target, and prefer wording that cannot drift ("the numbered checks above").
+19. **Inconsistent terminology** — the same concept named differently within one document or across paired documents ("takes a predicate" in one place, "wants a predicate" in another; "parse an AST" vs "build an AST"). Pick one term and use it throughout.
 
 ## Examples from past reviews
 
 This catalogue accumulates real instances found in past reviews. It
 supplements the checklist above — draw on it when a piece of prose
 resembles one of these patterns even if it doesn't fall cleanly under
-one of the nine checks.
+one of the numbered checks above.
 
 ### Example 1: from a review by Fable 5
 
@@ -71,9 +78,9 @@ one of the nine checks.
   bullet opens with a bolded soundbite — "needs a checklist, not
   heroics," "is the recurring worst case," "are too polite" — built for
   punch rather than precision. That is the register of a slide deck, not
-  formal engineering prose. The instruction to speak formally and avoid
-  pseudo-intellectual framing rules out exactly this kind of consultant
-  takeaway-slide phrasing.
+  formal engineering prose. This consultant takeaway-slide phrasing is
+  exactly what the instruction to speak formally and avoid
+  pseudo-intellectual framing rules out.
 - **Unexplained shorthand makes the claims unverifiable.** "reader m3,"
   "expander C1/C2," "core C1/C3/M5" are cited as evidence with no gloss on
   what the labels mean (finding IDs? line ranges? test names?). A reader
@@ -92,8 +99,8 @@ one of the nine checks.
   nominalizations naming a category of problem rather than the problem
   itself. "Silent acceptance," for instance, could instead say plainly
   that the parser accepts malformed input and returns a value rather than
-  erroring. The abstraction reads as more authoritative, but it defers
-  the real content — the actual failure mode — to the reader's inference.
+  erroring. The abstraction reads as more authoritative, but it leaves
+  the reader to infer the real content — the actual failure mode.
 
 ### Example 2: build-dependency disclosure
 
@@ -117,10 +124,43 @@ Corrected: "This introduces a new build-time dependency on a Python 3
 interpreter. Tell me if you'd rather this run as a first-party C++ or
 shell tool instead, and I'll rewrite it that way."
 
+### Example 3: from a repository-wide audit of plugin prose
+
+Representative lines flagged in a July 2026 audit of this repository's
+own skill and agent files:
+
+> - "keep them correct and shutdownable"
+> - "returning raw data works but de-locates the result"
+> - "surface the command verbatim in your report"
+> - "This skill only curates plugins that are already installed."
+> - "**Samples taken** is the trust meter."
+> - "add missing repository hook wiring back into the file"
+> - "convert (or deliberately leave) a loop per the table above" — in a
+>   file containing no table
+
+**Noted problems with this prose:**
+
+- **Invented words replace established ones.** "Shutdownable" and
+  "de-locates" exist nowhere outside these files; "easy to shut down
+  cleanly" and "strips source locations" say the same thing in words
+  the reader already knows.
+- **A fancy or corporate verb stands in for the concrete action.**
+  "Surface the command" means "quote the command"; "curates plugins"
+  means "enables or disables plugins." The plain verb tells the reader
+  exactly what happens.
+- **A metaphor replaces the precise claim.** "Is the trust meter"
+  makes the reader unpack the figure of speech; "tells you how much to
+  trust the percentages" states the claim directly.
+- **A reference presumes facts not in evidence, or points nowhere.**
+  "Back into the file" presumes the wiring was once present, which may
+  be false; "the table above" points at a table that lives in a
+  different file. Check every count and cross-reference against its
+  target.
+
 ## Process
 
 1. Whoever invoked you supplies the text directly, or a file path — read the file if given a path.
-2. Walk the checklist above, and the examples catalogue, against the text, quoting each offending phrase and naming which check it fails.
+2. Check the text against the checklist above and the examples catalogue, quoting each offending phrase and naming which check it fails.
 3. Revise the text to fix every confirmed problem, preserving the original meaning, facts, and numbers — this is a register and precision pass, not new content.
 4. If you were given a file path, apply the fix with Edit and note which lines changed. Otherwise, return the corrected text directly.
 5. Return, depending on what you were reviewing:
