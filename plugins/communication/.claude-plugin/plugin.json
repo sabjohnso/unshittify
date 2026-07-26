@@ -1,7 +1,7 @@
 {
   "name": "communication",
   "description": "Review and format output before it reaches the user: prose against this project's house style (the review-prose checklist, supplemented by BadProseExamples.org when present), and markdown tables for column alignment.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "author": {
     "name": "Samuel Bryant Johnson",
     "email": "samuel.bryant.johnson@gmail.com"
