@@ -20,9 +20,9 @@ and require/provide. Checked against Racket v9.1 [cs].
 - `module+`: like `module* … #f` but several same-named pieces combine; the
   standard form for `main` and `test`.
 
-Submodule order: a `module`/`module+`/`module*` may be required by the
-enclosing module, and `module+`/`module* #f` may use the enclosing module —
-the enclosing module body runs first, then `module+`/`module*` bodies.
+Ordering: the enclosing module's body runs first; `module+`/`module* #f`
+bodies run after it. The enclosing module may also `require` its own
+submodules.
 
 ## module-path (for require / submod)
 

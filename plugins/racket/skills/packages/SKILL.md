@@ -43,7 +43,7 @@ tools, not run as a program:
 (define license '(Apache-2.0 OR MIT))
 ```
 
-- **`deps` vs `build-deps` is the split that bites people.** `deps` are
+- **The `deps` vs `build-deps` split is easy to get wrong.** `deps` are
   needed to *run* the library; `build-deps` are needed only to *build docs
   and run tests* (`scribble-lib`, `racket-doc`, `rackunit-lib`). Putting a
   doc-only dependency in `deps` forces every user to install it at runtime;

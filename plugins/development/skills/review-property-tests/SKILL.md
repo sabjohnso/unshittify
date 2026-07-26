@@ -15,7 +15,7 @@ Goal: for each new or changed data type or operation in scope, confirm its algeb
 3. **Missing round-trip check** — any encode/decode, serialize/deserialize, or parse/print pair without a property test asserting `decode(encode(x)) == x`, or a documented reason the round trip doesn't hold.
 4. **Property tests too narrow** — a property test whose generator is constrained enough (a tiny fixed set, only "nice" values, no boundary or adversarial cases) that it would not catch a real violation of the law it claims to check.
 5. **Example tests standing in for a property** — an example-based test iterating several hand-written cases to approximate a general law that a single property test would state directly and check far more broadly. The example test is not wrong on its own; it signals the underlying property test is missing.
-6. **Correct use of examples** — confirm example-based tests exist for genuine edge cases, regressions, and readability anchors; this is the intended and correct use per CLAUDE.md, not something to flag.
+6. **Correct use of examples** — confirm example-based tests exist for genuine edge cases and regressions, and as examples kept for readability; this is the intended and correct use per CLAUDE.md, not something to flag.
 
 ## Steps
 

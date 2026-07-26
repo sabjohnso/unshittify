@@ -60,7 +60,7 @@ Number of samples taken: 38 (once every 2ms)
 - **Total** = time in this function *and everything it called*. **Self** =
   time in this function's own code. Optimize the node with the largest
   **Self** percentage — that is where the CPU actually sat.
-- **Samples taken** is the trust meter. Two samples prove nothing; aim for
+- **Samples taken** tells you how much to trust the percentages. Two samples prove nothing; aim for
   dozens to hundreds. Too few → raise `#:repeat`, lower `#:delay`, or profile
   a bigger workload.
 - The caller/callee lines around each entry show who called it and where its
@@ -122,7 +122,7 @@ and more.
   small the percentages are noise. Raise `#:repeat`/lower `#:delay` until the
   ranking is stable across runs.
 - **Optimize the dominant self-time node, then re-measure.** Fixing anything
-  else moves a number you cannot feel. After each change, re-profile —
+  else yields an improvement too small to notice. After each change, re-profile —
   the hot spot shifts.
 - **Keep the simple reference implementation.** Per project standards, a
   nontrivial optimization needs benchmark/profile evidence that it is

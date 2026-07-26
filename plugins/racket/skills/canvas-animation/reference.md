@@ -77,7 +77,7 @@ costly composite); blit it every frame. See the drawing skill for the full
 ## Loop drivers — when to use which
 
 - **`timer%`** — the default: periodic `notify-callback` on the handler
-  thread, automatically coalesced with paints/input. Use for ~all UI
+  thread, automatically coalesced with paints/input. Use for nearly all UI
   animation.
 - **A worker `thread` + `queue-callback`** — when frames depend on slow
   off-thread work; compute on the thread, then `queue-callback` to update the

@@ -36,12 +36,12 @@ Result<std::string> emit_ir_checked(const CheckedModule &m) {
 
 ## Split a function once it does more than one job
 
-A driver function — `main()`, a request handler, a top-level dispatcher — should reduce to classifying its input and dispatching to a per-case function, not also performing validation, I/O, and each case's own pipeline inline. Signs a function has outgrown single responsibility:
+A driver function — `main()`, a request handler, a top-level dispatcher — should reduce to classifying its input and dispatching to a per-case function, not also validating, doing I/O, and running each case's pipeline inline. Signs a function has outgrown single responsibility:
 
 - It mixes argument/input classification with validation, with I/O, with two or more independent pipelines.
 - The same short block (e.g. "render a diagnostic and return an error code") appears three or more times.
 
-Extract one function per job, and factor any block repeated three or more times into a single shared helper. This is the same Normalized Systems Theory "small, focused units" principle `/development:make-changing-easy` already assesses generally — apply it specifically to `main()`/driver functions, which tend to accumulate jobs one `if` branch at a time until no one notices they've become nine functions wearing one name.
+Extract one function per job, and factor any block repeated three or more times into a single shared helper. This is the same Normalized Systems Theory "small, focused units" principle `/development:make-changing-easy` already assesses generally — apply it specifically to `main()`/driver functions, which tend to accumulate jobs one `if` branch at a time until no one notices they are doing nine jobs under one name.
 
 ## Loop, or algorithm?
 

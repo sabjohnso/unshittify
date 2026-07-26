@@ -10,7 +10,7 @@ Goal: rewrite a markdown table so every pipe in every row lines up in a fixed-wi
 
 ## How a markdown table encodes alignment
 
-The row directly under the header is the separator row; the colons in each column's dashes set that column's alignment, not any per-cell markup:
+The row directly under the header is the separator row; the colons in each column's dashes — not any per-cell markup — set that column's alignment:
 
 | Separator cell | Alignment       |
 |----------------|-----------------|
@@ -19,7 +19,7 @@ The row directly under the header is the separator row; the colons in each colum
 | `:---:`        | center          |
 | `---:`         | right           |
 
-Read this row before touching any cell — it is the single source of truth for how to pad each column, and the rewritten separator row must reproduce the same colons.
+Read this row before touching any cell — it alone determines how to pad each column, and the rewritten separator row must reproduce the same colons.
 
 ## Computing column widths
 
@@ -46,4 +46,4 @@ Read this row before touching any cell — it is the single source of truth for 
 
 - **Never reflow cell text.** This skill fixes the spacing between pipes, not word choice, wrapping, or cell content — a cell containing a long sentence stays on one line; only the surrounding padding changes.
 - **Preserve escaped pipes.** A `\|` inside a cell is content, not a column separator — split a row on `|` only when that `|` is not preceded by a backslash.
-- **Don't assume every row has the same cell count as the header.** A malformed table — a row with fewer or more cells than the header — should be flagged rather than silently padded to fit; report it instead of guessing which column is missing.
+- **Don't assume every row has the same cell count as the header.** If a row has fewer or more cells than the header, stop and report it rather than guessing which column is missing or padding around the mismatch.

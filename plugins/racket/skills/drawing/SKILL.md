@@ -38,7 +38,7 @@ offscreen with no window:
 
 Other contexts: a GUI `canvas%`'s `get-dc` ([[gui]]); and vector backends
 `svg-dc%`, `pdf-dc%`, `post-script-dc%` for resolution-independent files.
-The vector backends are **stateful documents** — construct with
+The vector backends build a **stateful document** — construct with
 `[interactive #f]`, then bracket drawing with the page lifecycle:
 
 ```racket

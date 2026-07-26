@@ -58,8 +58,8 @@ jitter and for dropped frames.
 ## Flicker-free rendering
 
 `canvas%` is **double-buffered** by default: drawing inside the
-`paint-callback` is composited offscreen and shown atomically, so you get no
-tearing. The rules that keep it smooth:
+`paint-callback` is composited offscreen and shown atomically, so partially
+drawn frames never appear on screen. The rules that keep it smooth:
 
 - **Draw only in the `paint-callback`.** Reading `get-dc` and drawing from a
   timer bypasses the buffering and flickers. Update state in the timer; draw
@@ -76,7 +76,8 @@ tearing. The rules that keep it smooth:
   many draws outside the normal callback, wrap them so only one flush
   happens.
 
-For an expensive scene, render once to an **offscreen bitmap** and blit it,
+For an expensive scene, render once to an **offscreen bitmap** and copy
+("blit") it to the canvas,
 redrawing the bitmap only when the scene changes:
 
 ```racket

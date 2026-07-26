@@ -115,8 +115,8 @@ failed. Implications:
 ## Classifying inputs with `label!`
 
 Call `label!` inside a property to tag the current case; the report shows the
-distribution, which reveals whether your generator actually exercises the
-interesting space:
+distribution, which reveals whether your generator actually covers the
+input space you care about:
 
 ```racket
 (property ([n gen:natural])
@@ -147,7 +147,8 @@ its code:
 - **Pin `#:seed` to reproduce.** The failure prints a seed — feed it back to
   replay the exact case rather than re-rolling and hoping it recurs.
 - **Construct valid inputs; don't `gen:filter` heavily.** A filter that
-  rejects most candidates is slow and can exhaust — build the value with
+  rejects most candidates is slow and can exhaust its retry limit (raising
+  `exn:fail:gen:exhausted`) — build the value with
   `gen:let`/`gen:map` so it is valid by construction.
 - **One law per property.** A focused property yields a precise
   counterexample; bundling laws muddies which one broke.

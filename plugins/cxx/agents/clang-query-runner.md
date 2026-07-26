@@ -10,7 +10,7 @@ You find C++ code by structure, not by text. Given a description of a pattern, y
 
 ## Process
 
-1. Locate a compilation database: look for `compile_commands.json` in the current directory or an obvious build directory (`build/`, `out/`). If none exists, fall back to reading the file directly and passing compiler flags after `--` — infer the standard and include paths from the project's build files if you can find them, otherwise ask the caller for them, since a matcher run against the wrong flags returns silently empty rather than erroring.
+1. Locate a compilation database: look for `compile_commands.json` in the current directory or an obvious build directory (`build/`, `out/`). If none exists, fall back to reading the file directly and passing compiler flags after `--` — infer the standard and include paths from the project's build files if you can find them, otherwise ask the caller for them, since a matcher run against the wrong flags silently returns no matches rather than erroring.
 2. Translate the requested pattern into a first-draft matcher: choose the narrowest node matcher and narrowing predicates that plausibly capture it, filtered to `isExpansionInMainFile()` unless the caller specifically wants matches from included headers too.
 3. Run it in batch mode: `clang-query -p <build-dir> -c "set output dump" -c 'match <matcher>' <file>...`. Start with one representative file before scaling to the whole codebase.
 4. Inspect the results. Zero matches usually means the matcher or the compilation flags are wrong, not that the pattern doesn't exist — check the flags before broadening the matcher. Too many matches means the matcher needs another narrowing predicate.

@@ -139,7 +139,7 @@ rackunit checks and suites for everything else.
 - **Choose the specific check.** `(check-equal? x 42)` reports actual vs
   expected; `(check-true (= x 42))` reports only "got #f". Reach for
   `check-pred`, `check-=`, `check-match` over `check-true` of a predicate.
-- **`check-exn` wants a predicate/regexp and a thunk.** Wrap the failing code
+- **`check-exn` takes a predicate/regexp and a thunk.** Wrap the failing code
   in `(lambda () …)`; pass `exn:fail:…?` or a regexp to say *which* error.
 - **Name groups with `test-case`.** A labeled case turns an anonymous failure
   into one you can locate; suites without names are hard to read in output.

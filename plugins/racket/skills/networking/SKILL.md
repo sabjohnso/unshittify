@@ -15,7 +15,7 @@ Three layers, lowest to highest:
 
 Servers are inherently concurrent (a thread per connection) and resource-
 owning (ports, listeners) — `[[concurrency]]`'s threads and custodians are
-the tools that keep them correct and shutdownable.
+the tools that keep them correct and easy to shut down cleanly.
 
 ## TCP
 
@@ -84,7 +84,7 @@ distribution.
 
 ## JSON
 
-`json` is the API exchange format: `jsexpr`s are hashes (string-or-symbol
+The `json` module handles JSON, the usual API exchange format: `jsexpr`s are hashes (string-or-symbol
 keys), lists, strings, numbers, booleans, and `(json-null)`:
 
 ```racket

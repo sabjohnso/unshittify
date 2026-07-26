@@ -20,7 +20,7 @@ Steps 1-4 below mirror `/development:make-changing-easy` and `/development:chang
 3. If the change already fits through an existing seam and no idiom above is violated, skip preparation and go straight to step 5.
 4. If it doesn't fit, prepare the seam first:
    a. Confirm behavior-preserving tests already cover the code to be restructured; if none exist, add characterization tests capturing current behavior before touching structure.
-   b. Perform the minimal restructuring that creates the missing seam: move an exception guard into library code, extract one function per job, convert (or deliberately leave) a loop per the table above. This step must not change observable behavior.
+   b. Perform the minimal restructuring that creates the missing seam: move an exception guard into library code, extract one function per job, convert (or deliberately leave) a loop per the loop-shape rule in step 2. This step must not change observable behavior.
    c. Rebuild and re-run the existing tests, confirming they are still green, before proceeding.
 5. Make the requested change through the now-available seam, under strict TDD:
    a. Write the test(s) first. For a symbol that doesn't exist yet, a compile failure (undeclared identifier, undefined reference) is valid red evidence — confirm it before implementing.

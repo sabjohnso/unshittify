@@ -48,7 +48,7 @@ pat =
   | (struct-id pat ...)            ; positional fields (struct-id used directly)
   | (struct struct-id (pat ...))   ; explicit form
   | (struct* struct-id ([field pat] ...))  ; fields by name, any subset
-  | (regexp rx-expr)               ; string fully? matched by regexp
+  | (regexp rx-expr)               ; string matched by rx-expr (via regexp-match, not anchored)
   | (regexp rx-expr pat)           ; match the (regexp-match ...) result list
   | (pregexp rx-expr) (pregexp rx-expr pat)
   | (and pat ...)                  ; all; binds union (left-to-right)

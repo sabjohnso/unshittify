@@ -6,7 +6,7 @@ allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git a
 
 # Write a commit message in this repo's format
 
-Goal: produce a commit message that follows the template below, then create the commit. Only run this skill in direct response to an explicit request to commit — never chain into it off the back of finishing an unrelated task. Within that constraint, treat this skill as the default: any explicit commit request in this repository should go through it rather than being freehanded, unless the user has explicitly said to skip the template.
+Goal: produce a commit message that follows the template below, then create the commit. Only run this skill in direct response to an explicit request to commit — never invoke it merely because an unrelated task just finished. Within that constraint, treat this skill as the default: any explicit commit request in this repository should go through it rather than written without the template, unless the user has explicitly said to skip the template.
 
 ## Template
 

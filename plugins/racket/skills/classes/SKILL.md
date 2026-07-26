@@ -166,7 +166,7 @@ mix several independent method sets and resolve conflicts explicitly
 ## Rules that prevent rework
 
 - **Always call `super-new`.** Every class body must initialize its
-  superclass exactly once; omitting it is the most common construction error.
+  superclass exactly once; omitting it is a common construction error.
 - **Prefer interfaces + mixins to deep hierarchies.** Single inheritance is
   rigid; an `interface` plus mixins/traits gives open extension without
   editing existing classes — the composition-over-inheritance tenet.

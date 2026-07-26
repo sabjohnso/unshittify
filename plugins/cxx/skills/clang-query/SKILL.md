@@ -9,7 +9,7 @@ clang-query runs Clang's AST matcher language — the same matcher DSL used to w
 
 ## Prerequisites: a compilation database
 
-clang-query needs the same include paths, defines, and language standard the file was actually compiled with, or it will fail to parse a complete AST.
+clang-query needs the same include paths, defines, and language standard the file was actually compiled with, or it will fail to build a complete AST.
 
 - With CMake, configure with `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON`; this produces `compile_commands.json` in the build directory. Point clang-query at it with `-p <build-dir>`.
 - With a build system that doesn't emit one directly, generate it with `bear -- <build command>` (Bear) or `intercept-build <build command>`.

@@ -69,7 +69,7 @@ between them; indentation relative to the leftmost line is preserved.
 Braces must balance in text mode — use `@"{"` or `|{ ... }|` fences
 (inside fences, `@` and `}` are literal; escapes are written `|@`).
 
-## The rules that prevent rework
+## Rules that prevent rework
 
 - **`for-label` is what makes links work.** Every module whose bindings
   the prose mentions must appear in `@(require (for-label ...))` —
@@ -101,7 +101,7 @@ Braces must balance in text mode — use `@"{"` or `|{ ... }|` fences
 - **Multiple signatures for one binding** use `defproc*`/`defform*`, not
   repeated `defproc`s (Scribble warns on duplicate definition points).
   `deftogether` is for distinct-but-paired bindings sharing one prose body.
-- **Dependency hygiene:** linking into another manual (even via for-label)
+- **Doc dependencies:** linking into another manual (even via for-label)
   requires its doc package (e.g. `"racket-doc"`) in `build-deps`, or
   `raco setup --check-pkg-deps` fails.
 - The `.scrbl` filename becomes the output directory name and must be

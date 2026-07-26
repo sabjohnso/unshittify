@@ -93,7 +93,7 @@ needs. Use it for code that should be isolated.
   (define indep-val 'standalone))
 ```
 
-### `module*` — submodule that can peek
+### `module*` — sees the enclosing module (with `#f`)
 
 `(module* name #f ...)` uses the enclosing module's language *and* sees its
 bindings — useful to expose an extra view (e.g. internals for testing)

@@ -41,7 +41,7 @@ Each is an object: read and set its state with methods —
 `(send field get-value)`, `(send choice set-selection 2)`,
 `(send check get-value)`.
 
-## Layout — the box model
+## Layout — containers, not coordinates
 
 There is no absolute positioning by default. A control's `parent` places it,
 and panels stack children vertically or horizontally. Control the result with

@@ -149,7 +149,8 @@ the error carries source location instead of a bare `error`; use
   arity throws away source locations.
 - **Read with the syntax-aware operations inside read-syntax mode.** Use
   `read-syntax`/`peek-char`/`read-char` and rebuild with `datum->syntax` so
-  positions propagate; returning raw data works but de-locates the result.
+  positions propagate; returning raw data works but strips source locations
+  from the result.
 - **Remap brackets in pairs.** Mapping `{`→`(` without `}`→`)` leaves the
   closer unhandled and the read never terminates.
 - **`make-special-comment` is the only way to "produce nothing."** Zero

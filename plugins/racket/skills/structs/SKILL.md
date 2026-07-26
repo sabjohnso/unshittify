@@ -15,7 +15,7 @@ mutable). It is built into `racket/base` — no require needed.
 (posn-x p)        ; accessor per field
 ```
 
-## The opacity spectrum — pick deliberately
+## Opacity — pick deliberately
 
 This is the first decision, because it governs equality, printing, and
 serialization:
@@ -161,7 +161,7 @@ at a module boundary, use the `struct` clause of `contract-out` (see
   contents — never use one to enforce a constraint.
 - **`#:guard` runs before the struct exists.** It sees field values and the
   type name, not an instance; return the (coerced) values or raise. It is
-  the place for construction-time validation.
+  where you validate arguments at construction time.
 - **Auto fields come last and aren't constructor arguments.** Order them
   after all explicit fields; supply `#:auto-value` or they default to `#f`.
 - **Prefer immutable + `struct-copy` to `#:mutable`.** Immutable structs are

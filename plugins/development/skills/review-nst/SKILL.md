@@ -6,11 +6,11 @@ allowed-tools: Read, Grep, Glob, Bash(git diff:*), Bash(git status:*), Bash(git 
 
 # Review code against Normalized Systems Theory
 
-Goal: find concrete places where reviewed code violates one of the ten evolvable-code principles in CLAUDE.md, name the principle, and propose the specific fix — not a restatement of the principle.
+Goal: find concrete places where the code under review violates one of the ten evolvable-code principles in CLAUDE.md, name the principle, and propose the specific fix — not a restatement of the principle.
 
 ## Checklist
 
-For each item, look for the code smell, not just the absence of a keyword.
+For each item, look for the structural problem itself, not just for names or keywords that hint at it.
 
 1. **Encapsulation** — internal state or a private helper reachable from outside its owning module/class; a caller that reaches past an interface into another component's internals to save a few lines.
 2. **Separation of concerns** — a function or class mixing what it computes with how it's stored or how it's presented (e.g. a handler that both parses input and issues a database write and formats the response).
@@ -28,7 +28,7 @@ Also flag, where relevant, the two version-transparency properties: a change to 
 ## Steps
 
 1. Obtain the code to review: if given a file path, read it; if given a diff or nothing, run `git diff` (or `git diff --staged` if the working tree is clean but the index isn't) to get the pending changes; use `git log`/`git show` only if more history is needed to judge whether a change is a violation or a deliberate divergence already justified elsewhere.
-2. Walk the checklist above against the reviewed code. For each hit, record: the file:line, which principle it violates, a one-sentence statement of the concrete failure mode (not a restatement of the principle), and a specific proposed fix.
+2. Walk the checklist above against the code under review. For each hit, record: the file:line, which principle it violates, a one-sentence statement of the concrete failure mode (not a restatement of the principle), and a specific proposed fix.
 3. Skip code that violates a principle for a reason already justified in a comment, commit message, or CLAUDE.md's own carve-out for pre-existing code not written with these principles in mind — note the carve-out instead of re-flagging it.
 4. Report findings ordered by principle, most-violated first. If nothing violates the checklist, say so rather than inventing a finding.
 5. Do not apply fixes automatically — this skill reports; only edit the code if the user separately asks for the fix to be applied.

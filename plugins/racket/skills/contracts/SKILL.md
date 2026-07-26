@@ -96,7 +96,8 @@ position in `recursive-contract`:
 ```
 
 `parametric->/c` expresses parametric polymorphism — `(parametric->/c [X]
-(-> X X))` guarantees the result came from the input, not fabricated.
+(-> X X))` guarantees the result came from the input rather than being
+fabricated.
 
 ## Reading a blame message
 

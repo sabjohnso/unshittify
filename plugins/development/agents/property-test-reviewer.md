@@ -15,7 +15,7 @@ You check new or changed data types and operations for algebraic laws and proper
 3. **Missing round-trip check** — any encode/decode, serialize/deserialize, or parse/print pair without a property test asserting `decode(encode(x)) == x`, or a documented reason the round trip doesn't hold.
 4. **Property tests too narrow** — a property test whose generator is constrained enough (a tiny fixed set, only "nice" values) that it would not catch a real violation of the law it claims to check.
 5. **Example tests standing in for a property** — an example-based test iterating hand-written cases to approximate a general law a property test would state directly and check more broadly. The example test isn't wrong; it signals the property test is missing.
-6. **Correct use of examples** — confirm example-based tests exist for genuine edge cases, regressions, and readability anchors; this is correct and not something to flag.
+6. **Correct use of examples** — confirm example-based tests exist for genuine edge cases and regressions, and as examples kept for readability; this is correct and not something to flag.
 
 ## Process
 

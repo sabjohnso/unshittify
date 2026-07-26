@@ -68,8 +68,8 @@ Common options worth setting:
   distinct failure in one run, instead of stopping at the first.
 - `print_stacktrace=1` (UBSan) — print a stack trace, not just the source
   location of the failure.
-- `suppressions=file` with `*_OPTIONS=suppressions=path/to/file` — silence
-  known, unfixable reports (e.g. in a third-party library) by pattern.
+- `suppressions=path/to/file` — silence known, unfixable reports (e.g. in a
+  third-party library) by pattern.
 
 ## Reading a report
 
@@ -88,8 +88,8 @@ previously allocated by thread T0 here:
     #1 0x... in main app.cpp:8
 ```
 
-Read bottom-up within each stack: the innermost frame closest to `main` (or
-the relevant call site) is where the bug actually lives; frames inside the
+Read bottom-up within each stack: the deepest frame that is in your own code
+(e.g. `app.cpp:12`) is where the bug actually lives; frames inside the
 sanitizer runtime or `operator new`/`delete` are noise. If a report shows a
 raw address instead of a symbol name, the binary is missing debug info or a
 symbolizer (`llvm-symbolizer` for Clang, on `PATH` or pointed to via

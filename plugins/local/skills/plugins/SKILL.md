@@ -1,5 +1,5 @@
 ---
-description: Choose which installed plugins (and their bundled skills) are active for the CURRENT project only, by toggling local-scope enable/disable. Use when the user asks to pick/select/curate which skills or plugins apply to this project.
+description: Choose which installed plugins (and their bundled skills) are active for the CURRENT project only, by enabling or disabling them at the local scope. Use when the user asks to pick/select/curate which skills or plugins apply to this project.
 argument-hint: "[enable|disable] [plugin-id...]"
 disable-model-invocation: true
 allowed-tools: Bash(claude plugin list:*), Bash(claude plugin enable:*), Bash(claude plugin disable:*)
@@ -9,9 +9,9 @@ allowed-tools: Bash(claude plugin list:*), Bash(claude plugin enable:*), Bash(cl
 
 Goal: choose which already-installed plugins are active for the **current project only**, by toggling them at the `local` settings scope (`.claude/settings.local.json`), leaving the shared `.claude/settings.json` and the user's global configuration untouched.
 
-Note the granularity limit up front if relevant: Claude Code enables/disables whole plugins, not individual skills within a plugin. If the user's phrasing implies they want to keep one skill from a plugin while dropping another skill from that same plugin, tell them that isn't possible — the finest control is the plugin as a whole.
+If relevant, tell the user up front: Claude Code enables/disables whole plugins, not individual skills within a plugin. If the user's phrasing implies they want to keep one skill from a plugin while dropping another skill from that same plugin, tell them that isn't possible — the finest control is the plugin as a whole.
 
-This skill only curates plugins that are **already installed**. Installing a new plugin (`claude plugin install`) is a separate action, not something to do here unless the user explicitly asks for it.
+This skill only enables or disables plugins that are **already installed**. Installing a new plugin (`claude plugin install`) is a separate action, not something to do here unless the user explicitly asks for it.
 
 ## 1. See what's installed
 

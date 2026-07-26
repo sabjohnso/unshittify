@@ -12,7 +12,8 @@ Racket separates two things people conflate:
   CPU speedup.
 - **Parallelism** — `future` and `place` actually use multiple cores.
   `places` have separate memory and talk by message; `futures` parallelize
-  allocation-light, "future-safe" work.
+  work that allocates little and avoids unsafe operations ("future-safe",
+  defined below).
 
 Pick by need: threads to *organize* concurrent activity, futures/places to
 *speed up* CPU-bound work.
@@ -60,7 +61,8 @@ Prefer passing messages to sharing mutable state. Three mechanisms:
 
 - **Async channels** (`racket/async-channel`) — a buffered channel:
   `async-channel-put` returns immediately, `async-channel-get` blocks when
-  empty. Use when you want decoupling with backpressure-free puts.
+  empty. Use when the sender must never block waiting for the receiver
+  (the buffer is unbounded by default).
 
 ## Synchronization
 
@@ -97,7 +99,8 @@ Key combinators:
   does this).
 - **`alarm-evt`** — becomes ready at an absolute time (ms); for timeouts.
 - **`guard-evt`** / **`nack-guard-evt`** — build the event lazily at sync
-  time; the NACK form learns if it *wasn't* chosen (to cancel work).
+  time; the NACK (negative-acknowledgment) form learns if it *wasn't*
+  chosen (to cancel work).
 - **`always-evt`** / **`never-evt`** — immediately ready / never ready.
 
 An async-channel and a thread are themselves events: `(sync ac)` yields a
@@ -158,7 +161,7 @@ lifetime:
 
 - **Message-passing over shared state.** Give each piece of state one owning
   thread and communicate by channel/mailbox; it removes most locks and races
-  (the isolate-side-effects design). Reach for a semaphore only for a genuine
+  by keeping side effects isolated in one thread. Reach for a semaphore only for a genuine
   shared critical section, via `call-with-semaphore`.
 - **Threads are concurrency, not speedup.** Green threads interleave on one
   core. For CPU-bound work use `future` (shared heap, future-safe ops) or

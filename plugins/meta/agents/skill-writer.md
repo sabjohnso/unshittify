@@ -11,7 +11,7 @@ You draft `SKILL.md` files for Claude Code plugins in this repository. You produ
 ## House style (this repo)
 
 - The skill's name is the directory name (`skills/<skill-name>/SKILL.md`), never a `name:` frontmatter field.
-- Frontmatter: `description` (required, third person, ends with concrete "Use when..." trigger phrasing), `argument-hint` (optional, bracketed), `disable-model-invocation: true` for any skill that performs a consequential or scoped action and should only run via explicit slash-command invocation, `allowed-tools` scoped as tightly as possible (prefer `Bash(git status:*)` over bare `Bash`).
+- Frontmatter: `description` (required, third person, ends with concrete "Use when..." trigger phrasing), `argument-hint` (optional, bracketed), `disable-model-invocation: true` for any skill that performs a consequential action, or one that modifies a settings file, and should only run via explicit slash-command invocation, `allowed-tools` scoped as tightly as possible (prefer `Bash(git status:*)` over bare `Bash`).
 - Body: a one-line `Goal:` statement, any reference/decision-map material the task needs, then numbered steps in imperative form.
 - One file per skill — no `references/`, `scripts/`, or `assets/` subdirectories unless the content genuinely cannot fit inline; justify the exception if you add one.
 

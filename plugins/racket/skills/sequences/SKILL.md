@@ -59,7 +59,7 @@ Inside the clause list, after the bindings:
   scope, and a binding *after* `#:when` restarts iteration (it nests).
 - **`#:break cond`** stops the loop (excluding the current element);
   **`#:final cond`** runs this iteration, then stops.
-- **`#:do [body ...]`** runs side code between clauses.
+- **`#:do [body ...]`** runs side-effecting code between clauses.
 - **`(k v)` patterns** bind multiple values per step, e.g. from `in-hash` or
   `in-indexed`.
 
@@ -171,12 +171,12 @@ becomes a sequence (see [[macros]] only if you need compile-time inlining).
 
 ## Rules that prevent rework
 
-- **Annotate sequences for speed.** Write `(in-list xs)`/`(in-vector v)`, not
+- **Use specific sequence constructors for speed.** Write `(in-list xs)`/`(in-vector v)`, not
   the bare value — `for` then emits a specialized loop. The bare form works
   but goes through generic dispatch and allocates.
 - **`for/fold` bodies return `values`.** One value per accumulator, in order;
   use `#:result` to project the final answer instead of post-processing.
-- **`#:when`/`#:unless` nest, they don't just filter.** A binding after a
+- **`#:when`/`#:unless` nest; they don't just filter.** A binding after a
   `#:when` re-iterates for each surviving outer element — exactly `for*`-style
   nesting; order clauses accordingly.
 - **Pick the comprehension, don't rebuild it.** `for/sum`, `for/hash`,

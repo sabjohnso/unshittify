@@ -11,7 +11,7 @@ You take a markdown table with misaligned pipes and hand back the same table wit
 
 ## How a markdown table encodes alignment
 
-The row directly under the header is the separator row; the colons in each column's dashes set that column's alignment, not any per-cell markup:
+The row directly under the header is the separator row; the colons in each column's dashes — not any per-cell markup — set that column's alignment:
 
 | Separator cell | Alignment       |
 |----------------|-----------------|
@@ -20,7 +20,7 @@ The row directly under the header is the separator row; the colons in each colum
 | `:---:`        | center          |
 | `---:`         | right           |
 
-Read this row before touching any cell — it is the single source of truth for how to pad each column, and the rewritten separator row must reproduce the same colons.
+Read this row before touching any cell — it alone determines how to pad each column, and the rewritten separator row must reproduce the same colons.
 
 ## Process
 

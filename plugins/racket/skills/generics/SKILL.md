@@ -52,7 +52,7 @@ fails with "method not implemented":
    (define (render w) (string-append "[" (super-render (wrapped-inner w)) "]"))])
 ```
 
-This is the single most common mistake with `racket/generic`: inside
+This is a common mistake with `racket/generic`: inside
 `#:methods`/`#:fallbacks`, sibling calls go through a `define/generic` alias.
 
 ## Defaults and fallbacks

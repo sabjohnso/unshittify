@@ -24,7 +24,7 @@ Goal: set the `"theme"` key in the **current project's** `.claude/settings.local
 
 - Read the existing file contents (if present) and parse as JSON. If the file exists but is empty or fails to parse, stop and tell the user the file has invalid JSON that needs manual fixing rather than overwriting it blindly.
 - Set (or overwrite) only the top-level `"theme"` key to the value from step 1. Preserve every other existing top-level key and nested structure untouched.
-- Write the merged object back to `.claude/settings.local.json` as pretty-printed JSON (2-space indent), with a trailing newline, keeping stable/deterministic key ordering (don't reorder unrelated existing keys).
+- Write the merged object back to `.claude/settings.local.json` as pretty-printed JSON (2-space indent), with a trailing newline, preserving the existing key order.
 
 ## 4. Confirm
 
