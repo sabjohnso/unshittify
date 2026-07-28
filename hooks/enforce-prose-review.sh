@@ -9,7 +9,10 @@ MIN_WORDS=50
 # (not substring): a near-miss like "communication:prose-reviewer-preview"
 # must not count. The name carries the plugin prefix exactly as the transcript
 # records it - the harness stores an agent's subagent_type as
-# communication:prose-reviewer, not the bare prose-reviewer.
+# communication:prose-reviewer, not the bare prose-reviewer. Kept in lockstep
+# with confirm-git-commit-push.sh's REVIEW_AGENT - the two hooks enforce the
+# same prose-review policy at different moments (turn end vs commit time), so
+# a rename must change both.
 REVIEW_AGENT="communication:prose-reviewer"
 
 # shellcheck source=lib/transcript.sh disable=SC1091
@@ -29,23 +32,20 @@ transcript=$(printf '%s' "$input" | jq -r '.transcript_path // empty')
 
 word_count=$(printf '%s' "$last_msg" | wc -w)
 
-if [ "$word_count" -lt "$MIN_WORDS" ] || [ -z "$transcript" ] || [ ! -f "$transcript" ]; then
+if [ "$word_count" -lt "$MIN_WORDS" ] || ! transcript_judgeable "$transcript"; then
   exit 0
 fi
 
 # No genuine user prompt (and no fallback marker) means there is no turn to
 # judge - stay silent. find_turn_start_line encapsulates the turn-boundary
-# rule, shared with enforce-code-review.sh so the two cannot drift.
-find_turn_start_line "$transcript" >/dev/null || exit 0
+# rule, shared with the other hooks so it cannot drift; the boundary is
+# computed once and reused for the invocation check below.
+start_line=$(find_turn_start_line "$transcript") || exit 0
 
-# Count exact-name invocations of the review agent among this turn's tool_use
-# events. grep -Fxc is a whole-line match, so a near-miss like
-# "communication:prose-reviewer-preview" does not satisfy the requirement.
-reviewed=$(tool_use_events_since_turn_start "$transcript" \
-  | jq -r '.subagent_type // empty' 2>/dev/null \
-  | grep -Fxc "$REVIEW_AGENT" || true)
-
-if [ "$reviewed" -eq 0 ]; then
+# agent_invoked_since_line encapsulates the exact-name match rule (whole-name
+# equality, so a near-miss like "communication:prose-reviewer-preview" does
+# not satisfy the requirement), shared with confirm-git-commit-push.sh.
+if ! agent_invoked_since_line "$transcript" "$start_line" "$REVIEW_AGENT"; then
   jq -n --arg reason "This response is substantial prose (${word_count} words) and the ${REVIEW_AGENT} agent has not been invoked on it this turn. Delegate the draft to the ${REVIEW_AGENT} subagent, fix any flagged issues, and send the corrected text instead." \
     '{decision:"block", reason:$reason}'
 fi

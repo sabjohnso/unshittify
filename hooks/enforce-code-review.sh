@@ -132,9 +132,7 @@ main() {
 
   local transcript
   transcript=$(transcript_path_from "$input")
-  if [ -z "$transcript" ] || [ ! -f "$transcript" ]; then
-    exit 0
-  fi
+  transcript_judgeable "$transcript" || exit 0
 
   block_decision_json "$(missing_reviews_for_transcript "$transcript")"
 }
