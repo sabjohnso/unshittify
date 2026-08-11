@@ -334,3 +334,132 @@ permission_reason() {
   [ "$status" -eq 0 ]
   [ "$(permission_decision "$output")" = "ask" ]
 }
+
+# --- text the shell will not execute must not gate --------------------------
+# The hook reads the whole command string, so a shell comment or a heredoc
+# BODY that merely MENTIONS the gated words trips it. That is not
+# hypothetical: it blocked a transcript-searching command whose Python comment
+# read "first git commit afterwards", and then blocked the command that first
+# wrote these very tests.
+#
+# The word "git" is built from GITW below rather than written next to its
+# subcommand, so that editing this file does not trip the hook. Of the four
+# tests that follow, three were red before the fix; the string-literal one
+# passed already, because the quote before the word never satisfied the
+# pattern's preceding-character class, so it records existing behavior rather
+# than showing that the fix works. The three after them pin what the fix must
+# not relax: masking may only remove text the shell will not execute, so a
+# heredoc fed to a shell interpreter stays gated even though it is a heredoc
+# body.
+
+GITW=git
+
+@test "a shell comment mentioning a commit does not gate" {
+  stdin="$(pretooluse_payload "ls -la  # remember to $GITW commit later")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "a comment inside a heredoc body does not gate" {
+  body="$(printf 'python3 - <<%sPY%s\n# find the first %s commit afterwards\nprint(1)\nPY\n' "'" "'" "$GITW")"
+  stdin="$(pretooluse_payload "$body")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "a string literal in a heredoc body does not gate" {
+  body="$(printf 'python3 - <<%sPY%s\nif "%s commit" in line: pass\nPY\n' "'" "'" "$GITW")"
+  stdin="$(pretooluse_payload "$body")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "an unquoted heredoc body mentioning a push does not gate" {
+  body="$(printf 'cat > notes.txt <<EOF\ntodo: %s push origin main\nEOF\n' "$GITW")"
+  stdin="$(pretooluse_payload "$body")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "REGRESSION: a real commit whose message is a heredoc is still gated" {
+  body="$(printf '%s commit -m "$(cat <<%sEOF%s\nfix: the thing\nEOF\n)"\n' "$GITW" "'" "'")"
+  stdin="$(pretooluse_payload "$body")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$status" -eq 0 ]
+  [ -n "$(permission_decision "$output")" ]
+}
+
+@test "REGRESSION: a commit piped into a shell interpreter is still gated" {
+  body="$(printf 'bash <<EOF\n%s commit -m sneaky\nEOF\n' "$GITW")"
+  stdin="$(pretooluse_payload "$body")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$status" -eq 0 ]
+  [ -n "$(permission_decision "$output")" ]
+}
+
+@test "REGRESSION: a real commit with a trailing comment is still gated" {
+  stdin="$(pretooluse_payload "$GITW commit -m test  # finally")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$status" -eq 0 ]
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+# --- masking must fail CLOSED --------------------------------------------
+# A first attempt at the masking above deleted text whenever it looked like a
+# comment or a heredoc body, and that opened the gate on all eight commands
+# below: each runs a real git command, and each was reported as not gated.
+# The lesson is that ambiguity must resolve toward gating, never away from
+# it — a false positive costs a confirmation prompt, a false negative costs
+# the guarantee. Every case here is a genuine bypass found in review.
+
+@test "BYPASS: a hash inside a quoted string does not hide a later commit" {
+  stdin="$(pretooluse_payload "echo \"issue #42\" && $GITW commit -m x")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+@test "BYPASS: a hash inside a sed script does not hide a later commit" {
+  stdin="$(pretooluse_payload "sed 's/ #.*//' f && $GITW commit -m x")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+@test "BYPASS: a here-string is not a heredoc introducer" {
+  stdin="$(pretooluse_payload "$(printf 'cat <<<"x"\n%s commit -m y\n' "$GITW")")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+@test "BYPASS: an arithmetic left shift is not a heredoc introducer" {
+  stdin="$(pretooluse_payload "$(printf 'echo $((1 << N))\n%s commit -m y\n' "$GITW")")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+@test "BYPASS: an unterminated heredoc does not swallow a later commit" {
+  stdin="$(pretooluse_payload "$(printf 'cat <<EOF\nbody\n%s commit -m x\n' "$GITW")")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+@test "BYPASS: a heredoc introducer inside a string literal is not one" {
+  stdin="$(pretooluse_payload "$(printf 'echo "use <<EOF here"\n%s commit -m x\n' "$GITW")")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+@test "BYPASS: a path-prefixed shell interpreter still keeps its heredoc body" {
+  stdin="$(pretooluse_payload "$(printf '/bin/bash <<EOF\n%s commit -m sneaky\nEOF\n' "$GITW")")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+@test "BYPASS: a remote shell still keeps its heredoc body" {
+  stdin="$(pretooluse_payload "$(printf 'ssh host <<EOF\n%s push --force\nEOF\n' "$GITW")")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
