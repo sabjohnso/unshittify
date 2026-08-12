@@ -42,11 +42,16 @@ transcript_path_from() {
 # code_was_edited <events-jsonl>
 #
 # True (exit 0) if any event's tool name is Edit/Write/NotebookEdit.
+#
+# The names are captured into a variable rather than piped straight into
+# grep. Piping would fail open on a long turn: grep -q exits at the first
+# match, jq upstream is killed by SIGPIPE (141), and `set -o pipefail` turns
+# that into a failing pipeline - reporting "no code was edited" for a turn
+# that did edit code, which silently opens the review gate.
 code_was_edited() {
-  local events="$1"
-  printf '%s\n' "$events" \
-    | jq -r '.name // empty' \
-    | grep -qE "$CODE_CHANGE_TOOL_NAMES"
+  local events="$1" names
+  names=$(printf '%s\n' "$events" | jq -r '.name // empty')
+  grep -qE "$CODE_CHANGE_TOOL_NAMES" <<<"$names"
 }
 
 # review_satisfied <events-jsonl> <skill-name> <agent-name>

@@ -15,6 +15,12 @@ set -euo pipefail
 # rename must change both.
 REVIEW_AGENT="communication:prose-reviewer"
 
+# Commands that can execute text handed to them, so a heredoc body near one
+# may be executed rather than merely written. Add a name here to widen the
+# masker's refusal - no other code changes needed. Matched as a whole word,
+# optionally path-prefixed (/bin/bash counts).
+SHELL_FEEDS="bash sh zsh ksh dash fish csh tcsh busybox eval source ssh su sudo env xargs parallel"
+
 # shellcheck source=lib/transcript.sh disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/lib/transcript.sh"
 
@@ -34,67 +40,146 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib/transcript.sh"
 #
 # The rules, and what each refuses to touch:
 #
-#   comments      Stripped only on a line containing NO quote character. A
-#                 "#" inside quotes is not a comment, and deciding which is
-#                 which needs a lexer, so a line carrying any quote is left
-#                 whole.
-#   heredocs      A body is removed only when its introducer is a real <<
-#                 or <<- (never <<<, never a << inside an arithmetic
-#                 expansion) AND a matching terminator line exists. An
-#                 unterminated or merely apparent heredoc masks nothing, so
-#                 a << inside a string literal cannot swallow what follows.
-#   shell feeds   A heredoc whose introducer names a shell or a remote shell
-#                 keeps its body, because that body IS executed. The name may
-#                 carry a path, so /bin/bash counts.
+#   comments      A "#" starts a comment only outside quotes and at a word
+#                 boundary. Quote state is tracked character by character AND
+#                 carried across lines, since a shell string may span them,
+#                 and backslash escapes are honoured (a \" inside a double
+#                 quoted string does not close it). Getting either wrong
+#                 fabricates a comment that deletes a real command.
+#   heredocs      A body is removed only when its introducer is a << or <<-
+#                 found OUTSIDE quotes and not backslash-escaped, with the
+#                 delimiter adjacent to it (<<EOF, <<-EOF, <<'EOF', <<"EOF" -
+#                 never << EOF with a space), and a matching terminator line
+#                 AFTER it exists. Adjacency is what separates a heredoc from
+#                 a here-string (<<<), an arithmetic shift (1 << N), and a
+#                 C++ stream insertion.
+#   expansions    An UNQUOTED delimiter (<<EOF) means the shell expands the
+#                 body, so a body containing $(, ` or ${ keeps every line -
+#                 the shell really does run what is in there. A quoted
+#                 delimiter (<<'EOF') suppresses expansion, so its body is
+#                 inert data.
+#   shell feeds   Nothing is masked when the command anywhere names a shell
+#                 interpreter (SHELL_FEEDS below), pipes into one, or calls
+#                 eval: the body may be executed somewhere other than its
+#                 own introducer line, as in "{ cat <<EOF ... } | bash" or a
+#                 heredoc captured into a variable and evaled later.
+#   indirection   A command word that is a variable ($SHELL <<EOF) could name
+#                 any interpreter, so such a line masks nothing.
+#
+# ACCEPTED HOLE, stated plainly rather than papered over: a heredoc fed to a
+# NON-shell interpreter (python3, perl, node, ruby) is masked, yet that
+# interpreter can run git itself - python3 - <<'PY' calling subprocess is a
+# real bypass. Closing it means adding those names to SHELL_FEEDS, which
+# would defeat the masker's whole purpose, since a python heredoc mentioning
+# a commit in a comment is the case that motivated it. The fail-closed claim
+# above is therefore a claim about SHELLS, not about every interpreter.
 #
 # The introducer and terminator lines are always printed. Keeping the
 # introducer preserves this repository's own commit form, where the git
-# invocation sits on the introducer; keeping the terminator makes masking
-# idempotent, since a body already removed leaves a heredoc whose terminator
-# immediately follows.
+# invocation sits on the introducer. An unterminated introducer masks
+# nothing AND suppresses comment stripping for the rest of the input, so
+# that re-masking the output cannot turn a commented terminator lookalike
+# ("EOF # done", which bash does not accept as a terminator) into a real
+# one.
 mask_nonexecuting() {
-  printf '%s' "$1" | awk '
+  printf '%s' "$1" | awk -v feeds="$SHELL_FEEDS" '
     function trim(s) { gsub(/^[[:space:]]+|[[:space:]]+$/, "", s); return s }
-    function comment_stripped(l) {
-      if (l ~ QUOTES) return l
-      sub(/(^|[[:space:]])#.*$/, "", l)
-      return l
+
+    # scan_line(l, q0): walk one line from entry quote state q0, honouring
+    # backslash escapes. Records, in globals: CUT (index of the "#" that
+    # starts a comment, or 0), LT (index of an unquoted, unescaped "<<", or
+    # 0), and returns the quote state the NEXT line inherits. One scan
+    # answers both questions, so no character is examined twice.
+    function scan_line(l, q0,   i, c, n, q) {
+      q = q0; CUT = 0; LT = 0; n = length(l)
+      for (i = 1; i <= n; i++) {
+        c = substr(l, i, 1)
+        if (c == "\\" && q != SQ) { i++; continue }   # escape; literal in ''
+        if (q != "") { if (c == q) q = ""; continue }
+        if (c == SQ || c == DQ) { q = c; continue }
+        if (c == "#" && !CUT && (i == 1 || substr(l, i - 1, 1) ~ /[[:space:];&|(]/)) CUT = i
+        if (c == "<" && !LT && !CUT && substr(l, i + 1, 1) == "<") { LT = i; i++ }
+      }
+      return q
     }
-    function delim_of(l,   tok) {
-      if (l ~ /\$\(\(/) return ""
-      if (!match(l, INTRO)) return ""
-      tok = substr(l, RSTART, RLENGTH)
-      sub(/^<<-?[[:space:]]*/, "", tok)
-      gsub(QUOTES, "", tok)
-      return tok
+
+    # The visible-code part of a line: everything before a real comment.
+    function code_of(l, q0) { scan_line(l, q0); return CUT ? substr(l, 1, CUT - 1) : l }
+
+    # The heredoc delimiter introduced on this line, or "". Sets DELIM_QUOTED.
+    function intro_delim(l, q0,   rest) {
+      DELIM_QUOTED = 0
+      if (l ~ /\(\(/) return ""                          # arithmetic, both forms
+      if (l ~ /(^|[|&;(])[[:space:]]*\$/) return ""      # interpreter via variable
+      scan_line(l, q0)
+      if (!LT) return ""
+      if (substr(l, LT + 2, 1) == "<") return ""         # here-string
+      rest = substr(l, LT + 2)
+      sub(/^-/, "", rest)
+      if (match(rest, "^" SQ "[^" SQ "]*" SQ) || match(rest, "^" DQ "[^" DQ "]*" DQ)) {
+        DELIM_QUOTED = 1
+        return substr(rest, RSTART + 1, RLENGTH - 2)
+      }
+      if (match(rest, /^[A-Za-z_][A-Za-z0-9_]*/)) return substr(rest, RSTART, RLENGTH)
+      return ""                                          # << EOF, or junk
     }
+
+    function body_expands(from, to,   k) {
+      for (k = from; k <= to; k++)
+        if (line[k] ~ /\$\(/ || line[k] ~ /\$\{/ || index(line[k], BQ)) return 1
+      return 0
+    }
+
     BEGIN {
-      q      = sprintf("%c", 39)
-      QUOTES = "[\"" q "]"
-      INTRO  = "<<-?[[:space:]]*(\"[^\"]*\"|" q "[^" q "]*" q "|[A-Za-z_][A-Za-z0-9_]*)"
-      FEED   = "(^|[[:space:];&|(])([^[:space:];&|(]*/)?(bash|sh|zsh|ksh|dash|eval|source|ssh)([[:space:]]|$)"
+      SQ = sprintf("%c", 39); DQ = "\""; BQ = sprintf("%c", 96)
+      gsub(/[[:space:]]+/, "|", feeds)
+      FEED = "(^|[[:space:];&|(])([^[:space:];&|(]*/)?(" feeds ")([[:space:]<;&|)]|$)"
     }
     { line[++n] = $0 }
     END {
-      for (i = 1; i <= n; i++) {
-        s = comment_stripped(line[i])
-        d = delim_of(s)
-        if (d == "" || s ~ FEED) continue
-        for (j = i + 1; j <= n; j++) if (trim(line[j]) == d) break
-        if (j > n) continue                      # unterminated: mask nothing
-        for (k = i + 1; k < j; k++) drop[k] = 1  # the body, not the terminator
-        i = j
+      # One pass: entry quote state per line, and the visible code of each,
+      # both computed once and reused by every later pass.
+      q = ""
+      for (i = 1; i <= n; i++) { entry[i] = q; code[i] = code_of(line[i], q); q = scan_line(line[i], q) }
+
+      # A shell interpreter or eval anywhere means a body may be executed
+      # away from its introducer; mask no bodies at all. The guard reads the
+      # whole line, not just its visible code: a fabricated comment must not
+      # be able to hide the interpreter from this check.
+      for (i = 1; i <= n; i++)
+        if (code[i] ~ FEED || line[i] ~ FEED) { feeds_present = 1; break }
+
+      stop_stripping = n + 1
+      if (!feeds_present) {
+        # Occurrence lists per delimiter, so "the first terminator AFTER this
+        # introducer" is a cursor step rather than a scan. Two heredocs
+        # sharing a delimiter - the commonest multi-heredoc shape - need the
+        # occurrence after i, not the globally first one.
+        for (i = 1; i <= n; i++) { t = trim(line[i]); occ[t, ++seen[t]] = i }
+
+        for (i = 1; i <= n; i++) {
+          d = intro_delim(code[i], entry[i])
+          if (d == "") continue
+          j = 0
+          while (++cur[d] <= seen[d]) if (occ[d, cur[d]] > i) { j = occ[d, cur[d]]; break }
+          if (!j) { stop_stripping = i + 1; break }        # unterminated
+          if (!DELIM_QUOTED && body_expands(i + 1, j - 1)) continue
+          for (k = i + 1; k < j; k++) drop[k] = 1          # body, not terminator
+          i = j
+        }
       }
-      for (i = 1; i <= n; i++) if (!(i in drop)) print comment_stripped(line[i])
+      for (i = 1; i <= n; i++)
+        if (!(i in drop)) print (i < stop_stripping) ? code[i] : line[i]
     }
   '
 }
 
-# is_git_subcommand <command-string> <subcommand>
+# is_git_subcommand <masked-command-string> <subcommand>
 #
 # Succeeds when <subcommand> appears as a standalone token after a git
-# invocation within the same shell-separator segment, in the part of the
-# command the shell will execute (mask_nonexecuting above). Token matching on
+# invocation within the same shell-separator segment. The argument is
+# already-masked text (main calls mask_nonexecuting once), so this is a
+# pure matcher over what the shell will execute. Token matching on
 # both words, not substring: a ref such as fix-commit-message or a remote
 # named commit-fixes must never count as a commit, and a command like "legit"
 # is not git (though a path-prefixed /usr/bin/git is). The subcommand token
@@ -102,9 +187,14 @@ mask_nonexecuting() {
 # end of the command. Matching is per line, so a backslash-continuation
 # between git and its subcommand escapes the gate - accepted, since real
 # commit commands (including the heredoc form) keep the two words on one line.
+#
+# The text is fed to grep as a here-string rather than through a pipe.
+# Piping would fail open on a large command: grep -q exits at the first
+# match, the writer upstream is killed by SIGPIPE (141), and `set -o
+# pipefail` turns that into a failing pipeline - reporting "no match" for a
+# command that does match.
 is_git_subcommand() {
-  mask_nonexecuting "$1" |
-    grep -Eq "(^|[[:space:];&|(/])git[^&|;]*[[:space:]]$2([[:space:]&|;><)]|\$)"
+  grep -Eq "(^|[[:space:];&|(/\`])git[^&|;]*[[:space:]]$2([[:space:]&|;><)\`]|\$)" <<<"$1"
 }
 
 ask_confirmation() {
@@ -146,6 +236,16 @@ main() {
   local input cmd transcript
   input=$(cat)
   cmd=$(printf '%s' "$input" | jq -r '.tool_input.command // empty')
+
+  # Masking only ever deletes characters, so a command with no "git" in it
+  # cannot acquire one; skipping both the mask and the match here keeps the
+  # awk program off the latency path of every non-git Bash call. Masking
+  # once, rather than inside each is_git_subcommand call, halves the rest.
+  case $cmd in
+    *git*) ;;
+    *) return 0 ;;
+  esac
+  cmd=$(mask_nonexecuting "$cmd")
 
   if is_git_subcommand "$cmd" commit; then
     transcript=$(printf '%s' "$input" | jq -r '.transcript_path // empty')

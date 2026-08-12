@@ -463,3 +463,160 @@ GITW=git
   run_hook "$SCRIPT" "$stdin"
   [ "$(permission_decision "$output")" = "ask" ]
 }
+
+# --- SIGPIPE: the matcher must not report "no match" merely because grep -q
+# --- exited before the producer finished writing. Under `set -o pipefail` a
+# --- producer killed by SIGPIPE (141) fails the whole pipeline, so a large
+# --- command silently escapes the gate.
+
+@test "BYPASS: a large command containing a commit is still gated" {
+  # The commit is on line 1 so the matcher finds it immediately; the padding
+  # keeps the producer writing well past that point. It is executable text,
+  # not a comment, so masking cannot shrink it away.
+  padding="$(yes 'echo yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy' | head -2000)"
+  stdin="$(pretooluse_payload "$(printf '%s commit -m x\n%s\n' "$GITW" "$padding")")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$status" -eq 0 ]
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+# --- BYPASS classes found by the second review round. Each command below
+# --- runs a real git command, verified with an execution oracle, and each
+# --- was reported as not gated before the fix. The masker's fail-closed
+# --- claim is only true if every one of these gates.
+
+@test "BYPASS: a terminated here-string does not mask what follows" {
+  stdin="$(pretooluse_payload "$(printf 'cat <<<"EOF"\n%s commit -m x\nEOF\n' "$GITW")")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+@test "BYPASS: an unquoted heredoc body expands command substitution" {
+  stdin="$(pretooluse_payload "$(printf 'cat > f <<EOF\n$(%s push --force)\nEOF\n' "$GITW")")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+@test "BYPASS: an unquoted heredoc body expands a backtick substitution" {
+  stdin="$(pretooluse_payload "$(printf 'cat > f <<EOF\n`%s push --force`\nEOF\n' "$GITW")")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+@test "BYPASS: a shell feed with no space before the redirect keeps its body" {
+  stdin="$(pretooluse_payload "$(printf 'bash<<EOF\n%s commit -m sneaky\nEOF\n' "$GITW")")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+@test "BYPASS: an interpreter named by a variable keeps its body" {
+  stdin="$(pretooluse_payload "$(printf '$SHELL <<EOF\n%s commit -m x\nEOF\n' "$GITW")")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+@test "BYPASS: a heredoc piped into a shell after its terminator keeps its body" {
+  stdin="$(pretooluse_payload "$(printf '{ cat <<EOF\n%s commit -m x\nEOF\n} | bash\n' "$GITW")")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+@test "BYPASS: a heredoc captured and evaluated later keeps its body" {
+  stdin="$(pretooluse_payload "$(printf 'cmds=$(cat <<EOF\n%s commit -m x\nEOF\n)\neval "$cmds"\n' "$GITW")")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+@test "BYPASS: a quoted introducer lookalike with a terminator masks nothing" {
+  stdin="$(pretooluse_payload "$(printf 'grep -n "cat <<EOF" notes\n%s commit -m x\nEOF\n' "$GITW")")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+@test "BYPASS: an introducer lookalike in a comment on a quoted line masks nothing" {
+  stdin="$(pretooluse_payload "$(printf 'echo "hi" # like cat <<EOF\n%s commit -m x\nEOF\n' "$GITW")")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+@test "BYPASS: an arithmetic command shift is not a heredoc introducer" {
+  stdin="$(pretooluse_payload "$(printf 'if (( 1 << N )); then :; fi\n%s commit -m x\nN\n' "$GITW")")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+@test "BYPASS: a C++ shift written to a file is not a heredoc introducer" {
+  stdin="$(pretooluse_payload "$(printf 'echo std::cout << x > a.cpp\n%s commit -m y\nx\n' "$GITW")")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+@test "BYPASS: su keeps its heredoc body" {
+  stdin="$(pretooluse_payload "$(printf 'su user <<EOF\n%s commit -m x\nEOF\n' "$GITW")")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+@test "BYPASS: sudo -s keeps its heredoc body" {
+  stdin="$(pretooluse_payload "$(printf 'sudo -s <<EOF\n%s commit -m x\nEOF\n' "$GITW")")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+# --- idempotence: masking already-masked text must decide the same. A
+# --- terminator line carrying a trailing comment is not a terminator to
+# --- bash, so the heredoc is unterminated and nothing may be masked - and
+# --- re-masking the output must not turn it into a terminator.
+
+@test "BYPASS: a commented terminator lookalike does not mask on re-application" {
+  stdin="$(pretooluse_payload "$(printf 'cat <<EOF\n%s commit -m x\nEOF # done\n' "$GITW")")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+# --- Third review round. The quote scanner tracked quote state per line and
+# --- knew nothing of backslash escapes, so text bash keeps inside a string
+# --- was read as being outside one - fabricating comments and heredoc
+# --- introducers that swallow real commands. Each case below was confirmed
+# --- fail-open with an execution oracle.
+
+@test "BYPASS: an escaped quote inside a string does not hide a later commit" {
+  stdin="$(pretooluse_payload "$(printf 'echo "a\\" #b" && %s commit -m x' "$GITW")")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+@test "BYPASS: an escaped quote does not fabricate a heredoc introducer" {
+  stdin="$(pretooluse_payload "$(printf 'echo "a\\" <<EOF"\n%s commit -m x\nEOF\n' "$GITW")")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+@test "BYPASS: an escaped redirect is not a heredoc introducer" {
+  stdin="$(pretooluse_payload "$(printf 'echo \\<<EOF\n%s commit -m x\nEOF\n' "$GITW")")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+@test "BYPASS: a quote spanning lines does not fabricate a heredoc introducer" {
+  stdin="$(pretooluse_payload "$(printf 'echo "\ncat <<EOF\n"\n%s commit -m x\nEOF\n' "$GITW")")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+@test "BYPASS: a fabricated comment does not hide a shell feed from the guard" {
+  stdin="$(pretooluse_payload "$(printf 'cat <<EOF | { echo "z\\" #" ; bash ; }\n%s commit -m x\nEOF\n' "$GITW")")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+# --- Two heredocs sharing a delimiter is the commonest multi-heredoc shape.
+# --- Masking must handle the second one, or writing a file whose body merely
+# --- mentions a commit reaches the commit branch and is DENIED, not prompted.
+
+@test "two heredocs sharing a delimiter: the second body is masked too" {
+  stdin="$(pretooluse_payload "$(printf 'cat <<EOF\nhello\nEOF\ncat > f <<EOF\n%s commit -m x\nEOF\n' "$GITW")")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}

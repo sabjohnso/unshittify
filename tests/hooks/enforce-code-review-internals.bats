@@ -62,3 +62,21 @@ setup() {
   [ "$status" -eq 1 ]
   [ -z "$output" ]
 }
+
+# --- SIGPIPE: a matcher fed by a pipe must not report "no match" merely
+# --- because the reader exited before the writer finished. Under
+# --- `set -o pipefail`, `producer | grep -q` takes the reader's early exit
+# --- as SIGPIPE (141) on the producer and fails the whole pipeline, so a
+# --- long event list silently opens the gate.
+
+@test "code_was_edited detects an Edit at the head of a very long event list" {
+  # Shaped events ({name, skill, subagent_type}), as
+  # tool_use_events_since_turn_start emits them - not raw transcript lines.
+  # seq/awk rather than `yes | head`: the latter's own SIGPIPE would fail the
+  # fixture's command substitution under bats' pipefail, masking the result.
+  events="$( { printf '%s\n' '{"name":"Edit","skill":null,"subagent_type":null}'
+               seq 1 20000 | awk '{print "{\"name\":\"Read\",\"skill\":null,\"subagent_type\":null}"}'
+             } )"
+  run code_was_edited "$events"
+  [ "$status" -eq 0 ]
+}
