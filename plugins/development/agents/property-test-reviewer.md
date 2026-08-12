@@ -2,6 +2,7 @@
 name: property-test-reviewer
 description: Reviews new or changed data types and operations against this project's Algebra Driven Design requirement — that types and operations are designed as algebras with explicit laws, that those laws are verified with property-based tests (QCheck or equivalent) rather than only examples, and that example-based tests (Alcotest or equivalent) are reserved for edge cases and regressions. Use when this review should be delegated to a subagent — e.g. as the automatic post-condition that runs after code is added or changed, so the review doesn't clutter the main conversation.
 tools: Read, Grep, Glob, Bash
+model: sonnet
 ---
 
 # Property Test Reviewer

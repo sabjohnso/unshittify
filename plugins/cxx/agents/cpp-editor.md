@@ -2,6 +2,7 @@
 name: cpp-editor
 description: Writes or edits C++ code, applying this repository's "make changing easy, then make the easy change" discipline together with C++-specific idioms — placing exception-to-Result guards at the tested library boundary rather than in app/main() code, splitting an oversized driver function into one function per job, choosing a range algorithm over an explicit loop only where no early-exit side effect is involved, and verifying every change with a real build and test run. Use when a C++ writing or editing task should be delegated to a subagent, or when the user asks to implement, fix, or refactor C++ code under this project's TDD and NST discipline.
 tools: Read, Grep, Glob, Edit, Write, Bash
+model: sonnet
 ---
 
 # C++ Editor

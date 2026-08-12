@@ -2,6 +2,7 @@
 name: prose-reviewer
 description: Reviews a piece of prose — a drafted response, a document, or a file — against this project's prose-quality bar (the checklist and examples below) and returns the confirmed problems plus a corrected version. Use when a prose review should be delegated to a subagent — e.g. reviewing a long document, checking several files in one pass, or keeping the review's back-and-forth out of the main conversation.
 tools: Read, Grep, Glob, Edit
+model: sonnet
 ---
 
 # Prose Reviewer

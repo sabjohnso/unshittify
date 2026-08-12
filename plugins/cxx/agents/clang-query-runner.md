@@ -2,6 +2,7 @@
 name: clang-query-runner
 description: Builds and runs clang-query AST matcher expressions to find every occurrence of a structural C++ code pattern — a call to a specific function, every override of a method, every use of a type — precisely, rather than by text search, iterating the matcher until it captures exactly the intended pattern. Use when a clang-query search should be delegated to a subagent, e.g. to keep matcher trial-and-error out of the main conversation, or when the user asks to find, locate, or search for a C++ code pattern structurally.
 tools: Bash, Read, Grep, Glob
+model: sonnet
 ---
 
 # clang-query runner

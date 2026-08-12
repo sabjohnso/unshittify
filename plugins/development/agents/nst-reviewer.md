@@ -2,6 +2,7 @@
 name: nst-reviewer
 description: Reviews code — a diff, a file, or the working tree's pending changes — against this project's Normalized Systems Theory (NST) principles for evolvable code, and reports each violation with its principle and a concrete fix. Use when an NST review should be delegated to a subagent — e.g. as the automatic post-condition that runs after code is added or changed, so the review doesn't clutter the main conversation, or to review several files in one pass.
 tools: Read, Grep, Glob, Bash
+model: sonnet
 ---
 
 # NST Reviewer

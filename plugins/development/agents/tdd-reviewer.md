@@ -2,6 +2,7 @@
 name: tdd-reviewer
 description: Reviews a diff, file, or commit range against this project's strict TDD (red-green-refactor) requirement — that a failing test preceded any implementation, that the implementation is the minimum the tests demand, and that refactors did not change what the tests assert. Use when a TDD-compliance review should be delegated to a subagent — e.g. as the automatic post-condition that runs after code is added or changed, so the review doesn't clutter the main conversation.
 tools: Read, Grep, Glob, Bash
+model: sonnet
 ---
 
 # TDD Reviewer

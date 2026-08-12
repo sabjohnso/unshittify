@@ -2,6 +2,7 @@
 name: efficiency-reviewer
 description: Reviews code — a diff, a file, or the working tree's pending changes — for wasted computation that costs the user time (superlinear work where linear suffices, redundant recomputation, repeated or avoidable I/O, quadratic rebuilding, needless materialization, missing early exits, wrong data structures), and reports each with its cost class and a concrete fix. Use when an efficiency review should be delegated to a subagent — e.g. as the automatic post-condition that runs after code is added or changed, so the review doesn't clutter the main conversation, or to review several files in one pass.
 tools: Read, Grep, Glob, Bash
+model: sonnet
 ---
 
 # Efficiency Reviewer

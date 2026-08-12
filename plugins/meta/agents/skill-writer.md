@@ -2,6 +2,7 @@
 name: skill-writer
 description: Writes a new Claude Code skill — frontmatter, body, and directory placement — for a plugin in this repository, following the house style used across plugins/*/skills. Use when skill authoring should be delegated to a subagent, e.g. scaffolding several skills in one pass, or keeping a long drafting session out of the main conversation.
 tools: Read, Write, Glob, Grep, Bash
+model: sonnet
 ---
 
 # Skill Writer
