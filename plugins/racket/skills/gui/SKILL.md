@@ -10,6 +10,9 @@ with `send`. You build a tree — a `frame%` holding panels holding controls —
 wire callbacks, and show it. Require `racket/gui/base` (or `racket/gui`,
 which adds `racket/draw` and the framework).
 
+For the class hierarchy and the signatures of every window, container, and
+control class, read `reference.md` in this skill directory.
+
 ```racket
 (require racket/gui/base racket/class)
 

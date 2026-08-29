@@ -9,6 +9,10 @@ composition through mixins and traits. Classes and objects are first-class
 values: a class is an expression, `new` builds an object, and `send`
 dispatches a method. This is the model `racket/gui` is built on.
 
+For the exact grammar of `class`, the `define/` method family, and the
+interface and composition forms, read `reference.md` in this skill
+directory.
+
 Reach for `racket/class` when you need **stateful objects with behavior** or
 must interoperate with a class-based library (notably `racket/gui`). For
 plain data with operations, a [[structs]] + [[generics]] design is usually

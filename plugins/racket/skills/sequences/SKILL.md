@@ -1,5 +1,5 @@
 ---
-description: Iterate and build data with Racket for-loops and sequences — the for family (for/list, for/vector, for/hash, for/fold, for/sum), iteration clauses (#:when, #:break, #:final, parallel bindings), sequence constructors (in-range, in-list, in-vector, in-hash, in-naturals), racket/sequence operations, and the three ways to define new sequences (prop:sequence, make-do-sequence, define-sequence-syntax). Use when writing a loop or comprehension, choosing a sequence constructor, or making a value iterable.
+description: "Iterate and build data with Racket for-loops and sequences — the for family (for/list, for/vector, for/hash, for/fold, for/sum), iteration clauses (#:when, #:break, #:final, parallel bindings), sequence constructors (in-range, in-list, in-vector, in-hash, in-naturals), racket/sequence operations, and the three ways to define new sequences (prop:sequence, make-do-sequence, define-sequence-syntax). Use when writing a loop or comprehension, choosing a sequence constructor, or making a value iterable."
 ---
 
 # For-loops and Sequences
@@ -9,6 +9,10 @@ element. The plain `for` runs its body for effect; the `for/…`
 comprehensions collect the body's results into a list, vector, hash, or fold.
 Sequences are the common iteration protocol — lists, vectors, strings,
 hashes, ranges, ports, and your own types all flow through the same `for`.
+
+For the exact `for`-clause grammar, the full sequence-constructor list, and
+the three ways to define a sequence, read `reference.md` in this skill
+directory.
 
 ```racket
 (for ([x (in-list '(a b c))]) (displayln x))          ; effect

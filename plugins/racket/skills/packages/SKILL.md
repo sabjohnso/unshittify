@@ -6,6 +6,9 @@ description: Build, develop, and distribute Racket code with raco and packages â
 
 Two layers organize Racket code for reuse:
 
+For the full `raco` subcommand list and every `info.rkt` manifest field,
+read `reference.md` in this skill directory.
+
 - A **collection** is a directory of modules requirable by a stable path:
   files under a `foo/` collection are reached as `(require foo/bar)` â€” the
   collection name *is* the require path (see [[modules]]).

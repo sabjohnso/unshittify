@@ -10,6 +10,9 @@ idiomatic home for tests is a `test` submodule, run by `raco test` — no
 separate test file, and the tests can see the module's private bindings (see
 [[modules]]).
 
+For the complete check vocabulary and the test-grouping, runner, and custom-
+check signatures, read `reference.md` in this skill directory.
+
 ```racket
 #lang racket/base
 (provide double)

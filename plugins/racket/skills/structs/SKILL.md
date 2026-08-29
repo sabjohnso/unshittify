@@ -1,5 +1,5 @@
 ---
-description: Define and use Racket structs — the struct form and its options (#:transparent, #:mutable, #:prefab, #:guard, #:auto, #:constructor-name), inheritance and subtype predicates, struct-copy functional update, and generic interfaces via #:methods (gen:custom-write, gen:equal+hash, prop:procedure). Use when defining a struct, choosing transparent/opaque/prefab, controlling construction, customizing printing or equality, or deciding struct vs list/hash.
+description: "Define and use Racket structs — the struct form and its options (#:transparent, #:mutable, #:prefab, #:guard, #:auto, #:constructor-name), inheritance and subtype predicates, struct-copy functional update, and generic interfaces via #:methods (gen:custom-write, gen:equal+hash, prop:procedure). Use when defining a struct, choosing transparent/opaque/prefab, controlling construction, customizing printing or equality, or deciding struct vs list/hash."
 ---
 
 # Racket Structs
@@ -7,6 +7,9 @@ description: Define and use Racket structs — the struct form and its options (
 `struct` defines a new compound data type. One declaration generates a
 constructor, a type predicate, and an accessor per field (plus setters when
 mutable). It is built into `racket/base` — no require needed.
+
+For the exact `struct` grammar, every keyword option, and the generated
+bindings, read `reference.md` in this skill directory.
 
 ```racket
 (struct posn (x y) #:transparent)

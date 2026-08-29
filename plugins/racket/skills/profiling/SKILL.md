@@ -10,6 +10,9 @@ matters and leave the rest simple. Work from cheap to detailed: `time` for a
 single number, the statistical `profile` for a breakdown, `contract-profile`
 when contracts are suspect.
 
+For the profiler's exact signatures, the renderer options, and the timing
+and memory primitives, read `reference.md` in this skill directory.
+
 ## Quick timing
 
 `time` prints cpu / real / gc milliseconds for one expression and returns its

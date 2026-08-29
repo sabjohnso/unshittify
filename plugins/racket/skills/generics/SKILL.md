@@ -1,5 +1,5 @@
 ---
-description: Define generic interfaces in Racket with racket/generic — define-generics to declare a set of methods, implement them per type via #:methods gen:NAME, provide defaults/fallbacks (#:defaults, #:fast-defaults, #:fallbacks), call sibling methods with define/generic, introspect support (#:defined-predicate, exn:fail:support?), and contract instances with generic-instance/c. Use when several types should share an interface with runtime dispatch, or extending an interface to existing types.
+description: "Define generic interfaces in Racket with racket/generic — define-generics to declare a set of methods, implement them per type via #:methods gen:NAME, provide defaults/fallbacks (#:defaults, #:fast-defaults, #:fallbacks), call sibling methods with define/generic, introspect support (#:defined-predicate, exn:fail:support?), and contract instances with generic-instance/c. Use when several types should share an interface with runtime dispatch, or extending an interface to existing types."
 ---
 
 # Generic Interfaces with racket/generic
@@ -9,6 +9,9 @@ once, then implement it for many types. Calling a method dispatches at
 runtime on its first argument. This is the mechanism behind built-in
 interfaces like `gen:custom-write` and `gen:equal+hash` (see [[structs]]);
 `define-generics` lets you define your own.
+
+For the exact grammar of `define-generics`, its keyword options, and the
+contract forms, read `reference.md` in this skill directory.
 
 ```racket
 (require racket/generic)

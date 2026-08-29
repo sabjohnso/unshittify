@@ -11,6 +11,9 @@ law — so you debug `n = 50`, not `n = 8347291`. This complements example-based
 [[rackunit]] (which pins specific cases) and fits algebra-driven design:
 encode the algebra's laws, then verify them.
 
+For the full generator catalogue and the exact signatures of the property
+and configuration forms, read `reference.md` in this skill directory.
+
 ```racket
 #lang racket/base
 (require rackcheck rackunit)

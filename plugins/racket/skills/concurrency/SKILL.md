@@ -6,6 +6,9 @@ description: Concurrency and parallelism in Racket — green threads, synchronou
 
 Racket separates two things people conflate:
 
+For exact signatures across threads, channels, semaphores, and the
+synchronizable-event system, read `reference.md` in this skill directory.
+
 - **Concurrency** — `thread` creates *green threads* that interleave on one
   OS thread within a place. They are cheap and preemptively scheduled, but do
   **not** run simultaneously, so they give responsiveness and structure, not

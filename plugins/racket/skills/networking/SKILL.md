@@ -6,6 +6,10 @@ description: Networking and web servers in Racket — TCP/UDP sockets (racket/tc
 
 Three layers, lowest to highest:
 
+For exact signatures across `racket/tcp`, `racket/udp`, `net/url`,
+`net/http-client`, and the web-server forms, read `reference.md` in this
+skill directory.
+
 - **Sockets** — `racket/tcp` and `racket/udp` give you raw connections as
   ordinary Racket ports.
 - **HTTP client** — `net/url` for quick GET/POST, `net/http-client` for full

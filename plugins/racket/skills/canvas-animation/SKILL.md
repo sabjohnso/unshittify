@@ -10,6 +10,10 @@ current state. Data flows one way — *update the model, then draw it* — never
 the reverse. This builds on `[[gui]]` (the canvas, eventspace, and input)
 and `[[drawing]]` (the `dc<%>` you paint with).
 
+For the animation-relevant `canvas%` and `timer%` members, the timing
+primitives, and the offscreen double-buffer pattern, read `reference.md` in
+this skill directory.
+
 ```racket
 (require racket/gui/base racket/class)
 

@@ -6,6 +6,10 @@ description: Draw graphics in Racket with racket/draw and pict — imperative dr
 
 Two layers, used together:
 
+For the full `dc<%>` method list, the `dc-path%` and resource signatures,
+and the pict constructor catalogue, read `reference.md` in this skill
+directory.
+
 - **`racket/draw`** is imperative drawing onto a **drawing context**
   (`dc<%>`): you set a pen and brush, then issue `draw-line`,
   `draw-rectangle`, `draw-text`, … The same `dc<%>` API targets bitmaps,
