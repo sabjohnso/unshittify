@@ -1,7 +1,7 @@
 ---
 description: Draft and apply a git commit message in this repo's format — emoji, [module] summary, Problem/Solution bullets, and a closing haiku. This is the required path for every commit in this repository — invoke it whenever the user asks to commit staged or working-tree changes, even when the request is phrased conversationally (e.g. "commit this") rather than as the literal slash command. Skip it only if the user explicitly says not to use the template or asks for a freehand message.
 argument-hint: "[module hint]"
-allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git add:*), Bash(git commit:*), Task(communication:prose-reviewer)
+allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git add:*), Bash(git commit:*), Agent(communication:prose-reviewer)
 ---
 
 # Write a commit message in this repo's format

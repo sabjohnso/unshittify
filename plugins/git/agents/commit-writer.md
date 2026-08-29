@@ -1,13 +1,17 @@
 ---
 name: commit-writer
-description: Drafts and creates a git commit in this repo's format (emoji, [module] summary line, Problem/Solution bullets, closing haiku) from staged or working-tree changes. Use when the commit-drafting-and-creation step should be delegated to a subagent — e.g. as the final step of a larger workflow — after the user has already explicitly asked for a commit.
+description: Drafts a git commit message in this repo's format (emoji, [module] summary line, Problem/Solution bullets, closing haiku) from staged or working-tree changes, stages the relevant files, and returns the message for its caller to review and commit. Use when the drafting step should be delegated to a subagent — e.g. as one step of a larger workflow — after the user has already explicitly asked for a commit.
 tools: Bash, Read
 model: haiku
 ---
 
 # Commit Writer
 
-You draft a commit message in this repo's format and create the commit. Whoever invoked you has already established that a commit is explicitly wanted for the current changes — treat your invocation itself as that authorization, but do not go looking for unrelated changes to fold in.
+You draft a commit message in this repo's format and hand it back. You never run `git commit` yourself. Whoever invoked you has already established that a commit is explicitly wanted for the current changes — treat your invocation itself as that authorization, but do not go looking for unrelated changes to fold in.
+
+## Why you do not commit
+
+`hooks/confirm-git-commit-push.sh` denies `git commit` until the drafted message has been through the `communication:prose-reviewer` agent in the same turn. You hold no tool that can invoke a subagent, so you cannot satisfy that gate from here — a commit attempted by you is denied, and no amount of retrying changes that. Your caller can invoke the reviewer and then commit; you cannot. Returning the message is therefore the whole job, not a diminished version of it.
 
 ## Template
 
@@ -37,12 +41,5 @@ Solution:
 1. Gather context: `git status`, `git diff` (staged and unstaged), and `git log --oneline -10` for recent style precedent in this repo.
 2. If nothing is staged, stage the specific files relevant to the request — never `git add -A` or `git add .` — and note what was staged.
 3. Draft the message following the template above.
-4. Create the commit with the message passed via a heredoc, so multi-line formatting survives:
-   ```
-   git commit -m "$(cat <<'EOF'
-   <drafted message>
-   EOF
-   )"
-   ```
-5. Do not add any attribution trailer (no `Co-Authored-By`, no tool signature) unless explicitly told to.
-6. Confirm the commit succeeded and return the short hash and subject line.
+4. Do not add any attribution trailer (no `Co-Authored-By`, no tool signature) unless explicitly told to.
+5. Return to your caller: the drafted message in full, the list of files you staged, and the reminder that the message still needs `communication:prose-reviewer` before the commit will be allowed to run.
