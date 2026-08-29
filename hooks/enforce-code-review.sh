@@ -19,6 +19,74 @@ REQUIRED_REVIEWS=(
 
 CODE_CHANGE_TOOL_NAMES='^(Edit|Write|NotebookEdit)$'
 
+# Bash commands that modify a file. The tool name alone cannot answer this:
+# Bash both reads and writes, and the harness's auto mode instructs the model
+# to prefer sed and heredocs over the Edit tool outright, so a gate that
+# watches only Edit/Write/NotebookEdit misses the path the model is actively
+# told to take. Add a pattern here to widen detection - no other code changes
+# needed.
+#
+# THIS LIST FAILS CLOSED, in the opposite direction to a permission check: a
+# pattern that fires too eagerly costs one redundant review, while a write
+# shape that is missing here costs the gate's whole guarantee. Where the two
+# conflict, add the pattern.
+BASH_WRITE_PATTERNS=(
+  '(^|[[:space:];&|(])(sed|perl|ruby)[[:space:]][^;&|]*-i'   # in-place edit
+  '(^|[[:space:];&|(])tee([[:space:]]|$)'
+  '(^|[[:space:];&|(])(cp|mv|ln|install|truncate|touch|mkdir|rmdir|rm|shred)([[:space:]]|$)'
+  '(^|[[:space:];&|(])(patch|dos2unix|unix2dos)([[:space:]]|$)'
+  '(^|[[:space:];&|(])dd[[:space:]][^;&|]*of='
+  '(^|[[:space:];&|(])git[[:space:]]+(apply|restore|checkout|revert|stash)([[:space:]]|$)'
+  '(^|[[:space:];&|(])(chmod|chown|chgrp)([[:space:]]|$)'
+  '>>?[[:space:]]*[^&[:space:]]'                             # redirection to a path
+)
+
+# Redirection targets that write nothing a review could cover, stripped from
+# a command before the patterns above are matched against it. The redirection
+# pattern is otherwise so broad that a routine `make >/dev/null` would demand
+# four reviews and teach the user to route around the gate entirely.
+#
+# Two kinds are exempt:
+#
+#   discards      /dev/null and friends, and a duplicated descriptor (2>&1).
+#                 Nothing is written at all.
+#   temporaries   An absolute path under /tmp or /var/tmp. Such a file is not
+#                 in the tree under review, and cannot reach it except by
+#                 being copied back - which is itself a write this table
+#                 detects. Scratch work (drafting a commit message, staging
+#                 notes) otherwise trips the gate on a turn that changed no
+#                 code.
+#
+# The exemption covers the REDIRECTION OPERATOR only. `cp secret /tmp/x` still
+# counts as a write, because deciding which argument of an arbitrary command
+# is its target would mean parsing every command's option grammar. Erring
+# toward "this was a write" is the right direction for a gate.
+BASH_WRITE_EXEMPT='>>?[[:space:]]*(/dev/(null|stderr|stdout|fd/[0-9]+)|/(var/)?tmp/[^[:space:];&|)]*|&[0-9-])'
+
+# Subagents known to hold no file-writing tool. Any OTHER subagent_type
+# counts as a possible code change, because a delegated agent's Edit calls
+# are recorded in the SUBAGENT's transcript - the parent transcript this hook
+# is handed shows only that some agent ran, never what it did. Erring toward
+# "it might have edited" is the only rule that closes that hole; the cost is
+# a redundant review after delegating to an agent not yet listed here.
+#
+# An agent belongs on this list only when its own `tools:` line grants it
+# neither Edit, Write, nor NotebookEdit. Check the file before adding a name.
+READ_ONLY_AGENTS=(
+  Explore
+  Plan
+  claude-code-guide
+  cxx:clang-query-runner
+  development:efficiency-reviewer
+  development:nst-reviewer
+  development:property-test-reviewer
+  development:tdd-reviewer
+  git:commit-writer
+  git:git-explorer
+  global:settings-doctor
+  local:settings-doctor
+)
+
 # shellcheck source=lib/transcript.sh disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/lib/transcript.sh"
 
@@ -39,19 +107,79 @@ transcript_path_from() {
 # enforce-prose-review.sh agree on where a turn begins and how events are
 # shaped.
 
-# code_was_edited <events-jsonl>
+# Each of the three predicates below answers one question about the turn's
+# events, and code_was_edited is their disjunction. They are separate so a
+# new way of changing a file can be recognised by adding one predicate rather
+# than by extending a single grep, and so each can be tested on its own.
 #
-# True (exit 0) if any event's tool name is Edit/Write/NotebookEdit.
+# All three capture their input into a variable rather than piping it
+# straight into grep. Piping would fail open on a long turn: grep -q exits at
+# the first match, jq upstream is killed by SIGPIPE (141), and
+# `set -o pipefail` turns that into a failing pipeline - reporting "no code
+# was edited" for a turn that did edit code, which silently opens the gate.
+
+# edit_tool_used <events-jsonl>
 #
-# The names are captured into a variable rather than piped straight into
-# grep. Piping would fail open on a long turn: grep -q exits at the first
-# match, jq upstream is killed by SIGPIPE (141), and `set -o pipefail` turns
-# that into a failing pipeline - reporting "no code was edited" for a turn
-# that did edit code, which silently opens the review gate.
-code_was_edited() {
+# True if any event's tool name is Edit/Write/NotebookEdit.
+edit_tool_used() {
   local events="$1" names
   names=$(printf '%s\n' "$events" | jq -r '.name // empty')
   grep -qE "$CODE_CHANGE_TOOL_NAMES" <<<"$names"
+}
+
+# bash_wrote_a_file <events-jsonl>
+#
+# True if any Bash event's command matches a BASH_WRITE_PATTERNS entry, once
+# the exempt redirection targets have been removed from it. Stripping the
+# exemptions first, rather than testing them as a separate condition, is what
+# lets a single command that both writes a file and discards stderr
+# (`sed -i s/a/b/ f 2>/dev/null`) still count as a write.
+bash_wrote_a_file() {
+  local events="$1" commands
+  commands=$(printf '%s\n' "$events" | jq -r 'select(.name == "Bash") | .command // empty')
+  [ -n "$commands" ] || return 1
+  # @ delimits the s/// because BASH_WRITE_EXEMPT itself contains | as
+  # alternation; a | delimiter here silently truncates the pattern.
+  commands=$(sed -E "s@${BASH_WRITE_EXEMPT}@@g" <<<"$commands")
+  # One grep over the joined alternation rather than one grep per pattern.
+  # This runs on the Stop path, which the user waits on at the end of every
+  # turn, so the eight processes the per-pattern loop spawned were eight
+  # process spawns of latency on every turn that ran any Bash command.
+  grep -qE "$(bash_write_alternation)" <<<"$commands"
+}
+
+# bash_write_alternation
+#
+# The BASH_WRITE_PATTERNS table joined into one extended regex. Kept as a
+# function over the table, rather than a second hand-maintained constant, so
+# adding a pattern is still a one-line change to the table alone.
+bash_write_alternation() {
+  local joined
+  joined=$(printf '|%s' "${BASH_WRITE_PATTERNS[@]}")
+  printf '%s' "${joined:1}"
+}
+
+# agent_may_have_edited <events-jsonl>
+#
+# True if the turn delegated to any subagent not named in READ_ONLY_AGENTS.
+# See that table for why an unrecognised agent counts as a possible edit.
+agent_may_have_edited() {
+  local events="$1" agents unrecognised
+  agents=$(printf '%s\n' "$events" | jq -r '.subagent_type // empty')
+  [ -n "$agents" ] || return 1
+  # One grep against the whole exempt list rather than one grep per entry.
+  # Same reason as bash_write_alternation: this is Stop-path latency, paid on
+  # every turn that delegated to anything.
+  unrecognised=$(grep -Fxv -f <(printf '%s\n' "${READ_ONLY_AGENTS[@]}") <<<"$agents") || true
+  [ -n "$unrecognised" ]
+}
+
+# code_was_edited <events-jsonl>
+#
+# True if the turn changed a file by any of the three routes above.
+code_was_edited() {
+  local events="$1"
+  edit_tool_used "$events" || bash_wrote_a_file "$events" || agent_may_have_edited "$events"
 }
 
 # review_satisfied <events-jsonl> <skill-name> <agent-name>

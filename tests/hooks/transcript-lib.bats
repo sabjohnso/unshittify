@@ -204,3 +204,108 @@ setup() {
   run transcript_judgeable "$transcript"
   [ "$status" -eq 0 ]
 }
+
+# --- harness injections are not turn boundaries ---------------------------
+#
+# A boundary must be a message the USER actually sent. The harness records
+# several of its own messages in the user role with plain string content;
+# each one that is treated as a boundary silently discards the evidence of
+# everything the assistant did before it in the same turn.
+#
+# The task-notification case is the damaging one, and it is not hypothetical:
+# it is written after the Agent tool_use that spawned the subagent, so an
+# asynchronously delegated review can never be seen by a hook that anchors on
+# the last qualifying user message.
+
+@test "a task notification is not a boundary" {
+  transcript="$(write_transcript "$(printf '%s\n%s\n%s\n' \
+    "$(typed_prompt_event 'review this project')" \
+    "$(tool_use_event Agent subagent_type=communication:prose-reviewer)" \
+    "$(task_notification_event)")")"
+  run find_turn_start_line "$transcript"
+  [ "$status" -eq 0 ]
+  [ "$output" -eq 1 ]
+}
+
+@test "a delegated review stays visible after its completion notification" {
+  transcript="$(write_transcript "$(printf '%s\n%s\n%s\n' \
+    "$(typed_prompt_event 'review this project')" \
+    "$(tool_use_event Agent subagent_type=communication:prose-reviewer)" \
+    "$(task_notification_event)")")"
+  start_line="$(find_turn_start_line "$transcript")"
+  run agent_invoked_since_line "$transcript" "$start_line" communication:prose-reviewer
+  [ "$status" -eq 0 ]
+}
+
+@test "a slash-command marker is not a boundary" {
+  transcript="$(write_transcript "$(printf '%s\n%s\n' \
+    "$(typed_prompt_event 'do the thing')" \
+    "$(slash_command_marker_event)")")"
+  run find_turn_start_line "$transcript"
+  [ "$status" -eq 0 ]
+  [ "$output" -eq 1 ]
+}
+
+@test "local command stdout is not a boundary" {
+  transcript="$(write_transcript "$(printf '%s\n%s\n' \
+    "$(typed_prompt_event 'do the thing')" \
+    "$(local_command_stdout_event)")")"
+  run find_turn_start_line "$transcript"
+  [ "$status" -eq 0 ]
+  [ "$output" -eq 1 ]
+}
+
+@test "a typed prompt after a task notification is still a boundary" {
+  transcript="$(write_transcript "$(printf '%s\n%s\n%s\n' \
+    "$(typed_prompt_event 'first prompt')" \
+    "$(task_notification_event)" \
+    "$(typed_prompt_event 'second prompt')")")"
+  run find_turn_start_line "$transcript"
+  [ "$status" -eq 0 ]
+  [ "$output" -eq 3 ]
+}
+
+@test "a plain string prompt with no origin field is still a boundary" {
+  transcript="$(write_transcript "$(printf '%s\n%s\n' \
+    "$(tool_use_event Read)" \
+    "$(user_prompt_event 'an older-format prompt with no origin recorded')")")"
+  run find_turn_start_line "$transcript"
+  [ "$status" -eq 0 ]
+  [ "$output" -eq 2 ]
+}
+
+# --- the boundary rule only ever moves the boundary earlier -----------------
+#
+# The rejection rules in find_turn_start_line are stated in the code and in
+# CLAUDE.md as only ever moving the turn start EARLIER, which is what makes a
+# misjudgement cost a redundant review rather than a missed one. A stated
+# invariant with no test is exactly the gap this suite exists to close.
+
+@test "rejecting a harness message never moves the boundary later" {
+  local injection
+  for injection in "$(task_notification_event)" \
+                   "$(slash_command_marker_event)" \
+                   "$(local_command_stdout_event)"; do
+    transcript="$(write_transcript "$(printf '%s\n%s\n%s\n' \
+      "$(typed_prompt_event 'the real prompt')" \
+      "$(tool_use_event Agent subagent_type=communication:prose-reviewer)" \
+      "$injection")")"
+    run find_turn_start_line "$transcript"
+    [ "$status" -eq 0 ]
+    [ "$output" -le 3 ]
+    [ "$output" -eq 1 ]
+  done
+}
+
+@test "appending harness messages is idempotent for the boundary" {
+  local one many
+  one="$(write_transcript "$(printf '%s\n%s\n' \
+    "$(typed_prompt_event 'the real prompt')" \
+    "$(task_notification_event)")")"
+  many="$(write_transcript "$(printf '%s\n%s\n%s\n%s\n' \
+    "$(typed_prompt_event 'the real prompt')" \
+    "$(task_notification_event a1)" \
+    "$(task_notification_event a2)" \
+    "$(task_notification_event a3)")")"
+  [ "$(find_turn_start_line "$one")" -eq "$(find_turn_start_line "$many")" ]
+}

@@ -146,3 +146,88 @@ meta_injection_event() {
   local text="${1:-injected skill instructions}"
   jq -nc --arg text "$text" '{type:"user", isMeta:true, message:{role:"user", content:[{type:"text", text:$text}]}}'
 }
+
+# task_notification_event [task-id]
+#
+# Prints one compact-JSON transcript line for the harness message that
+# announces an asynchronous subagent's completion. The harness records it as
+# a user-role message with string content and no isMeta flag, so it is
+# structurally indistinguishable from a typed prompt except for its
+# origin.kind - and it is always written AFTER the Agent tool_use that
+# spawned the subagent. Treating it as a turn boundary therefore hides the
+# very delegation that produced it, which is what defeated
+# enforce-prose-review.sh's check for every asynchronously delegated review.
+# Not a genuine prompt: it must never act as a boundary.
+task_notification_event() {
+  local task_id="${1:-a96433995f69d06a7}"
+  jq -nc --arg id "$task_id" \
+    '{type:"user", promptSource:"system", origin:{kind:"task-notification"},
+      message:{role:"user", content:("<task-notification>\n<task-id>" + $id + "</task-id>\n<status>completed</status>\n</task-notification>")}}'
+}
+
+# slash_command_marker_event [command]
+#
+# Prints one compact-JSON transcript line for the marker the harness writes
+# when the user runs a built-in slash command (/model, /config). It carries
+# neither origin nor promptSource, so it is recognised by its content shape.
+# Not a genuine prompt: it must never act as a boundary.
+slash_command_marker_event() {
+  local command="${1:-/model}"
+  jq -nc --arg c "$command" \
+    '{type:"user", message:{role:"user", content:("<command-name>" + $c + "</command-name>\n<command-args>opus</command-args>")}}'
+}
+
+# local_command_stdout_event
+#
+# Prints one compact-JSON transcript line for the output the harness records
+# after a built-in slash command runs. Not a genuine prompt.
+local_command_stdout_event() {
+  printf '%s' '{"type":"user","message":{"role":"user","content":"<local-command-stdout>Set model to Opus 5</local-command-stdout>"}}'
+}
+
+# typed_prompt_event [text]
+#
+# A genuine typed prompt carrying the origin/promptSource fields the current
+# harness records. Must act as a boundary, which is what distinguishes it
+# from task_notification_event.
+typed_prompt_event() {
+  local text="${1:-a genuine typed prompt with several plain words}"
+  jq -nc --arg text "$text" \
+    '{type:"user", promptSource:"typed", origin:{kind:"human"},
+      message:{role:"user", content:$text}}'
+}
+
+# bash_command_event <command>
+#
+# Prints one compact-JSON transcript line for a Bash tool_use carrying the
+# given command string. The command is what decides whether the turn changed
+# a file, so it must survive into the fixture verbatim.
+bash_command_event() {
+  jq -nc --arg cmd "$1" \
+    '{type:"assistant", message:{content:[{type:"tool_use", name:"Bash", input:{command:$cmd}}]}}'
+}
+
+# shaped_event <name> [skill=<skill>] [subagent_type=<type>] [command=<cmd>]
+#
+# Prints one SHAPED event, the {name, skill, subagent_type, command} form
+# tool_use_events_since_turn_start emits - which is what code_was_edited and
+# review_satisfied consume. Distinct from tool_use_event, which prints the
+# raw assistant transcript LINE those are derived from; passing a raw line
+# where a shaped event is expected silently reports "nothing happened".
+shaped_event() {
+  local name="$1"; shift
+  local skill="" subagent_type="" command="" arg
+  for arg in "$@"; do
+    case "$arg" in
+      skill=*) skill="${arg#skill=}" ;;
+      subagent_type=*) subagent_type="${arg#subagent_type=}" ;;
+      command=*) command="${arg#command=}" ;;
+    esac
+  done
+  jq -nc --arg name "$name" --arg skill "$skill" \
+         --arg subagent_type "$subagent_type" --arg command "$command" \
+    '{name: $name,
+      skill: (if $skill == "" then null else $skill end),
+      subagent_type: (if $subagent_type == "" then null else $subagent_type end),
+      command: (if $command == "" then null else $command end)}'
+}
