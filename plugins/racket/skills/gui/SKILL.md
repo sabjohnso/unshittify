@@ -1,14 +1,16 @@
 ---
-description: Build desktop GUIs in Racket with racket/gui — windows and widgets (frame%, panels, button%, text-field%, canvas%), the box-model layout, control callbacks, custom drawing with canvas%/dc<%>/racket-draw, mouse/keyboard input, the eventspace event loop, keeping the UI responsive with threads and queue-callback, and dialogs. Use when writing a windowed application, drawing custom graphics, handling input events, or testing GUI code headlessly.
+description: Build a desktop application window with racket/gui — frame% and dialog%, panels and the box-model layout, controls (button%, text-field%, choice%, list-box%, slider%), menu bars, control callbacks, mouse and keyboard events, the eventspace handler thread, queue-callback, and the standard file, color, and text dialogs. Use when assembling or laying out a window's widgets, wiring a control callback, handling input events, keeping the UI responsive during slow work, or testing a windowed application headlessly; for what to paint on a canvas see ../drawing/SKILL.md, and for a timer-driven redraw loop see ../canvas-animation/SKILL.md.
+allowed-tools: Bash(racket:*), Bash(raco:*), Bash(xvfb-run:*), Read, Grep, Glob
 ---
 
 # GUI Programming with racket/gui
 
-`racket/gui` is a class-based widget toolkit built on [[classes]]: every
-window, container, and control is an object you create with `new` and drive
-with `send`. You build a tree — a `frame%` holding panels holding controls —
-wire callbacks, and show it. Require `racket/gui/base` (or `racket/gui`,
-which adds `racket/draw` and the framework).
+`racket/gui` is a class-based widget toolkit built on
+[classes](../classes/SKILL.md): every window, container, and control is an
+object you create with `new` and drive with `send`. You build a tree — a
+`frame%` holding panels holding controls — wire callbacks, and show it.
+Require `racket/gui/base` (or `racket/gui`, which adds `racket/draw` and the
+framework).
 
 For the class hierarchy and the signatures of every window, container, and
 control class, read `reference.md` in this skill directory.
@@ -79,7 +81,9 @@ In tests you can fire a callback without a user:
 
 A `canvas%` gives you a drawing context (`dc<%>`); supply a `paint-callback`
 that draws on each refresh. The `dc<%>` API (from `racket/draw`) is the same
-whether you draw to a window or an offscreen bitmap:
+whether you draw to a window or an offscreen bitmap — it is catalogued in
+[drawing](../drawing/SKILL.md); this skill covers only how a canvas obtains
+one and when it repaints:
 
 ```racket
 (new canvas% [parent frame]
@@ -125,8 +129,9 @@ Subclass `canvas%` and override `on-event` (a `mouse-event%`) and `on-char`
 
 Every callback, paint, and input handler runs on the eventspace's **handler
 thread**. While one runs, the UI is frozen — so **never do slow work in a
-callback**. Offload it to a thread ([[concurrency]]) and marshal results back
-to the UI with `queue-callback`, which runs a thunk on the handler thread:
+callback**. Offload it to a thread ([concurrency](../concurrency/SKILL.md))
+and marshal results back to the UI with `queue-callback`, which runs a thunk
+on the handler thread:
 
 ```racket
 (new button% [parent col] [label "Fetch"]
@@ -164,7 +169,7 @@ assert on rendering — no window shown.
 
 - **Never block the handler thread.** Slow work in a callback freezes the
   whole UI. Run it in a thread and update widgets via `queue-callback`
-  ([[concurrency]]).
+  ([concurrency](../concurrency/SKILL.md)).
 - **Touch widgets only from the handler thread.** From another thread, wrap UI
   updates in `queue-callback`; calling `send` on a control from a worker
   thread is a race.
@@ -172,9 +177,10 @@ assert on rendering — no window shown.
   `alignment`/`spacing`/`stretchable-*`; absolute positioning breaks on
   resize and across platforms.
 - **`super-new` in every custom widget.** A `class` extending `canvas%`/`frame%`
-  must call `super-new`, like any [[classes]] subclass.
+  must call `super-new`, like any [classes](../classes/SKILL.md) subclass.
 - **Separate model from view.** Keep application state in plain data
-  ([[structs]]) and let callbacks read/update it, then refresh the view — so
-  the logic is testable without the GUI and the view can change independently.
+  ([structs](../structs/SKILL.md)) and let callbacks read/update it, then
+  refresh the view — so the logic is testable without the GUI and the view
+  can change independently.
 - **Test under `xvfb-run` and via callbacks.** Drive controls programmatically
   and render to bitmaps; reserve a real display for manual checks.

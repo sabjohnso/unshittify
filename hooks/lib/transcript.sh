@@ -8,6 +8,61 @@
 # place and the turn-boundary and name-matching rules cannot drift between
 # them.
 
+# Every scan below reads the transcript RAW, one line at a time, and parses
+# each line inside jq instead of letting jq read the file as JSON. Two
+# properties follow, and both are load-bearing:
+#
+#   partial reads  The harness appends to the transcript while a hook reads
+#                  it, so the final line is routinely half-written. A parse
+#                  failure must cost that one line and no more: jq aborting
+#                  after it has already emitted events, with those events
+#                  then discarded, tells enforce-code-review.sh that nothing
+#                  was edited - fail-open, on the commonest input there is.
+#   position       input_line_number is then the line number of the record
+#                  itself, so each scan reports the positions it found.
+#                  Nothing downstream counts lines a second time, so no
+#                  second count can drift out of step with the first. It
+#                  counts newlines consumed, so a final line the harness has
+#                  not finished writing is numbered one low - which reports
+#                  a boundary EARLIER than the record sits, the direction
+#                  that costs a redundant review rather than a missed one.
+#
+# jq has no way to report a line it skipped except through its own output, so
+# a skipped line arrives on stdout as this marker and drop_malformed_lines
+# converts it to a warning. The conversion cannot be skipped: a scan's stdout
+# is read by its caller as events, so a diagnostic left there becomes a
+# fabricated event.
+MALFORMED_MARKER='MALFORMED'
+
+# jq definitions shared by the scans. `record` is null both for a line that
+# is not JSON and for a line that is the literal `null`; neither is a
+# transcript record, so the callers need not tell them apart.
+TRANSCRIPT_JQ_PRELUDE='
+  def record: [fromjson?] | first;
+'
+
+# drop_malformed_lines <what-the-scan-was-doing>
+#
+# Filter. Copies a scan's output through, except for the malformed-line
+# markers, which are collected into a single warning on stderr naming the
+# lines that were skipped.
+drop_malformed_lines() {
+  local context="$1"
+  local line
+  local skipped=()
+
+  while IFS= read -r line; do
+    case "$line" in
+      "${MALFORMED_MARKER} "*) skipped+=("${line#* }") ;;
+      *) printf '%s\n' "$line" ;;
+    esac
+  done
+
+  if [ "${#skipped[@]}" -gt 0 ]; then
+    echo "transcript: warning: ${context}: skipped ${#skipped[@]} malformed line(s) at ${skipped[*]}" >&2
+  fi
+}
+
 # transcript_judgeable <transcript-path>
 #
 # Succeeds when the path names an existing transcript file that can be judged
@@ -23,16 +78,49 @@ transcript_judgeable() {
 # message whose content is a string, or an array of blocks none of which is a
 # tool_result, which is not an isMeta skill/system injection, and which the
 # harness did not write on the user's behalf. Falls back to the last
-# "type":"last-prompt" marker for transcripts with no recognizable prompt.
-# Returns 1 (printing nothing) when neither is present; warns on stderr when
-# the transcript is non-empty but has neither, since that is a schema anomaly
+# last-prompt record for transcripts with no recognizable prompt. Returns 1
+# (printing nothing) when neither is present; warns on stderr when the
+# transcript is non-empty but has neither, since that is a schema anomaly
 # rather than the ordinary "hook fired before any prompt was recorded" case.
 #
 # Anchoring on the genuine prompt rather than the marker is deliberate: the
 # harness appends last-prompt markers out of chronological order, sometimes
 # after the very tool calls that belong to the turn the marker names, so a
 # marker-anchored search can skip a tool call (such as a review) that did run.
-# jq emits one line per input object, so grep -n recovers the file line.
+find_turn_start_line() {
+  local transcript="$1"
+  local candidates line
+
+  candidates=$(scan_boundary_candidates "$transcript")
+
+  line=$(printf '%s\n' "$candidates" | grep '^PROMPT ' | tail -1 | cut -d' ' -f2)
+  if [ -z "$line" ]; then
+    line=$(printf '%s\n' "$candidates" | grep '^MARKER ' | tail -1 | cut -d' ' -f2)
+  fi
+
+  if [ -z "$line" ]; then
+    if [ -s "$transcript" ]; then
+      echo "transcript: warning: no user prompt or last-prompt marker in non-empty transcript: ${transcript}" >&2
+    fi
+    return 1
+  fi
+  printf '%s\n' "$line"
+}
+
+# scan_boundary_candidates <transcript-file>
+#
+# Prints one line per record that could start a turn: "PROMPT <line>" for a
+# genuine user prompt and "MARKER <line>" for a last-prompt record. Exactly
+# one verdict per record, whatever the record contains - a user message may
+# carry several text blocks, and a classifier that spoke once per block would
+# shift every line number after it forward, landing the boundary past the
+# turn's own tool calls.
+#
+# The last-prompt record is recognised by its parsed type, never by the text
+# {"type":"last-prompt"} appearing in the line. That text occurs inside any
+# record that embeds a transcript - which this repository's own tests and
+# hook development produce constantly - and matching one would move the
+# boundary FORWARD, hiding the turn's events from the enforce hooks.
 #
 # HARNESS INJECTIONS ARE EXCLUDED, and this is the load-bearing part. The
 # harness records several of its OWN messages in the user role with plain
@@ -63,48 +151,47 @@ transcript_judgeable() {
 #                <system-reminder>) is an injection whatever its metadata
 #                says. This is the rule that catches transcripts predating
 #                the origin field, and slash-command markers, which carry no
-#                origin field even now.
+#                origin field even now. ALL leading whitespace is trimmed
+#                before the tag is looked for, not one newline: ltrimstr
+#                removes its argument exactly once, so a second newline or a
+#                leading space left the tag unseen and the injection acting
+#                as a boundary - forward, past the delegation, the one
+#                direction this rule must never move the boundary.
 #
 # Both rules only ever REJECT a candidate boundary, moving the turn start
 # earlier. That direction is the safe one for the enforce hooks: an earlier
 # boundary can only make them see more of the turn's tool calls, never
 # fewer, so a misjudgement costs a redundant review rather than a missed one.
-find_turn_start_line() {
+scan_boundary_candidates() {
   local transcript="$1"
-  local line
-  line=$(jq -r '
+
+  jq -R -r --arg malformed "$MALFORMED_MARKER" "${TRANSCRIPT_JQ_PRELUDE}"'
       def content_text:
         if (.message.content | type) == "string" then .message.content
-        else ((.message.content[]? | select(.type? == "text") | .text) // "")
+        else [.message.content[]? | select(.type? == "text") | .text] | join("\n")
         end;
       def harness_authored:
         ((.origin.kind? // "human") != "human")
         or ((.promptSource? // "") == "system")
-        or (content_text | ltrimstr("\n")
+        or (content_text | sub("^[[:space:]]+"; "")
             | startswith("<task-notification>")
               or startswith("<command-name>")
               or startswith("<local-command-stdout>")
               or startswith("<system-reminder>"));
-      if (.type == "user"
-          and ((.isMeta // false) != true)
-          and (harness_authored | not)
-          and (((.message.content | type) == "string")
-               or ((.message.content | type) == "array"
-                   and (all(.message.content[]?; (.type? // "") != "tool_result")))))
-      then "PROMPT" else "." end' "$transcript" 2>/dev/null \
-    | grep -n '^PROMPT$' | tail -1 | cut -d: -f1)
-
-  if [ -z "$line" ]; then
-    line=$(grep -n '"type":"last-prompt"' "$transcript" | tail -1 | cut -d: -f1)
-  fi
-
-  if [ -z "$line" ]; then
-    if [ -s "$transcript" ]; then
-      echo "transcript: warning: no user prompt or last-prompt marker in non-empty transcript: ${transcript}" >&2
-    fi
-    return 1
-  fi
-  printf '%s\n' "$line"
+      def genuine_prompt:
+        .type == "user"
+        and ((.isMeta // false) != true)
+        and (harness_authored | not)
+        and (((.message.content | type) == "string")
+             or ((.message.content | type) == "array"
+                 and (all(.message.content[]?; (.type? // "") != "tool_result"))));
+      record as $line
+      | if ($line | type) != "object" then "\($malformed) \(input_line_number)"
+        elif ($line | genuine_prompt) then "PROMPT \(input_line_number)"
+        elif ($line | .type == "last-prompt") then "MARKER \(input_line_number)"
+        else empty
+        end' "$transcript" \
+    | drop_malformed_lines "classifying the turn boundary in ${transcript}"
 }
 
 # tool_use_events_since_line <transcript-file> <start-line>
@@ -116,25 +203,33 @@ find_turn_start_line() {
 # Bash call's command string, since the tool NAME alone cannot say whether a
 # Bash call read a file or rewrote one. Takes a precomputed boundary so
 # a caller that already ran find_turn_start_line does not pay a second
-# full-transcript scan. On a jq parse failure, warns on stderr instead of
-# silently reporting zero events.
+# full-transcript scan. A line jq cannot read costs that line alone; every
+# event found before and after it is still reported.
 tool_use_events_since_line() {
   local transcript="$1"
   local start_line="$2"
 
-  local events jq_status=0
-  events=$(tail -n +"$start_line" "$transcript" \
-    | jq -c 'select(.type=="assistant") | .message.content[]? | select(.type=="tool_use") |
-        {name, skill: (.input.skill // null), subagent_type: (.input.subagent_type // null),
-         command: (.input.command // null)}' \
-        2>&1) || jq_status=$?
+  local scanned jq_status=0
+  scanned=$(tail -n +"$start_line" "$transcript" \
+    | jq -R -r --arg malformed "$MALFORMED_MARKER" \
+               --argjson offset "$((start_line - 1))" "${TRANSCRIPT_JQ_PRELUDE}"'
+        record as $line
+        | if ($line | type) != "object" then "\($malformed) \($offset + input_line_number)"
+          else $line
+            | select(.type == "assistant")
+            | .message.content[]?
+            | select(.type == "tool_use")
+            | {name, skill: (.input.skill // null),
+               subagent_type: (.input.subagent_type // null),
+               command: (.input.command // null)}
+            | tojson
+          end') || jq_status=$?
 
   if [ "$jq_status" -ne 0 ]; then
-    echo "transcript: warning: failed to parse tool_use events (jq exit ${jq_status}): ${events}" >&2
-    return 0
+    echo "transcript: warning: failed to parse tool_use events (jq exit ${jq_status})" >&2
   fi
 
-  printf '%s\n' "$events"
+  printf '%s\n' "$scanned" | drop_malformed_lines "reading tool_use events from ${transcript}"
 }
 
 # tool_use_events_since_turn_start <transcript-file>

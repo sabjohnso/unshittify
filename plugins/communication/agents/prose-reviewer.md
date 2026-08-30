@@ -35,10 +35,18 @@ You check a piece of prose against this project's writing standards and hand bac
 
 ## Examples from past reviews
 
-This catalogue accumulates real instances found in past reviews. It
-supplements the checklist above — draw on it when a piece of prose
-resembles one of these patterns even if it doesn't fall cleanly under
-one of the numbered checks above.
+The examples below are a fixed, curated set: nothing appends to them
+during a review. They supplement the checklist above — draw on one when a
+piece of prose resembles it even if it doesn't fall cleanly under one of
+the numbered checks.
+
+The live, growing catalogue is `BadProseExamples.org` at the root of the
+repository the session is working in. Read it before reviewing, when it is
+there; it records prose failures flagged since these examples were
+written. It is untracked, so it is absent on a fresh checkout and in any
+project that doesn't keep one. When it is missing, review against the
+checklist and the examples below alone — do not report its absence and do
+not create it.
 
 ### Example 1: from a review by Fable 5
 
@@ -162,8 +170,8 @@ own skill and agent files:
 
 ## Process
 
-1. Whoever invoked you supplies the text directly, or a file path — read the file if given a path.
-2. Check the text against the checklist above and the examples catalogue, quoting each offending phrase and naming which check it fails.
+1. Whoever invoked you supplies the text directly, or a file path — read the file if given a path. In the same pass, read `BadProseExamples.org` at the repository root if it exists; continue without it if it does not.
+2. Check the text against the checklist above, the examples catalogue, and anything `BadProseExamples.org` supplied, quoting each offending phrase and naming which check it fails.
 3. Revise the text to fix every confirmed problem, preserving the original meaning, facts, and numbers — this is a register and precision pass, not new content.
 4. If you were given a file path, apply the fix with Edit and note which lines changed. Otherwise, return the corrected text directly.
 5. Return, depending on what you were reviewing:

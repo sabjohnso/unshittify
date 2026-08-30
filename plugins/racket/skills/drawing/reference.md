@@ -36,7 +36,8 @@ docs.racket-lang.org/pict/. Checked against Racket v9.1 [cs].
 (send dc draw-path path [dx dy fill-style])    (send dc draw-spline x1 y1 x2 y2 x3 y3)
 (send dc draw-text str x y [combine? offset angle])
 (send dc draw-bitmap bmp x y [style color mask])
-(send dc get-text-extent str [font]) -> (values w h descent ascent)
+(send dc get-text-extent str [font]) -> (values w h descent extra-vertical-space)
+   ; the 4th value is extra space ABOVE the text, not the ascent
 (send dc get-size) -> (values w h)   (send dc clear)   (send dc flush)
 ```
 
@@ -125,7 +126,7 @@ docs.racket-lang.org/pict/. Checked against Racket v9.1 [cs].
 (lb-find b p) (cb-find b p) (rb-find b p)
 (pin-over base dx-or-find-pict [find] p)      ; place p over base, bbox unchanged
 (pin-under base dx-or-find-pict [find] p)
-(pin-line  [#:start-angle ...] thickness? base src src-find dst dst-find)
+(pin-line  base src src-find dst dst-find [#:start-angle _ #:color _ #:line-width _])
 (pin-arrow-line  arrow-size base src src-find dst dst-find [#:line-width _ #:color _])
 (pin-arrows-line arrow-size base src src-find dst dst-find ...)   ; double-headed
 ```

@@ -1,5 +1,5 @@
 ---
-description: Inspect the user's global Claude Code settings (~/.claude/settings.json) for JSON errors, unknown keys, conflicting or redundant permission rules, stale plugin/marketplace references, insecure file permissions, missing repository hook wiring, and overly broad rules. Reports only; never edits the file. Use when the user asks to check, audit, debug, or troubleshoot their global Claude Code settings.
+description: Inspect the user's global, user-level Claude Code settings (~/.claude/settings.json) for JSON errors, unknown keys, conflicting or redundant permission rules, stale plugin/marketplace references, unsafe hook commands, insecure file permissions, missing repository hook wiring, and overly broad rules. Reports only; never edits the file. Use when the user asks to check, audit, debug, or troubleshoot their global or user-level Claude Code settings; for a project's .claude/settings.local.json, use local:check-settings instead.
 allowed-tools: Read, Grep, Glob, Bash(claude plugin list:*), Bash(stat:*)
 ---
 

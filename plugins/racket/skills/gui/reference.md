@@ -1,7 +1,10 @@
 # racket/gui Reference — classes and signatures
 
 Companion to SKILL.md. Source: docs.racket-lang.org/gui/ and racket/draw.
-Checked against Racket v9.1 [cs] (constructed under Xvfb).
+Class and method names checked against Racket v9.1 [cs] by interface
+introspection (`interface->method-names`) with no display attached. That
+confirms a method exists; it does NOT confirm an init-argument name, which
+only realising a window would catch.
 
 ## Class hierarchy (interfaces)
 
@@ -23,10 +26,11 @@ area<%>              ; anything with a size: min-width, stretchable-*, ...
 (new frame% [label str] [parent #f] [width n] [height n] [x n] [y n]
             [style '(...)] [enabled #t])
    ; styles: 'no-resize-border 'no-caption 'fullscreen-button 'float ...
-   ; methods: show, is-shown?, center, maximize, set-label, create-status-line,
-   ;          show-without-yield
+   ; methods: show, is-shown?, center, maximize, set-label, create-status-line
 (new dialog% [label str] [parent #f] [width n] [height n] [style ...])
    ; (send dlg show #t) blocks until the dialog is dismissed (modal)
+   ; methods: show, is-shown?, center, show-without-yield
+   ;          show-without-yield is on dialog% only, NOT on frame%
 
 (new panel%            [parent p] [style '(border)] ...)
 (new vertical-panel%   [parent p] [alignment '(h v)] [spacing n] [border n]
@@ -89,7 +93,8 @@ Common `control<%>`/`window<%>` methods: `enable`, `is-enabled?`, `show`,
 (send dc draw-ellipse x y w h)         (send dc draw-arc x y w h start end)
 (send dc draw-point x y)               (send dc draw-polygon points)
 (send dc draw-text str x y)            (send dc draw-bitmap bmp x y)
-(send dc get-text-extent str) -> (values w h descent ascent)
+(send dc get-text-extent str) -> (values w h descent extra-vertical-space)
+   ; the 4th value is extra space ABOVE the text, not the ascent
 (send dc get-size) -> (values w h)     (send dc clear)
 ```
 

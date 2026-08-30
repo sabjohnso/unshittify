@@ -20,11 +20,11 @@ claude plugin list --json          # confirm what is installed and enabled
 | Plugin | What it gives you |
 |--------|-------------------|
 | `local` | Project-local settings (`.claude/settings.local.json`) that `/config` does not expose per-project: theme, model, per-project plugin enable/disable, and a settings audit. |
-| `global` | The same audit against `~/.claude/settings.json`, plus a slash-command-only repair for missing hook wiring. |
+| `global` | The audit again, against `~/.claude/settings.json`: the checks `local` runs, less the two that only mean anything inside a project, plus one for whether a marketplace's hook scripts are wired into the file - and a slash-command-only repair when they are not. |
 | `git` | Commit-message drafting in this repo's template, and git-history exploration. |
-| `development` | Language-agnostic discipline: a "make changing easy" precondition, and TDD, Normalized Systems Theory, property-test, and efficiency reviews. |
+| `development` | Language-agnostic discipline: a "make changing easy" precondition, and test-driven-development, Normalized Systems Theory, property-test, and efficiency reviews. |
 | `cxx` | C++ work: sanitizer builds, structural search with `clang-query`, and editing idioms. |
-| `racket` | Nineteen reference skills for Racket - classes, contracts, macros, concurrency, GUI, drawing, testing, packaging - each a `SKILL.md` with a signature-level `reference.md`. |
+| `racket` | Reference skills for Racket - classes, contracts, macros, concurrency, exceptions, GUI, drawing, testing, packaging, and more - each a `SKILL.md` with a signature-level `reference.md` beside it. |
 | `communication` | Reviews drafted prose against a written style bar before it reaches you; aligns markdown tables. |
 | `meta` | Skills for authoring new skills and agents in this repository's house style. |
 
@@ -72,20 +72,48 @@ hook that blocks a turn blocks it in every repository you open, not just this
 one. And `enforce-code-review.sh` treats delegation to any subagent it does
 not recognise as a possible file change, because a subagent's edits are
 recorded in the subagent's transcript and never reach the one the hook is
-handed; the cost is a redundant review after delegating to an agent not yet
-listed in its `READ_ONLY_AGENTS` table.
+handed. Its `READ_ONLY_AGENTS` table is a judgement about what each listed
+agent is told to do, not a fact read off that agent's `tools:` line - no
+entry earned its place by looking harmless there, and every one defined in
+this repository holds a tool that writes (`Bash`, or `Edit` in
+`communication:prose-reviewer`'s case). Delegating to an agent the table does not name
+costs a redundant review. For `communication:prose-reviewer` it cost more
+than that: `enforce-prose-review.sh` demands that agent on every substantial
+reply, so until the table exempted it the two hooks left no move that
+satisfied both - one required the review, the other blocked the turn for
+having run it.
 
 ## Developing
 
 ```sh
-tests/run_tests.sh                   # everything
+tests/run_tests.sh                   # shellcheck, every bats suite, the validator
 tests/hooks/run_tests.sh             # the hook scripts (bats)
 tests/plugins/run_tests.sh           # the validator's own tests (bats)
+tests/scripts/run_tests.sh           # scripts/ (bats)
 tests/plugins/validate-plugins.sh    # the validator, against this repository
-shellcheck hooks/*.sh hooks/lib/*.sh
+scripts/update-install.sh            # publish your edits to the local install
 ```
 
-`bats` and `shellcheck` are the only external tools needed. Run
+Editing a file under `plugins/` changes nothing a running session sees.
+Installing copies the tree into
+`~/.claude/plugins/cache/<marketplace>/<plugin>/<version>/`, and that copy is
+what loads. `scripts/update-install.sh` refreshes the marketplace, republishes
+every plugin, and then verifies each installed snapshot against the tree,
+exiting non-zero if any is stale. Use `--dry-run` to see the commands and
+`--verify-only` to check staleness without changing anything.
+
+The verification matters because `claude plugin update` is keyed on the
+version string alone: a plugin edited without a version bump is reported as
+already current while its stale copy stays in place. The script reinstalls
+those plugins instead of updating them.
+
+`.github/workflows/tests.yml` runs `tests/run_tests.sh` on every push and
+pull request, so one command settles the question locally and in continuous
+integration alike. It runs `shellcheck` first, over the hooks, the validator
+and the runners themselves.
+
+The test suites need `bats` and `shellcheck`; the hook scripts and the
+validator themselves need only `bash`, `jq`, and `awk`. Run
 `validate-plugins.sh` after any edit under `plugins/` - it is the only thing
 that checks the Markdown and JSON, and the defects it catches (a YAML comment
 eating half a description, a reference file nothing points at, a renamed tool)

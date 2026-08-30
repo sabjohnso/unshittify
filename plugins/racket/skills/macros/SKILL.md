@@ -1,5 +1,6 @@
 ---
 description: Write Racket macros with syntax-parse — pattern matching on syntax, syntax classes, ellipses, hygiene, phase levels, and good compile-time error messages. Covers define-syntax, syntax-parse, define-syntax-parse-rule, define-syntax-class/define-splicing-syntax-class, templates (#', ~?, ~@), format-id, and raise-syntax-error. Use when writing or debugging a Racket macro, designing new syntactic forms, or choosing between syntax-rules and syntax-parse.
+allowed-tools: Read, Grep, Glob
 ---
 
 # Racket Macros with syntax-parse
@@ -16,8 +17,9 @@ directory.
 - **A function** if the arguments can be evaluated normally — most of the
   time. Macros only when you must control evaluation order, bind names, or
   read the *shape* of unevaluated code.
-- **A reader macro** ([[reader-macros]]) if the change is *lexical* — a new
-  bracket or sigil the reader must handle before s-expressions exist.
+- **A reader macro** ([reader-macros](../reader-macros/SKILL.md)) if the
+  change is *lexical* — a new bracket or sigil the reader must handle before
+  s-expressions exist.
 - **`define-syntax-parse-rule`** (from `syntax/parse/define`) for a simple
   one-pattern rewrite — like `syntax-rules` but with syntax-class
   annotations and good errors.

@@ -1,5 +1,6 @@
 ---
 description: Networking and web servers in Racket — TCP/UDP sockets (racket/tcp, racket/udp), HTTP clients (net/url, net/http-client), JSON (json), and the web-server stack (serve/servlet, dispatch-rules routing, request/response, response/xexpr). Use when writing a network client or server, calling an HTTP API, parsing/producing JSON, building a web app or REST endpoint, or testing servers headlessly.
+allowed-tools: Read, Grep, Glob
 ---
 
 # Networking and Web Servers
@@ -18,8 +19,9 @@ skill directory.
   values, and a quick-start launcher.
 
 Servers are inherently concurrent (a thread per connection) and resource-
-owning (ports, listeners) — `[[concurrency]]`'s threads and custodians are
-the tools that keep them correct and easy to shut down cleanly.
+owning (ports, listeners) — the threads and custodians of
+`../concurrency/SKILL.md` are the tools that keep them correct and easy to
+shut down cleanly.
 
 ## TCP
 
@@ -31,7 +33,7 @@ input port and output port:
 (define listener (tcp-listen 0 4 #t "127.0.0.1"))     ; port 0 = OS picks one
 (define-values (host port _ph _pp) (tcp-addresses listener #t))  ; read it back
 
-;; accept loop: one thread per connection (see [[concurrency]])
+;; accept loop: one thread per connection (see ../concurrency/SKILL.md)
 (thread (lambda ()
   (let loop ()
     (define-values (in out) (tcp-accept listener))
@@ -83,20 +85,27 @@ with `purify-port`). For method/header/body control, `net/http-client`:
 ```
 
 The `net/http-easy` package offers a friendlier client (sessions, JSON,
-auth), but it is a separate install (`[[packages]]`), not in the base
+auth), but it is a separate install (`../packages/SKILL.md`), not in the base
 distribution.
 
 ## JSON
 
-The `json` module handles JSON, the usual API exchange format: `jsexpr`s are hashes (string-or-symbol
-keys), lists, strings, numbers, booleans, and `(json-null)`:
+The `json` module handles JSON, the usual API exchange format: `jsexpr`s are
+hashes keyed by **symbols only**, lists, strings, numbers, booleans, and
+`(json-null)`. A string key is not a legal jsexpr — `(jsexpr? (hash "n" 42))`
+is `#f`, and `jsexpr->string` on it raises `expected argument of type <legal
+JSON key value>`.
 
 ```racket
 (require json)
-(jsexpr->string (hash 'ok #t 'n 42))        ; => "{\"ok\":true,\"n\":42}"
-(string->jsexpr "{\"n\":42}")                ; => (hash 'n 42)
+(jsexpr->string (hash 'ok #t 'n 42))        ; => "{\"n\":42,\"ok\":true}"  (keys sorted)
+(string->jsexpr "{\"n\":42}")                ; => (hasheq 'n 42) — hasheq, not hash
 (read-json a-port)  (write-json v a-port)    ; stream from/to ports
 ```
+
+`jsexpr->string` and `write-json` emit object keys in sorted order, not
+insertion order, so don't assert on a multi-key object's exact text — compare
+the parsed `jsexpr` instead.
 
 ## Web server
 
@@ -140,7 +149,7 @@ handler. Route requests with `dispatch-rules`, and build replies with the
 ## Testing servers headlessly
 
 Start the server under a custodian in a thread, fetch with `net/url`, then
-shut it down — a self-contained integration test ([[rackunit]]):
+shut it down — a self-contained integration test (`../rackunit/SKILL.md`):
 
 ```racket
 (define cust (make-custodian))
@@ -158,7 +167,7 @@ shut it down — a self-contained integration test ([[rackunit]]):
 - **One thread per connection, bounded by a custodian.** Spawn a handler
   thread per `tcp-accept`/connection so a slow client can't block others, and
   create them under a custodian so one `custodian-shutdown-all` closes
-  everything ([[concurrency]]).
+  everything (`../concurrency/SKILL.md`).
 - **Escape output; never trust input.** Build HTML with `response/xexpr`
   (it escapes) rather than string-concatenating request data, and validate
   every binding before use — request data is attacker-controlled (a security

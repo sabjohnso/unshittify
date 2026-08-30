@@ -27,7 +27,9 @@ Checked against Racket v9.1 [cs].
 (make-config [#:seed seed]                ; integer in [0, 2^31-1]; fixes the RNG
              [#:tests n]                  ; exact-positive-integer?, default 100
              [#:size size-fn]             ; (-> exact-positive-integer? exact-nonnegative-integer?)
-             [#:deadline ms])             ; (>=/c 0)
+             [#:deadline abs-ms])         ; (>=/c 0) — an ABSOLUTE time, not a
+                                          ;   duration; default is
+                                          ;   (+ (current-inexact-milliseconds) 60000)
    -> config?
 
 (label! str-or-#f) -> void?               ; classify the current case; #f = skip
@@ -45,17 +47,27 @@ gen:char-letter  gen:char-digit  gen:char-alphanumeric
 (gen:char-in lo hi)                       ; lo/hi are integer code points, not chars
 gen:unicode  gen:unicode-letter  gen:unicode-mark  gen:unicode-number
 gen:unicode-punctuation  gen:unicode-separator  gen:unicode-symbol
-(gen:string char-gen)                     ; string from a char generator
-gen:symbol
-(gen:bytes byte-gen)
+(gen:string [char-gen])                   ; string from a char generator (default gen:char)
+(gen:symbol [char-gen])                   ; a PROCEDURE: bare gen:symbol is not a gen?
+(gen:bytes [byte-gen])                    ; default (gen:integer-in 0 255)
 ```
+
+Everything on this list that is written applied — `gen:integer-in`,
+`gen:char-in`, `gen:string`, `gen:symbol`, `gen:bytes` — is a procedure and
+must be called; everything written bare is already a `gen?` value. `sample`
+and `property` reject a procedure with `expected: gen?`.
 
 ## Generators — collections
 
 ```racket
 (gen:list elem-gen [#:max-length n])
 (gen:vector elem-gen [#:max-length n])
-(gen:hash   key-gen val-gen)              ; also gen:hasheq, gen:hasheqv
+(gen:hash key val-gen key val-gen ...)    ; also gen:hasheq, gen:hasheqv
+   ; ALTERNATING literal keys and generators, an even number of arguments:
+   ;   (gen:hash 'a gen:natural 'b gen:boolean)  =>  #hash((a . 0) (b . #t))
+   ; The keys are fixed; only the values are generated. An odd argument count
+   ; raises "expected: an even number of arguments"; a generator in a key
+   ; position raises nothing and keys the hash by the generator itself.
 (gen:tuple gen ...)                       ; fixed-length list, one elem per gen
 ```
 
@@ -92,9 +104,10 @@ raises `exn:fail:gen:exhausted` (predicate `exn:fail:gen:exhausted?`).
 
 ## Notes
 
-- A generator is a struct wrapping `(-> rng size shrink-tree)`; `make-gen`
-  and the shrink-tree API live in `rackcheck/shrink-tree` for custom
-  generators.
+- A generator is a struct wrapping `(-> rng size shrink-tree)`. `make-gen` is
+  exported from `rackcheck` itself; `rackcheck/shrink-tree` adds the
+  shrink-tree API (`shrink-tree`, `make-shrink-tree`, `shrink-tree-map`,
+  `shrink-proc/c`) that a custom generator's procedure must return.
 - `gen:map`, `gen:bind`, and `gen:let` preserve shrinking; values built
   through them shrink as their inputs shrink. `gen:const` and `gen:no-shrink`
   do not shrink.

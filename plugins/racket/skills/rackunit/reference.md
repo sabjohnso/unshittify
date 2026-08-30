@@ -84,9 +84,10 @@ against the exception message; the second is a `(-> any)` thunk.
 (struct exn:test:check (...))   exn:test:check?   exn:test:check-stack
 ```
 
-## rackunit/spec (package: rackunit-spec)
+## rackunit/spec (package: rackunit-spec — not in rackunit-lib)
 
 ```racket
+;; raco pkg install rackunit-spec
 (require rackunit/spec)
 
 (describe description-string body ...+)    ; nests the description

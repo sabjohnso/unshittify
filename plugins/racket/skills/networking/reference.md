@@ -82,10 +82,12 @@ and docs.racket-lang.org/web-server/. Checked against Racket v9.1 [cs].
 ## json
 
 ```racket
-(jsexpr? v)        ; (or/c (hash/c symbol-or-string jsexpr) (listof jsexpr)
+(jsexpr? v)        ; (or/c (hash/c symbol? jsexpr?) (listof jsexpr?)
                    ;       string exact-integer inexact-real boolean json-null)
+                   ; object keys are SYMBOLS ONLY: (jsexpr? (hash "n" 42)) is #f
 (read-json [in])   (write-json v [out])
 (string->jsexpr str) -> jsexpr     (jsexpr->string v) -> string
+   ; both writers emit object keys in SORTED order, not insertion order
 (json-null) -> 'null               ; parameter; the value for JSON null
 ```
 
@@ -133,10 +135,18 @@ and docs.racket-lang.org/web-server/. Checked against Racket v9.1 [cs].
 (dispatch-rules [dispatch-pattern maybe-method handler] ... [else handler])
    -> (values dispatch url-generator)
    dispatch-pattern = (seg ...) ; seg = "literal" | (string-arg) | (integer-arg)
-                                ;             | (symbol-arg) | (number-arg) | ...
+                                ;             | (number-arg) | (real-arg) | (symbol-arg)
    maybe-method     = #:method (or "get" "post" regexp ...)
-(dispatch-case [pattern handler] ... [else handler])     ; like dispatch-rules, no url gen
-(dispatch-rules! ...)  (define-dispatch-rules id ...)
+(dispatch-rules+applies [pattern handler] ... [else handler])
+   -> (values dispatch url-generator applies?)   ; applies? : (request? -> boolean?)
+(dispatch-rules! ...)                        ; like dispatch-rules, mutable rule set
+(dispatch-case [pattern handler] ... [else handler])     ; dispatch fn only, no url gen
+(dispatch-url  [pattern handler] ...)                    ; url generator only
+(serve/dispatch dispatch) -> void
+   ; serve/servlet with #:servlet-regexp #rx"" so every request reaches dispatch
+(define-container id ...)  (container? v)
+;; NOTE: there is no define-dispatch-rules. The full export list of
+;; web-server/dispatch is exactly the identifiers named in this section.
 ```
 
 ## web-server/web-server (embed a server)

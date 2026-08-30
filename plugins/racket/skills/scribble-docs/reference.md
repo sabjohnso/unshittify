@@ -1,7 +1,8 @@
 # Scribble Reference — exact signatures and grammars
 
 Companion to SKILL.md. Sources: docs.racket-lang.org/scribble/ and the
-Racket Style Guide §5 ("Scribbling Documentation").
+Racket Style Guide §5 ("Scribbling Documentation"). Forms and command-line
+flags checked against Racket v9.1 [cs].
 
 ## scribble/manual definition forms
 

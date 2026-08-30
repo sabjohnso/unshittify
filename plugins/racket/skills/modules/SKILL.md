@@ -1,5 +1,6 @@
 ---
 description: Organize Racket code with modules and submodules — require sub-forms (only-in, except-in, prefix-in, rename-in, submod), provide forms (rename-out, struct-out, contract-out, all-defined-out, all-from-out, for-syntax), and the three submodule kinds (module+, module, module*) including the main/test idiom. Use when structuring code across files, controlling exports/imports, adding in-file tests or a script entry point, or accessing a submodule with submod/dynamic-require.
+allowed-tools: Bash(racket:*), Bash(raco:*), Read, Grep, Glob
 ---
 
 # Racket Modules and Submodules
@@ -22,7 +23,7 @@ A require spec is a module path or a wrapper that adjusts which names arrive:
          (prefix-in str: racket/string)     ; str:string-trim
          (rename-in racket/math [pi PI])
          (submod "subs.rkt" extra)          ; a submodule of another file
-         (for-syntax racket/base))          ; phase 1 (see [[macros]])
+         (for-syntax racket/base))          ; phase 1 (see ../macros/SKILL.md)
 ```
 
 | Wrapper                       | Effect                               |
@@ -44,7 +45,7 @@ level (top is conventional):
 (provide greet                          ; a single binding
          (rename-out [internal-add add]); export under a different name
          (struct-out posn)              ; constructor + predicate + accessors
-         (contract-out                  ; export guarded by a contract — see [[contracts]]
+         (contract-out                  ; guarded by a contract — ../contracts/SKILL.md
           [halve (-> number? number?)])
          (all-defined-out)              ; every module-level definition here
          (all-from-out racket/list)     ; re-export everything from a require
@@ -121,8 +122,9 @@ name)` the parent.
 ## Rules that prevent rework
 
 - **`provide` is the boundary — design it.** Everything else stays private.
-  Export named bindings or `contract-out` ([[contracts]]); avoid
-  `all-defined-out` on anything you want to keep changeable.
+  Export named bindings or `contract-out`
+  ([contracts](../contracts/SKILL.md)); avoid `all-defined-out` on anything
+  you want to keep changeable.
 - **`main` for "run me," not "require me."** Put a script's side effects in
   `(module+ main ...)` so importing the file stays pure; top-level effects
   fire on every require.
@@ -137,4 +139,4 @@ name)` the parent.
   constructor, predicate, accessors, and setters together and stays correct
   when fields change.
 - **Require transformer imports `for-syntax`.** Anything a macro uses at
-  expansion time is a phase-1 import; see [[macros]].
+  expansion time is a phase-1 import; see [macros](../macros/SKILL.md).

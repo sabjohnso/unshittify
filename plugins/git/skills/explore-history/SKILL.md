@@ -1,7 +1,6 @@
 ---
 description: Explore this repository's git history — find when or why a line/file changed, who changed it, search commit messages or code changes across history, or inspect a past commit. Use when the user asks about git history, blame, log, "when did X change," "who wrote this," or "find the commit that...".
 argument-hint: "[question, path, or search term]"
-disable-model-invocation: true
 allowed-tools: Bash(git log:*), Bash(git show:*), Bash(git blame:*), Bash(git diff:*), Bash(git reflog:*), Bash(git branch:*), Bash(git tag:*), Bash(git shortlog:*), Bash(git rev-list:*)
 ---
 

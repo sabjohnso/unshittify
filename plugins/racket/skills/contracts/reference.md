@@ -12,7 +12,11 @@ Checked against Racket v9.1 [cs].
     | [rename orig-id export-id contract-expr]
     | [struct struct-id ([field contract-expr] ...) struct-option ...]
     | [struct (struct-id parent-struct-id) ([field contract-expr] ...)]
-    | [#:exists id-or-ids] | [#:∃ ...] | [#:forall ...]
+    | #:exists id-or-ids | #:∃ ... | #:forall ... | #:∀ ...
+  ; struct-option is #:omit-constructor.
+  ; The polymorphism keyword and its variables are two SEPARATE clauses, both
+  ; unbracketed: (contract-out #:exists T [make-t (-> T)]).  Bracketing them
+  ; as [#:exists T] is a syntax error ("contract-out: expected identifier").
   ; checks each export at the module boundary; internal uses are unchecked.
 
 (define/contract id contract-expr body)            ; or (define/contract (head . args) ...)
@@ -34,8 +38,9 @@ Checked against Racket v9.1 [cs].
 (->* (mandatory-dom ...)
      (optional-dom ...)                    ; may be omitted entirely
      [#:rest rest-contract]                ; tail of remaining args
-     [#:pre pre-cond-expr]
-     range)
+     [#:pre pre-cond-expr]                 ; before the range
+     range
+     [#:post post-cond-expr])              ; AFTER the range
    ; mandatory/optional include keyword pairs: (->* (string?) (#:loud? boolean?) string?)
    ; range is one contract, (values c ...), or any
 
@@ -48,8 +53,8 @@ Checked against Racket v9.1 [cs].
    mandatory-dependent-dom =
        [id contract-expr]                       ; independent
      | [id (dep-id ...) contract-expr]          ; depends on dep-ids
-     | [id keyword contract-expr]
-     | [id keyword (dep-id ...) contract-expr]
+     | keyword [id contract-expr]               ; keyword OUTSIDE the brackets
+     | keyword [id (dep-id ...) contract-expr]
    dependent-range =
        any
      | [_ contract-expr] | [_ (dep-id ...) contract-expr]
@@ -66,11 +71,16 @@ Checked against Racket v9.1 [cs].
 ```racket
 any/c   none/c   any                      ; any = range only, multi-value ok
 (or/c c ...)   (and/c c ...)   (not/c c)
-(one-of/c v ...)   (symbols sym ...)   (literal datum)
+(one-of/c v ...)   (symbols sym ...)
+'sym  42  "s"                             ; a quoted datum is already a contract
 (=/c n) (</c n) (>/c n) (<=/c n) (>=/c n)
 (between/c lo hi)   (integer-in lo hi)   (real-in lo hi)   (char-in a b)
 exact-integer?  exact-nonnegative-integer?  natural-number/c
-(string-len/c n)   (false/c)   (printable/c)
+(string-len/c n)   ; strings STRICTLY shorter than n
+false/c   printable/c                     ; VALUES, not constructors: false/c is
+                                          ;   #f, printable/c is a flat contract.
+                                          ;   (false/c) => "not a procedure";
+                                          ;   (printable/c) => arity mismatch.
 (flat-named-contract name flat-contract)  ; rename for nicer messages
 ```
 
@@ -80,11 +90,16 @@ exact-integer?  exact-nonnegative-integer?  natural-number/c
 (listof c)  (non-empty-listof c)  (list*of c)  (cons/c a d)  (list/c c ...)
 (vectorof c [#:flat? bool])  (vector/c c ...)
 (hash/c key/c val/c [#:immutable bool #:flat? bool])
-(box/c c)  (set/c c)  (sequence/c c ...)  (stream/c c)
+(box/c c)
 (promise/c c)  (parameter/c in/c [out/c])  (struct/c struct-id field-c ...)
 (struct/dc struct-id [field maybe-deps contract-or-dep] ...)  ; dependent fields
-(syntax/c c)   (hash/dc ...)
+(syntax/c c)   (hash/dc [key-id key-c] [val-id (key-id) val-c])
 ```
+
+Three collection combinators are *not* in `racket/contract` — require the
+collection's own module: `(set/c c)` from `racket/set`, `(sequence/c c ...)`
+from `racket/sequence`, `(stream/c c)` from `racket/stream`. Under
+`#lang racket` all three are already there.
 
 ## Higher-order, polymorphic, and lazy
 

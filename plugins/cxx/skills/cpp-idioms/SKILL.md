@@ -4,6 +4,8 @@ description: Reference for C++-specific coding idioms to apply when writing or e
 
 # C++ editing idioms
 
+Goal: apply the right C++ idiom at the change site — where the exception guard belongs, when a function has outgrown one job, whether a loop should become an algorithm, and what counts as red evidence in C++. This is a reference consulted while editing, not a procedure run start to finish, so it states no numbered steps; the procedure it feeds is the one in `/development:make-changing-easy`.
+
 These idioms generalize a real refactor of an executable's `main()`: broadening an exception guard that only handled one error type, splitting a nine-job function into one function per job, and replacing two explicit loops with range algorithms where that fit and leaving one as a loop where it didn't.
 
 ## Guard fallible boundaries in library code, not app code

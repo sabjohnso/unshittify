@@ -8,6 +8,8 @@ allowed-tools: Read, Grep, Glob, Edit, Write, Bash
 
 Goal: before touching existing code, confirm the change fits through an existing seam. If it doesn't, create the seam first through a behavior-preserving refactor, then make the requested change.
 
+This skill grants a bare `Bash` rather than argument-scoped patterns because steps 4c and 5 run the project's own test command, which is different in every project and unknowable when the skill is written.
+
 ## When this applies
 
 Applies to any edit that touches existing code: a bug fix, a feature addition, an extension of existing behavior. Skip it for a brand-new file or module with no existing structure to assess, and for a trivial one-line fix (a typo, a literal constant) that carries no structural risk.

@@ -83,20 +83,26 @@ adds a second one (both build the same struct).
 ;; helper:
 (make-constructor-style-printer get-name get-contents) -> write-proc
    ; prints  #<name: c ...>  in write/display,  (name c ...)  in print mode.
-(make-prefab-style-printer ...) ; alternative
+(struct->list v) -> list?                      ; the other racket/struct export
 
-;; gen:equal+hash — value equality (for opaque structs)
+;; gen:equal+hash — value equality (for opaque structs); all three required
 #:methods gen:equal+hash
   [(define (equal-proc a b recur) ....)        ; -> boolean?
    (define (hash-proc  a recur) ....)          ; -> exact-integer?
    (define (hash2-proc a recur) ....)]         ; -> exact-integer?
 
+;; gen:equal-mode+hash — the two-method alternative; mode is #t under equal?,
+;; #f under equal-always?
+#:methods gen:equal-mode+hash
+  [(define (equal-mode-proc a b recur mode) ....)   ; -> boolean?
+   (define (hash-mode-proc  a recur mode) ....)]    ; -> exact-integer?
+
 ;; applicable struct
 #:property prop:procedure proc-or-field-index
    ; proc: (lambda (self arg ...) ....);  or an integer field holding a procedure
 
-;; other common props
-prop:custom-write  prop:equal+hash  prop:evt  prop:dict  prop:sequence
+;; other common props (all in racket/base except prop:dict, from racket/dict)
+prop:custom-write  prop:equal+hash  prop:evt  prop:sequence  prop:dict
 ```
 
 `#:methods gen:foo [defn ...]` implements the generic interface `gen:foo`
@@ -106,7 +112,9 @@ accessors directly.
 ## Legacy
 
 ```racket
-(define-struct id (field ...) option ...)   ; older form; constructor is make-id,
-                                            ; fields mutable by default. Prefer struct.
+(define-struct id (field ...) option ...)   ; older form; constructor is make-id
+                                            ; and a subtype is (define-struct (sub id) ...).
+                                            ; Same options as struct — fields are
+                                            ; immutable unless #:mutable. Prefer struct.
 (struct-out id)                             ; provide constructor/pred/accessors together
 ```

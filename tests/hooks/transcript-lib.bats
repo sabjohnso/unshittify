@@ -70,7 +70,7 @@ setup() {
 }
 
 @test "an empty transcript returns 1 and is silent" {
-  transcript="$(mktemp "${BATS_TMPDIR:-/tmp}/empty.XXXXXX.jsonl")"
+  transcript="$(mktemp "$(fixture_dir)/empty.XXXXXX.jsonl")"
   : > "$transcript"
   run find_turn_start_line "$transcript"
   [ "$status" -eq 1 ]
@@ -120,14 +120,38 @@ setup() {
   [[ "$output" == *'"name":"Edit"'* ]]
 }
 
-@test "warns and yields no events on stdout when a line after the boundary is malformed" {
-  transcript="$(write_transcript "$(printf '%s\n%s\n' \
+# A half-written trailing line is the normal case, not an exotic one: the
+# harness appends to the transcript while the hook reads it. Losing the events
+# already scanned because the last line arrived incomplete tells
+# enforce-code-review.sh that nothing was edited, which is fail-open.
+@test "a malformed line is skipped and the events around it survive" {
+  transcript="$(write_transcript "$(printf '%s\n%s\n%s\n%s\n' \
     "$(user_prompt_event 'do the work')" \
+    "$(tool_use_event Edit)" \
+    '{"type":"assistant","message":{"content":[{"type":"tool_' \
+    "$(tool_use_event Read)")")"
+  result="$(tool_use_events_since_turn_start "$transcript" 2>/dev/null)"
+  [[ "$result" == *'"name":"Edit"'* ]]
+  [[ "$result" == *'"name":"Read"'* ]]
+}
+
+@test "a malformed line after the boundary is still reported on stderr" {
+  transcript="$(write_transcript "$(printf '%s\n%s\n%s\n' \
+    "$(user_prompt_event 'do the work')" \
+    "$(tool_use_event Edit)" \
+    'this is not json')")"
+  run tool_use_events_since_turn_start "$transcript"
+  [[ "$output" == *"malformed"* ]]
+}
+
+@test "a warning never reaches stdout as an event" {
+  transcript="$(write_transcript "$(printf '%s\n%s\n%s\n' \
+    "$(user_prompt_event 'do the work')" \
+    "$(tool_use_event Edit)" \
     'this is not json')")"
   result="$(tool_use_events_since_turn_start "$transcript" 2>/dev/null)"
-  [ -z "$result" ]
-  run tool_use_events_since_turn_start "$transcript"
-  [[ "$output" == *"failed to parse tool_use events"* ]]
+  run bash -c 'printf "%s" "$1" | jq -e -c . >/dev/null' _ "$result"
+  [ "$status" -eq 0 ]
 }
 
 # --- tool_use_events_since_line --------------------------------------------
@@ -246,6 +270,37 @@ setup() {
   [ "$output" -eq 1 ]
 }
 
+# The content rule is the fallback for transcripts recorded before the origin
+# field existed, so it must recognise the wrapper tag wherever the harness put
+# it in the leading whitespace. ltrimstr removes its argument exactly once, so
+# a second leading newline (or a leading space) left the tag unrecognised and
+# the injection acting as a boundary - moving the turn start FORWARD, past the
+# delegation, which is the one direction this rule must never move it.
+
+@test "a wrapper tag behind two newlines is not a boundary" {
+  injection="$(jq -nc '{type:"user", message:{role:"user",
+    content:"\n\n<task-notification>\n<status>completed</status>\n</task-notification>"}}')"
+  transcript="$(write_transcript "$(printf '%s\n%s\n%s\n' \
+    "$(typed_prompt_event 'review this project')" \
+    "$(tool_use_event Agent subagent_type=communication:prose-reviewer)" \
+    "$injection")")"
+  run find_turn_start_line "$transcript"
+  [ "$status" -eq 0 ]
+  [ "$output" -eq 1 ]
+}
+
+@test "a wrapper tag behind a leading space is not a boundary" {
+  injection="$(jq -nc '{type:"user", message:{role:"user",
+    content:" <system-reminder>context</system-reminder>"}}')"
+  transcript="$(write_transcript "$(printf '%s\n%s\n%s\n' \
+    "$(typed_prompt_event 'review this project')" \
+    "$(tool_use_event Agent subagent_type=communication:prose-reviewer)" \
+    "$injection")")"
+  run find_turn_start_line "$transcript"
+  [ "$status" -eq 0 ]
+  [ "$output" -eq 1 ]
+}
+
 @test "local command stdout is not a boundary" {
   transcript="$(write_transcript "$(printf '%s\n%s\n' \
     "$(typed_prompt_event 'do the thing')" \
@@ -308,4 +363,210 @@ setup() {
     "$(task_notification_event a2)" \
     "$(task_notification_event a3)")")"
   [ "$(find_turn_start_line "$one")" -eq "$(find_turn_start_line "$many")" ]
+}
+
+# --- one transcript object is one boundary verdict --------------------------
+#
+# The boundary is a LINE NUMBER, so the classifier's output and the file's
+# lines must stay in step. A user message may carry several text blocks; a
+# classifier that inspects the blocks rather than the message emits one
+# verdict per block, and every line number after it is shifted forward. The
+# boundary then lands past the turn's own tool calls, which is fail-open for
+# both enforce hooks.
+
+@test "a prompt of several text blocks is one boundary, not one per block" {
+  transcript="$(write_transcript "$(printf '%s\n%s\n%s\n' \
+    "$(user_prompt_multiblock_event 4 'do the work')" \
+    "$(tool_use_event Edit)" \
+    "$(tool_use_event Skill skill=development:review-tdd)")")"
+  run find_turn_start_line "$transcript"
+  [ "$status" -eq 0 ]
+  [ "$output" -eq 1 ]
+}
+
+@test "the events after a multi-block prompt are all still visible" {
+  transcript="$(write_transcript "$(printf '%s\n%s\n%s\n' \
+    "$(user_prompt_multiblock_event 4 'do the work')" \
+    "$(tool_use_event Edit)" \
+    "$(tool_use_event Skill skill=development:review-tdd)")")"
+  run tool_use_events_since_turn_start "$transcript"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *'"name":"Edit"'* ]]
+  [[ "$output" == *'"skill":"development:review-tdd"'* ]]
+}
+
+@test "the boundary never points past the end of the transcript" {
+  local prompt
+  for prompt in "$(user_prompt_event 'a plain string prompt')" \
+                "$(typed_prompt_event 'a typed prompt')" \
+                "$(user_prompt_array_event 'a one-block prompt')" \
+                "$(user_prompt_multiblock_event 2)" \
+                "$(user_prompt_multiblock_event 4)" \
+                "$(user_prompt_multiblock_event 9)"; do
+    transcript="$(write_transcript "$(printf '%s\n%s\n%s\n' \
+      "$prompt" \
+      "$(tool_use_event Edit)" \
+      "$(tool_use_event Read)")")"
+    run find_turn_start_line "$transcript"
+    [ "$status" -eq 0 ]
+    [ "$output" -le "$(wc -l < "$transcript")" ]
+  done
+}
+
+# --- the last-prompt fallback matches records, not quoted text --------------
+
+@test "a tool_result embedding the last-prompt marker is not a boundary" {
+  transcript="$(write_transcript "$(printf '%s\n%s\n' \
+    "$(tool_use_event Edit)" \
+    "$(tool_result_embedding_marker_event)")")"
+  run find_turn_start_line "$transcript"
+  [ "$status" -eq 1 ]
+}
+
+@test "an embedded last-prompt marker never moves the boundary past a real one" {
+  transcript="$(write_transcript "$(printf '%s\n%s\n%s\n' \
+    "$(last_prompt_marker)" \
+    "$(tool_use_event Edit)" \
+    "$(tool_result_embedding_marker_event)")")"
+  run find_turn_start_line "$transcript"
+  [ "$status" -eq 0 ]
+  [ "$output" -eq 1 ]
+}
+
+# --- schema drift in the boundary scan is visible ---------------------------
+#
+# The boundary classifier is the more load-bearing of the two scans: every
+# hook anchors on it. A line it cannot read must be reported, not silently
+# treated as "nothing here".
+
+@test "the boundary scan reports a line it could not parse" {
+  transcript="$(write_transcript "$(printf '%s\n%s\n' \
+    "$(user_prompt_event 'do the work')" \
+    'this is not json')")"
+  run find_turn_start_line "$transcript"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"malformed"* ]]
+}
+
+# --- a partially written final line ----------------------------------------
+#
+# The harness appends while the hook reads, so the final line is routinely
+# incomplete. Whatever the scan makes of it, the boundary must not land after
+# the events of the turn it opens.
+
+@test "a prompt on an unterminated final line does not push the boundary past it" {
+  transcript="$(mktemp "$(fixture_dir)/partial.XXXXXX.jsonl")"
+  printf '%s\n' "$(tool_use_event Edit)" > "$transcript"
+  printf '%s' "$(user_prompt_event 'the newest prompt')" >> "$transcript"
+  run find_turn_start_line "$transcript"
+  [ "$status" -eq 0 ]
+  [ "$output" -le 2 ]
+}
+
+# --- the boundary invariant, over generated transcripts ---------------------
+#
+# transcript.sh states the rule as a law: rejecting a harness-authored message
+# only ever moves the turn start EARLIER, and an earlier boundary can only let
+# a hook see more of the turn, never less. CLAUDE.md repeats it. It was pinned
+# by fixed examples - three injection strings against one transcript shape,
+# and six prompt shapes always followed by the same two lines - which is what
+# let the boundary once run past the end of a three-line file.
+#
+# The generator below varies what the examples held constant: the transcript's
+# length, how many harness messages are appended and in what order, and
+# whether malformed lines are interleaved. It reuses the seeded-LCG idiom from
+# enforce-code-review-internals.bats so a failing trial reproduces on a rerun.
+
+BOUNDARY_SEED=20260830
+BOUNDARY_TRIALS=12
+
+boundary_prng_reset() { BOUNDARY_STATE="$BOUNDARY_SEED"; }
+
+boundary_prng_next() {
+  BOUNDARY_STATE=$(( (BOUNDARY_STATE * 1103515245 + 12345) % 2147483648 ))
+  BOUNDARY_VALUE=$(( (BOUNDARY_STATE / 65536) % $1 ))
+}
+
+# One harness-authored line of each kind the boundary rule must reject, plus
+# the two shapes that previously fooled it: a tool_result quoting the marker
+# text, and a prompt carrying several text blocks.
+harness_line() {
+  case "$1" in
+    0) task_notification_event ;;
+    1) slash_command_marker_event ;;
+    2) local_command_stdout_event ;;
+    3) meta_injection_event ;;
+    4) tool_result_embedding_marker_event ;;
+    *) tool_result_event ;;
+  esac
+}
+
+@test "law: the boundary never points past the end of the transcript" {
+  boundary_prng_reset
+  for _ in $(seq "$BOUNDARY_TRIALS"); do
+    boundary_prng_next 4
+    local blocks=$(( BOUNDARY_VALUE + 1 ))
+    boundary_prng_next 5
+    local injections="$BOUNDARY_VALUE"
+    boundary_prng_next 3
+    local trailing=$(( BOUNDARY_VALUE + 1 ))
+
+    local lines
+    lines="$(user_prompt_multiblock_event "$blocks")"
+    for _ in $(seq 0 "$injections"); do
+      boundary_prng_next 6
+      lines="$(printf '%s\n%s' "$lines" "$(harness_line "$BOUNDARY_VALUE")")"
+    done
+    for _ in $(seq "$trailing"); do
+      lines="$(printf '%s\n%s' "$lines" "$(tool_use_event Edit)")"
+    done
+
+    local transcript total start
+    transcript="$(write_transcript "$lines")"
+    total="$(wc -l < "$transcript")"
+    start="$(find_turn_start_line "$transcript")"
+
+    [ -n "$start" ] || {
+      echo "no boundary (seed $BOUNDARY_SEED, blocks=$blocks injections=$injections)" >&2
+      return 1
+    }
+    [ "$start" -ge 1 ] || {
+      echo "boundary $start below 1 (seed $BOUNDARY_SEED)" >&2
+      return 1
+    }
+    [ "$start" -le "$total" ] || {
+      echo "boundary $start past EOF $total (seed $BOUNDARY_SEED, blocks=$blocks injections=$injections trailing=$trailing)" >&2
+      return 1
+    }
+  done
+}
+
+@test "law: appending a harness message never moves the boundary later" {
+  boundary_prng_reset
+  for _ in $(seq "$BOUNDARY_TRIALS"); do
+    boundary_prng_next 4
+    local blocks=$(( BOUNDARY_VALUE + 1 ))
+
+    local base
+    base="$(printf '%s\n%s' \
+      "$(user_prompt_multiblock_event "$blocks")" \
+      "$(tool_use_event Edit)")"
+
+    local before after grown
+    before="$(find_turn_start_line "$(write_transcript "$base")")"
+
+    grown="$base"
+    boundary_prng_next 4
+    local extra=$(( BOUNDARY_VALUE + 1 ))
+    for _ in $(seq "$extra"); do
+      boundary_prng_next 6
+      grown="$(printf '%s\n%s' "$grown" "$(harness_line "$BOUNDARY_VALUE")")"
+    done
+    after="$(find_turn_start_line "$(write_transcript "$grown")")"
+
+    [ "$after" -le "$before" ] || {
+      echo "boundary moved later: $before -> $after (seed $BOUNDARY_SEED, blocks=$blocks extra=$extra)" >&2
+      return 1
+    }
+  done
 }

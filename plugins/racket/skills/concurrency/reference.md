@@ -106,7 +106,11 @@ TCP listeners, custodian boxes.
 ```racket
 (place id body ...+)                   ; id names the place-channel inside body;
                                        ;   must appear at module level
-(place* id #:in ... body ...)          ; with custom ports
+(place* maybe-port ... id body ...+)   ; with custom ports; the KEYWORDS COME
+                                       ;   FIRST, before id:
+                                       ;   (place* #:in in #:out out #:err err
+                                       ;           pch body ...+)
+                                       ; maybe-port = #:in in | #:out out | #:err err
 (dynamic-place module-path start-name) ; start a place from a module's function
 (place-channel) -> (values pch pch)    ; a fresh bidirectional pair
 (place-channel-put pch v)              ; send (v must be place-message-allowed?)

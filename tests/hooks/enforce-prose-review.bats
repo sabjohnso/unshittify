@@ -192,3 +192,82 @@ setup() {
   [ "$status" -eq 0 ]
   [ "$(decision_field "$output")" = "block" ]
 }
+
+# --- a response that is code, not prose ------------------------------------
+#
+# MIN_WORDS is calibrated for prose. A response whose whole content is one
+# fenced code block has no prose in it to review, so counting its tokens as
+# words demands a prose review of a diff.
+
+# fenced_code_message
+#
+# A response that is one fenced code block and nothing else, well over
+# MIN_WORDS by `wc -w`.
+fenced_code_message() {
+  cat <<'MSG'
+```bash
+review_satisfied() {
+  local events="$1" skill_name="$2" agent_name="$3"
+  printf '%s\n' "$events" \
+    | jq -e -s --arg s "$skill_name" --arg a "$agent_name" \
+        'any(.[]; .skill == $s or .subagent_type == $a)' >/dev/null 2>&1
+}
+
+missing_reviews() {
+  local entry
+  for entry in "${REQUIRED_REVIEWS[@]}"; do
+    review_satisfied "$1" "${entry%%|*}" "${entry##*|}" || echo "${entry}"
+  done
+}
+```
+MSG
+}
+
+@test "a response that is one fenced code block never blocks" {
+  transcript="$(write_transcript "$(printf '%s\n%s\n' \
+    "$(typed_prompt_event 'show me the script')" \
+    "$(tool_use_event Edit)")")"
+  stdin="$(stdin_payload last_assistant_message="$(fenced_code_message)" transcript_path="$transcript")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "substantial prose introducing a code block still blocks, counting only the prose" {
+  transcript="$(write_transcript "$(printf '%s\n%s\n' \
+    "$(typed_prompt_event 'please explain this at length')" \
+    "$(tool_use_event Edit)")")"
+  message="$(printf '%s\n%s\n' "$LONG_MSG" "$(fenced_code_message)")"
+  stdin="$(stdin_payload last_assistant_message="$message" transcript_path="$transcript")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$status" -eq 0 ]
+  [ "$(decision_field "$output")" = "block" ]
+  [[ "$(reason_field "$output")" == *"(60 words)"* ]]
+}
+
+# --- malformed stdin --------------------------------------------------------
+#
+# The payload is read with bare `jq -r '.field'` assignments under `set -e`.
+# A payload that is not a JSON object makes each of those abort the script
+# mid-way: the hook exits nonzero having emitted no decision, so the turn ends
+# unjudged with jq's parse error as the only trace. Whether or not the harness
+# ever sends one, a Stop hook must reach a deliberate verdict on its own input
+# rather than crash into one.
+
+@test "stdin that is not JSON exits cleanly without a decision" {
+  run_hook "$SCRIPT" 'not json at all'
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "stdin that is JSON but not an object exits cleanly without a decision" {
+  run_hook "$SCRIPT" '"just a string"'
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "a truncated JSON payload exits cleanly without a decision" {
+  run_hook "$SCRIPT" '{"last_assistant_message": "half a pay'
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}

@@ -1,5 +1,6 @@
 ---
 description: "Iterate and build data with Racket for-loops and sequences — the for family (for/list, for/vector, for/hash, for/fold, for/sum), iteration clauses (#:when, #:break, #:final, parallel bindings), sequence constructors (in-range, in-list, in-vector, in-hash, in-naturals), racket/sequence operations, and the three ways to define new sequences (prop:sequence, make-do-sequence, define-sequence-syntax). Use when writing a loop or comprehension, choosing a sequence constructor, or making a value iterable."
+allowed-tools: Read, Grep, Glob
 ---
 
 # For-loops and Sequences
@@ -34,10 +35,14 @@ Pick the variant by what you want back:
 | `for/and` `for/or`       | boolean reduction (short-circuits)          |
 | `for/first` `for/last`   | the first / last body value                 |
 | `for/lists`              | several parallel lists from a `values` body |
-| `for/string` `for/bytes` | a string / byte string                      |
 
 Each has a `for*/…` sibling that nests the clauses (a Cartesian product)
 instead of iterating them in parallel.
+
+There is **no `for/string` or `for/bytes`** — build those from `for/list`:
+`(list->string (for/list ([c (in-string s)]) (char-upcase c)))`, and
+`list->bytes` likewise. (`2htdp/abstraction` defines a `for/string`, but it
+is a teaching-language form, not part of `racket`.)
 
 ## for/fold — accumulate
 
@@ -123,7 +128,7 @@ Three mechanisms, from simplest to fastest:
 ### 1. `prop:sequence` — make a struct iterable
 
 When a struct just wraps something already iterable, delegate. This is the
-easiest and usually enough (see [[structs]]):
+easiest and usually enough (see `../structs/SKILL.md`):
 
 ```racket
 (struct ring (items)
@@ -171,7 +176,8 @@ provide the fallback:
 
 For lazy or coroutine-style sequences, `in-generator` (from
 `racket/generator`) is an easier alternative: a body that `yield`s values
-becomes a sequence (see [[macros]] only if you need compile-time inlining).
+becomes a sequence (see `../macros/SKILL.md` only if you need
+compile-time inlining).
 
 ## Rules that prevent rework
 
@@ -187,5 +193,5 @@ becomes a sequence (see [[macros]] only if you need compile-time inlining).
   `for/first` already exist; reach for `for/fold` only when none fit.
 - **Make structs iterable with `prop:sequence` first.** Drop to
   `make-do-sequence` only for non-collection iteration, and to
-  `define-sequence-syntax` only when profiling ([[profiling]]) shows the loop
-  is hot — and always give it a proc fallback.
+  `define-sequence-syntax` only when profiling (`../profiling/SKILL.md`)
+  shows the loop is hot — and always give it a proc fallback.

@@ -2,7 +2,7 @@
 description: Add missing repository hook wiring to the user's global Claude Code settings (~/.claude/settings.json) — the Stop and PreToolUse entries for a marketplace's enforce-prose-review.sh, enforce-code-review.sh, and confirm-git-commit-push.sh — after showing the exact JSON and getting explicit approval. Use only when the user types this slash command, having already seen a check-settings report naming the missing wiring.
 argument-hint: "[marketplace path, if more than one has hooks]"
 disable-model-invocation: true
-allowed-tools: Read, Bash(jq:*), Bash(cp ~/.claude/settings.json:*), Bash(mv:*)
+allowed-tools: Read, Bash(jq:*), Bash(cp ~/.claude/settings.json:*), Bash(mv ~/.claude/settings.json.new:*)
 ---
 
 # Repair missing hook wiring
@@ -34,7 +34,7 @@ The command is `bash <path>/hooks/<script>`, where `<path>` is the `extraKnownMa
 1. Read `~/.claude/settings.json` and the check-settings report. List exactly which scripts are missing or mis-wired.
 2. Show the user the exact JSON that would be added, and ask. Proceed only on an explicit yes; if the user declines, leave the file untouched and say so.
 3. Back the file up: `cp ~/.claude/settings.json ~/.claude/settings.json.bak`.
-4. Build the merged JSON with `jq` into a temp file. Append a missing `Stop` command to an existing `hooks.Stop` entry's `hooks` array, or create the array if absent; append a missing `PreToolUse` command to an existing entry whose `matcher` is `Bash`, or create one. Never remove, reorder, or duplicate anything already present.
-5. Validate the temp file (`jq empty <temp>`). Only once it is valid, `mv` it into place. If the merge or validation fails, leave the live file untouched and report the failure; if anything goes wrong after the move, restore from the `.bak`.
+4. Build the merged JSON with `jq` into `~/.claude/settings.json.new`. That exact path is what `allowed-tools` permits the `mv` in step 5 to move, so a temp file anywhere else cannot be installed. Append a missing `Stop` command to an existing `hooks.Stop` entry's `hooks` array, or create the array if absent; append a missing `PreToolUse` command to an existing entry whose `matcher` is `Bash`, or create one. Never remove, reorder, or duplicate anything already present.
+5. Validate it (`jq empty ~/.claude/settings.json.new`). Only once it is valid, `mv ~/.claude/settings.json.new ~/.claude/settings.json`. If the merge or validation fails, leave the live file untouched and report the failure; if anything goes wrong after the move, restore with `cp ~/.claude/settings.json.bak ~/.claude/settings.json`.
 6. For a script that is present but under the wrong event or missing its matcher, describe the correction and ask before changing it — never silently move an existing entry.
 7. Report exactly which commands were added and confirm the file is still valid JSON.

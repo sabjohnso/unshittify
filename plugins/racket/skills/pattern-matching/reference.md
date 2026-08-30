@@ -93,8 +93,17 @@ within a pattern forces those positions to be `equal?`.
    ; macro-transformer-expr : optional, lets id also be used as an expression
    ; requires (for-syntax racket/base) for lambda/syntax at phase 1.
 
-(match-expander? v)
+(match-expander? v)          ; PHASE 1 ONLY — see below
 ```
+
+`racket/match` provides `match-expander?` (with `legacy-match-expander?`,
+`match-...-nesting`, `prop:match-expander`, `prop:legacy-match-expander`,
+and `syntax-local-match-introduce`) *for-syntax*: a plain
+`(require racket/match)` binds them at phase 1, inside a transformer body,
+and leaves them **unbound at phase 0** — calling `(match-expander? v)` in
+ordinary code is an unbound-identifier error. `(require (for-syntax
+racket/match))` does *not* reach them either; that lifts `racket/match`'s
+phase-0 exports, not its phase-1 ones.
 
 ## Failure continuation
 

@@ -1,7 +1,7 @@
 ---
-description: Review code — a diff, a file, or the working tree's pending changes — for wasted computation that costs the user time: superlinear work where linear suffices, redundant recomputation, repeated or avoidable I/O, quadratic rebuilding, needless materialization, missing early exits, and wrong data structures. Report each with its cost class and a concrete fix. Use automatically after any code is added or changed — a bug fix, a new feature, a refactor — as a standing post-condition on the change, not only when the user explicitly asks to review for efficiency or performance.
+description: "Review code — a diff, a file, or the working tree's pending changes — for wasted computation that costs the user time: superlinear work where linear suffices, redundant recomputation, repeated or avoidable I/O, quadratic rebuilding, needless materialization, missing early exits, and wrong data structures. Report each with its cost class and a concrete fix. Use automatically after any code is added or changed — a bug fix, a new feature, a refactor — as a standing post-condition on the change, not only when the user explicitly asks to review for efficiency or performance."
 argument-hint: "[file path, or none for working tree changes]"
-allowed-tools: Read, Grep, Glob, Bash(git diff:*), Bash(git status:*), Bash(git log:*)
+allowed-tools: Read, Grep, Glob, Bash(git diff:*), Bash(git status:*), Bash(git log:*), Bash(git show:*)
 ---
 
 # Review code for efficient use of the user's time

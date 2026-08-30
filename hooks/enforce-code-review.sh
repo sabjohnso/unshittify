@@ -31,51 +31,147 @@ CODE_CHANGE_TOOL_NAMES='^(Edit|Write|NotebookEdit)$'
 # shape that is missing here costs the gate's whole guarantee. Where the two
 # conflict, add the pattern.
 BASH_WRITE_PATTERNS=(
-  '(^|[[:space:];&|(])(sed|perl|ruby)[[:space:]][^;&|]*-i'   # in-place edit
+  '(^|[[:space:];&|(])(awk|sed|perl|ruby)[[:space:]][^;&|]*-i'  # in-place edit
   '(^|[[:space:];&|(])tee([[:space:]]|$)'
-  '(^|[[:space:];&|(])(cp|mv|ln|install|truncate|touch|mkdir|rmdir|rm|shred)([[:space:]]|$)'
+  '(^|[[:space:];&|(])(cp|mv|ln|truncate|touch|mkdir|rmdir|rm|shred)([[:space:]]|$)'
   '(^|[[:space:];&|(])(patch|dos2unix|unix2dos)([[:space:]]|$)'
   '(^|[[:space:];&|(])dd[[:space:]][^;&|]*of='
-  '(^|[[:space:];&|(])git[[:space:]]+(apply|restore|checkout|revert|stash)([[:space:]]|$)'
+  '(^|[[:space:];&|(])git[[:space:]]+(am|apply|checkout|cherry-pick|clean|merge|pull|rebase|reset|restore|revert|stash|switch)([[:space:]]|$)'
   '(^|[[:space:];&|(])(chmod|chown|chgrp)([[:space:]]|$)'
+  '(^|[[:space:];&|(])(python3?|node|ruby|perl)[[:space:]]+-[ce]([^[:alnum:]_-]|$)'
+  '(^|[;&|(][[:space:]]*)install([[:space:]]|$)'             # the coreutils tool
   '>>?[[:space:]]*[^&[:space:]]'                             # redirection to a path
 )
 
-# Redirection targets that write nothing a review could cover, stripped from
-# a command before the patterns above are matched against it. The redirection
-# pattern is otherwise so broad that a routine `make >/dev/null` would demand
-# four reviews and teach the user to route around the gate entirely.
+# Two entries above are anchored differently from the rest, and the
+# difference is the whole reason they work:
 #
-# Two kinds are exempt:
+#   git         The alternation covers every subcommand that rewrites tracked
+#               files, not only the ones that take a path. `git reset --hard`,
+#               `git clean -fdx`, `git merge`, `git rebase` and `git pull` all
+#               replace working-tree contents wholesale, and none of them was
+#               listed while the list read as though it were about applying
+#               patches.
+#   install     Anchored to a COMMAND position ([;&|(] or the start), not to
+#               any whitespace, because `install` is a coreutils file-copying
+#               tool AND the commonest subcommand word in the language: make,
+#               npm, pip, apt-get, cargo and go all take it, and none of them
+#               touches the tree under review. The cost of the tighter anchor
+#               is that `sudo install ...` is missed; that is the direction
+#               the file usually refuses, and it is accepted here only
+#               because the looser anchor demanded four reviews on every
+#               `npm install`.
 #
-#   discards      /dev/null and friends, and a duplicated descriptor (2>&1).
-#                 Nothing is written at all.
-#   temporaries   An absolute path under /tmp or /var/tmp. Such a file is not
-#                 in the tree under review, and cannot reach it except by
-#                 being copied back - which is itself a write this table
-#                 detects. Scratch work (drafting a commit message, staging
-#                 notes) otherwise trips the gate on a turn that changed no
-#                 code.
+# The interpreter entry exists for the same reason the sed entry does. The
+# harness's auto mode tells the model to prefer short scripts, so
+# `python3 -c "open('src/x.c','w').write('')"` is a path it is steered
+# toward. The option's tail is matched with [^[:alnum:]_-] rather than
+# whitespace so that `python3 -c'...'` counts too.
 #
-# The exemption covers the REDIRECTION OPERATOR only. `cp secret /tmp/x` still
-# counts as a write, because deciding which argument of an arbitrary command
-# is its target would mean parsing every command's option grammar. Erring
-# toward "this was a write" is the right direction for a gate.
-BASH_WRITE_EXEMPT='>>?[[:space:]]*(/dev/(null|stderr|stdout|fd/[0-9]+)|/(var/)?tmp/[^[:space:];&|)]*|&[0-9-])'
+# NOT COVERED, stated rather than implied: these patterns are matched against
+# the raw command, with no idea of quoting, so `echo 'run cp a b'` counts as
+# a write. confirm-git-commit-push.sh's mask_nonexecuting is the repository's
+# quote-aware masker, but it removes shell comments and heredoc bodies - it
+# leaves a quoted ARGUMENT exactly as it found it, so it would not change
+# this case. Closing it needs a quoted-string masker that does not exist yet,
+# and a naive one would be worse than the false positive: stripping quotes
+# would hide the real write in `bash -c 'sed -i s/a/b/ f'`.
 
-# Subagents known to hold no file-writing tool. Any OTHER subagent_type
-# counts as a possible code change, because a delegated agent's Edit calls
-# are recorded in the SUBAGENT's transcript - the parent transcript this hook
-# is handed shows only that some agent ran, never what it did. Erring toward
-# "it might have edited" is the only rule that closes that hole; the cost is
-# a redundant review after delegating to an agent not yet listed here.
+# One path component under a temporary directory: at least one character,
+# no "/" and no shell separator, and never "." or "..". Rejecting ".." is
+# what stops a traversal from claiming the exemption - /tmp/../home/user/src
+# leaves /tmp and names a file in the tree under review. Rejecting a lone "."
+# costs a redundant review on /tmp/./x, which nobody writes.
+BASH_TEMP_COMPONENT='(\.\.[^/[:space:];&|)]|\.[^./[:space:];&|)]|[^./[:space:];&|)])[^/[:space:];&|)]*'
+
+# An absolute path under /tmp or /var/tmp, and nothing else. It must be
+# followed by BASH_WORD_END wherever it is used: without that, /tmp matches
+# the head of /tmpfoo/bar.c and exempts a write into the tree.
+BASH_TEMP_PATH="/(var/)?tmp(/${BASH_TEMP_COMPONENT})*"
+
+# Where a command word ends, and where a whole command ends.
+BASH_WORD_END='([[:space:];&|)]|$)'
+BASH_COMMAND_END='[[:space:]]*([;&|)]|$)'
+
+# Text that writes nothing a review could cover, replaced by a space before
+# the patterns above are matched against a command. Add a rule here to widen
+# the exemption - no other code changes needed. Each rule is a complete sed
+# -E script; @ delimits the s/// because the patterns themselves contain | as
+# alternation, and a | delimiter would silently truncate them.
 #
-# An agent belongs on this list only when its own `tools:` line grants it
-# neither Edit, Write, nor NotebookEdit. Check the file before adding a name.
+# A space, not deletion: every write pattern anchors on a separator, so
+# leaving one behind means removing an exempt clause can neither join two
+# commands into a shape that matches nor split one that should.
+#
+# Two rules, and what each is for:
+#
+#   redirection   The redirection pattern is otherwise so broad that a routine
+#                 `make >/dev/null` would demand four reviews and teach the
+#                 user to route around the gate entirely. Exempt targets are
+#                 discards (/dev/null and friends), a duplicated descriptor
+#                 (2>&1), and an absolute path under /tmp - a file that is
+#                 not in the tree under review and cannot reach it except by
+#                 being copied back, which is itself a write this table
+#                 detects.
+#   scratch dirs  `mkdir -p /tmp/work` and `touch /tmp/x` create nothing a
+#                 review could read, yet mkdir and touch are in the write
+#                 table because they create files in the tree just as often.
+#                 The rule fires only when EVERY path the command names is
+#                 temporary and the command ends there: `mkdir /tmp/a src/b`
+#                 keeps its mkdir and is still a write.
+#
+# The redirection exemption covers the REDIRECTION OPERATOR only. `cp secret
+# /tmp/x` still counts as a write, because deciding which argument of an
+# arbitrary command is its target would mean parsing every command's option
+# grammar. Erring toward "this was a write" is the right direction for a gate.
+BASH_WRITE_EXEMPTIONS=(
+  "s@>>?[[:space:]]*(/dev/(null|stderr|stdout|fd/[0-9]+)|${BASH_TEMP_PATH}|&[0-9-])${BASH_WORD_END}@ @g"
+  "s@(^|[[:space:];&|(])(mkdir|touch)([[:space:]]+-[A-Za-z-]+)*([[:space:]]+${BASH_TEMP_PATH})+${BASH_COMMAND_END}@ @g"
+)
+
+# Subagents judged not to change the tree under review. Any OTHER
+# subagent_type counts as a possible code change, because a delegated agent's
+# Edit calls are recorded in the SUBAGENT's transcript - the parent transcript
+# this hook is handed shows only that some agent ran, never what it did.
+# Erring toward "it might have edited" is the only rule that closes that hole;
+# the cost is a redundant review after delegating to an agent not yet listed
+# here.
+#
+# THIS LIST IS A JUDGEMENT ABOUT EACH AGENT'S BODY, NOT A GUARANTEE DERIVED
+# FROM ITS `tools:` LINE, and the difference is not academic: every entry
+# below holds Bash. BASH_WRITE_PATTERNS above exists precisely because Bash
+# writes files, and a subagent's Bash calls go to the subagent's own
+# transcript, which no SubagentStop hook reads. So the exemption rests on
+# having read each agent's instructions and found that what it is told to do
+# is read, search and report - not on any capability the harness enforces.
+#
+# Adding a name therefore means reading that agent's file and judging its
+# whole body, not checking its tools line for Edit. Two consequences of the
+# judgement as it stands:
+#
+#   communication:prose-reviewer   Holds Edit, and is listed anyway. It is
+#                                  the one agent another Stop hook MANDATES:
+#                                  enforce-prose-review.sh blocks a
+#                                  substantial reply until this agent has run
+#                                  on it. Treating that mandated delegation
+#                                  as a possible code change left the two
+#                                  hooks with no move that satisfies both -
+#                                  one demanded the review, the other blocked
+#                                  the turn for having run it. What it edits
+#                                  is the prose it was handed, and reviewing
+#                                  that prose is the invocation itself.
+#   communication:table-formatter  Holds the same tools and is NOT listed. No
+#                                  hook mandates it, so listing it would buy
+#                                  no deadlock relief, and its own
+#                                  instructions tell it to apply the rewrite
+#                                  with Edit when it is given a file path -
+#                                  in this repository that file is a Markdown
+#                                  skill or agent, which is the product.
 READ_ONLY_AGENTS=(
   Explore
   Plan
   claude-code-guide
+  communication:prose-reviewer
   cxx:clang-query-runner
   development:efficiency-reviewer
   development:nst-reviewer
@@ -89,14 +185,6 @@ READ_ONLY_AGENTS=(
 
 # shellcheck source=lib/transcript.sh disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/lib/transcript.sh"
-
-# stop_hook_active_from <input-json>
-#
-# Don't re-block a stop that was itself forced by this hook - avoids an
-# infinite loop if the model ignores the instruction.
-stop_hook_active_from() {
-  printf '%s' "$1" | jq -r '.stop_hook_active // false'
-}
 
 transcript_path_from() {
   printf '%s' "$1" | jq -r '.transcript_path // empty'
@@ -138,14 +226,27 @@ bash_wrote_a_file() {
   local events="$1" commands
   commands=$(printf '%s\n' "$events" | jq -r 'select(.name == "Bash") | .command // empty')
   [ -n "$commands" ] || return 1
-  # @ delimits the s/// because BASH_WRITE_EXEMPT itself contains | as
-  # alternation; a | delimiter here silently truncates the pattern.
-  commands=$(sed -E "s@${BASH_WRITE_EXEMPT}@@g" <<<"$commands")
+  commands=$(strip_exempt_writes <<<"$commands")
   # One grep over the joined alternation rather than one grep per pattern.
   # This runs on the Stop path, which the user waits on at the end of every
   # turn, so the eight processes the per-pattern loop spawned were eight
   # process spawns of latency on every turn that ran any Bash command.
   grep -qE "$(bash_write_alternation)" <<<"$commands"
+}
+
+# strip_exempt_writes
+#
+# Filter. Replaces every BASH_WRITE_EXEMPTIONS match in its input with a
+# space. One sed invocation carrying the whole table, rather than one per
+# rule: this runs on the Stop path the user waits on at the end of every turn
+# that ran any Bash command.
+strip_exempt_writes() {
+  local -a sed_args=()
+  local rule
+  for rule in "${BASH_WRITE_EXEMPTIONS[@]}"; do
+    sed_args+=(-e "$rule")
+  done
+  sed -E "${sed_args[@]}"
 }
 
 # bash_write_alternation
@@ -255,11 +356,59 @@ block_decision_json() {
     '{decision:"block", reason:$reason}'
 }
 
+# stop_hook_active_or_unreadable <input-json>
+#
+# Reads the flag that stops this hook re-blocking a stop it forced itself,
+# which would loop if the model ignored the instruction.
+#
+# Prints the flag and succeeds, or prints nothing and fails
+# when the payload is not a JSON object - the only shape the field readers
+# above can be applied to. A bare scalar parses as JSON yet still makes
+# `.stop_hook_active` an error, so "parses" is not enough.
+#
+# The shape check and the first field read share one jq pass. Both run on
+# every turn, and validating in a process of its own cost as much again as
+# every other jq call this hook makes.
+stop_hook_active_or_unreadable() {
+  local flag
+  flag=$(printf '%s' "$1" | jq -r 'if type == "object" then (.stop_hook_active // false | tostring) else empty end' 2>/dev/null)
+  # An empty result is the only unreadable signal available here: jq -e would
+  # report a payload whose flag is legitimately false as a failure, since -e
+  # keys its exit status on the output value rather than on the parse.
+  [ -n "$flag" ] || return 1
+  printf '%s' "$flag"
+}
+
+# unreadable_input_decision
+#
+# The block emitted when the stdin payload cannot be read at all. A payload
+# this hook cannot parse is a payload it cannot clear: it names the
+# transcript, so without it there is no evidence either way about whether the
+# turn's reviews ran.
+#
+# It must be a decision on stdout, not a nonzero exit. The harness reads any
+# exit status other than 0 and 2 as a non-blocking error, so letting jq's
+# failure propagate under `set -e` (exit 5) ends the turn unreviewed - the
+# gate failing open on the one input it cannot check at all.
+#
+# This cannot loop: the retry payload carrying stop_hook_active is written by
+# the harness, not by whatever produced the unreadable one.
+unreadable_input_decision() {
+  jq -n --arg reason "The code-review Stop hook could not read its own stdin payload, so it cannot tell whether this turn changed code or whether the required reviews ran. Run the four development: reviews against the diff, address any findings, and then stop." \
+    '{decision:"block", reason:$reason}'
+}
+
 main() {
   local input
   input=$(cat)
 
-  if [ "$(stop_hook_active_from "$input")" = "true" ]; then
+  local stop_active
+  if ! stop_active=$(stop_hook_active_or_unreadable "$input"); then
+    unreadable_input_decision
+    return 0
+  fi
+
+  if [ "$stop_active" = "true" ]; then
     exit 0
   fi
 

@@ -4,6 +4,8 @@ description: Compile and run C++ code with the Clang/GCC sanitizers — AddressS
 
 # Compiling and running with sanitizers
 
+Goal: pick the sanitizer that catches the bug at hand, build and run with the flags it needs, and read its report down to the frame where the bug actually lives. This is a reference consulted at each of those points, not a procedure run start to finish, so it states no numbered steps.
+
 Sanitizers are compiler-inserted runtime checks: the compiler instruments
 every memory access, arithmetic operation, or thread synchronization point
 and aborts with a detailed report the moment a check fails, instead of

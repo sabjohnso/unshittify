@@ -1,5 +1,6 @@
 ---
 description: Build, develop, and distribute Racket code with raco and packages — collections vs packages, the info.rkt manifest (deps/build-deps/version/scribblings), scaffolding with raco pkg new, in-place development with raco pkg install --link, building with raco make/setup/test, standalone executables with raco exe, and publishing to the package catalog. Use when structuring a package, editing info.rkt, fixing dependency-check errors, or shipping a Racket library or app.
+allowed-tools: Bash(racket:*), Bash(raco:*), Read, Grep, Glob
 ---
 
 # raco and Packages
@@ -11,7 +12,7 @@ read `reference.md` in this skill directory.
 
 - A **collection** is a directory of modules requirable by a stable path:
   files under a `foo/` collection are reached as `(require foo/bar)` — the
-  collection name *is* the require path (see [[modules]]).
+  collection name *is* the require path (see [modules](../modules/SKILL.md)).
 - A **package** is a unit of *distribution* that provides one or more
   collections, declared by an `info.rkt` manifest. Installing a package makes
   its collections available everywhere.
@@ -26,9 +27,9 @@ raco pkg new my-lib
 
 generates a working package: `info.rkt` (the manifest), `main.rkt` (the
 collection's entry module with `test`/`main` submodules), `scribblings/` (a
-Scribble manual, see [[scribble-docs]]), `README.md`, `LICENSE-*`, and a CI
-workflow. The collection name defaults to the package name, so `(require
-my-lib)` loads `main.rkt`.
+Scribble manual, see [scribble-docs](../scribble-docs/SKILL.md)), `README.md`,
+`LICENSE-*`, and a CI workflow. The collection name defaults to the package
+name, so `(require my-lib)` loads `main.rkt`.
 
 ## The info.rkt manifest
 
@@ -69,7 +70,7 @@ raco pkg install --link /path/to/my-lib
 
 `--link` registers the directory as the package source; `raco pkg show` lists
 it as a `link`. (`--copy` snapshots instead; `--clone <dir>` links a git
-checkout.) Remove with `raco pkg remove my-lib`.
+checkout.) Remove with `raco pkg uninstall my-lib`.
 
 Resolve dependencies during install with `--auto` (install missing deps
 without asking) or `--deps search-auto`; choose where it lands with
@@ -83,10 +84,10 @@ without asking) or `--deps search-auto`; choose where it lands with
   Scope it: `raco setup my-lib` or `raco setup --pkgs my-lib`. Add
   `--check-pkg-deps` to validate `deps`/`build-deps`, `--no-docs` to skip
   docs, `-j N` for parallelism, `--clean` to wipe built files first.
-- **`raco test`** runs the `test` submodules (see [[rackunit]]). Targets:
-  `raco test file.rkt`, `raco test -c my-lib` (a collection), `raco test -p
-  my-lib` (a package), `-s name` for a non-`test` submodule, `-j N` to
-  parallelize.
+- **`raco test`** runs the `test` submodules (see
+  [rackunit](../rackunit/SKILL.md)). Targets: `raco test file.rkt`, `raco test
+  -c my-lib` (a collection), `raco test -p my-lib` (a package), `-s name` for
+  a non-`test` submodule, `-j N` to parallelize.
 
 A typical loop: `raco pkg install --link`, edit, `raco test -p my-lib`, and
 `raco setup my-lib` before committing to catch doc/dependency breakage.
@@ -124,7 +125,8 @@ changes by checksum and version.
   data-version-transparency concern — keep the path stable).
 - **Run `raco setup` before release, not just `raco test`.** `setup` builds
   docs and checks dependencies; tests alone miss unlinked-identifier and
-  missing-dep errors that only surface at build time (see [[scribble-docs]]).
+  missing-dep errors that only surface at build time (see
+  [scribble-docs](../scribble-docs/SKILL.md)).
 - **Bump `version` on every release.** The catalog and `raco pkg update`
   reconcile by version/checksum; an unchanged version hides changes from
   updaters.

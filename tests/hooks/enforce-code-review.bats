@@ -144,7 +144,16 @@ all_reviews_via_agents() {
   [[ "$reason" == *"review-efficiency"* ]]
 }
 
-@test "duplicate-insensitivity: invoking the same review skill twice still leaves it satisfied once" {
+# The two tests below are examples, not law-pins. Duplicate-insensitivity and
+# order-invariance are properties over every turn, and a single fixed turn
+# cannot say a property holds - these two were the whole evidence for two of
+# the three laws CLAUDE.md claims are pinned, and one of them permuted only
+# the case where nothing was missing. The laws themselves are checked over
+# generated turns in enforce-code-review-internals.bats ("law: ..."). What
+# these keep is end-to-end coverage of the shapes through the hook's stdin
+# interface, which the internals tests do not exercise.
+
+@test "a review skill invoked twice in one turn still leaves it satisfied" {
   transcript="$(write_transcript "$(printf '%s\n%s\n%s\n%s\n%s\n%s' \
     "$(last_prompt_marker)" \
     "$(tool_use_event Edit)" \
@@ -158,7 +167,7 @@ all_reviews_via_agents() {
   [ -z "$output" ]
 }
 
-@test "order-invariance: review invoked before the edit counts the same as after" {
+@test "a review invoked before the edit counts the same as one invoked after" {
   transcript="$(write_transcript "$(printf '%s\n%s\n%s' \
     "$(last_prompt_marker)" \
     "$(all_reviews_via_skills)" \
@@ -213,4 +222,67 @@ all_reviews_via_agents() {
   run_hook "$SCRIPT" "$stdin"
   [ "$status" -eq 0 ]
   [ -z "$output" ]
+}
+
+# --- the two Stop hooks must agree on one transcript ------------------------
+#
+# Nothing else in either suite runs both hooks against the same input, which
+# is why a deadlock between them shipped: enforce-prose-review.sh MANDATES
+# delegating a substantial reply to communication:prose-reviewer, and that
+# delegation was itself an unrecognised subagent here, so the turn that
+# satisfied one hook was blocked by the other with no move left that
+# satisfies both.
+
+# substantial_prose <word-count>
+#
+# A plain-prose assistant message of the requested length, long enough to
+# clear enforce-prose-review.sh's MIN_WORDS threshold.
+substantial_prose() {
+  local count="$1" i out=""
+  for ((i = 0; i < count; i++)); do
+    out+="word${i} "
+  done
+  printf '%s' "$out"
+}
+
+@test "a turn whose only delegation is the mandated prose review satisfies both Stop hooks" {
+  transcript="$(write_transcript "$(printf '%s\n%s\n%s\n' \
+    "$(typed_prompt_event 'explain how the turn boundary is computed')" \
+    "$(tool_use_event Read)" \
+    "$(tool_use_event Agent subagent_type=communication:prose-reviewer)")")"
+  stdin="$(stdin_payload transcript_path="$transcript" \
+                         last_assistant_message="$(substantial_prose 120)")"
+
+  run_hook "${HOOKS_DIR}/enforce-prose-review.sh" "$stdin"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ] || { echo "prose hook blocked: $output"; return 1; }
+
+  run_hook "$SCRIPT" "$stdin"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ] || { echo "code hook blocked a turn that changed no file: $output"; return 1; }
+}
+
+# --- unreadable stdin ------------------------------------------------------
+#
+# A Stop hook reports a block on stdout and exits 0. Any OTHER nonzero exit
+# is a non-blocking error to the harness, so a payload that kills the script
+# part-way lets the turn end unreviewed - the gate fails OPEN on the one
+# input it cannot check at all.
+
+@test "a stdin payload that is not JSON blocks rather than exiting nonzero" {
+  run_hook "$SCRIPT" 'not json'
+  [ "$status" -eq 0 ]
+  [ "$(decision_field "$output")" = "block" ]
+}
+
+@test "a stdin payload that is JSON but not an object blocks" {
+  run_hook "$SCRIPT" '"just a string"'
+  [ "$status" -eq 0 ]
+  [ "$(decision_field "$output")" = "block" ]
+}
+
+@test "an empty stdin payload blocks" {
+  run_hook "$SCRIPT" ''
+  [ "$status" -eq 0 ]
+  [ "$(decision_field "$output")" = "block" ]
 }

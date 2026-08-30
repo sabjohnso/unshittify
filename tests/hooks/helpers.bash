@@ -15,6 +15,17 @@
 # which shellcheck can't see across files since .bats isn't shell it parses.
 HOOKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../hooks" && pwd)"
 
+# fixture_dir - the directory every throwaway fixture is created under.
+#
+# BATS_TEST_TMPDIR is per-test and bats removes it; BATS_TMPDIR is shared
+# across the run and nothing removes it, so the transcripts and stderr
+# captures written there accumulated in /tmp one per assertion, run after
+# run. The fallbacks keep the suite working on a bats too old to set the
+# per-test variable.
+fixture_dir() {
+  printf '%s' "${BATS_TEST_TMPDIR:-${BATS_TMPDIR:-/tmp}}"
+}
+
 # stdin_payload key=value [key=value ...]
 #
 # Builds the JSON object a Stop hook receives on stdin. Recognized keys:
@@ -55,19 +66,19 @@ stdin_payload() {
 run_hook() {
   local script="$1"
   local stdin="$2"
-  HOOK_STDERR="$(mktemp "${BATS_TMPDIR:-/tmp}/hook_stderr.XXXXXX")"
+  HOOK_STDERR="$(mktemp "$(fixture_dir)/hook_stderr.XXXXXX")"
   run bash -c 'printf "%s" "$1" | "$2" 2>"$3"' _ "$stdin" "$script" "$HOOK_STDERR"
 }
 
 # write_transcript <heredoc-content>
 #
 # Writes the given content (one JSON object per line) to a fresh temp file
-# and prints its path. Caller is responsible for nothing further; files
-# are written under BATS_TMPDIR which bats/the OS clean up.
+# and prints its path. Caller is responsible for nothing further: the file
+# goes under fixture_dir, which bats removes when the test ends.
 write_transcript() {
   local content="$1"
   local file
-  file="$(mktemp "${BATS_TMPDIR:-/tmp}/transcript.XXXXXX.jsonl")"
+  file="$(mktemp "$(fixture_dir)/transcript.XXXXXX.jsonl")"
   printf '%s\n' "$content" > "$file"
   printf '%s' "$file"
 }
@@ -230,4 +241,35 @@ shaped_event() {
       skill: (if $skill == "" then null else $skill end),
       subagent_type: (if $subagent_type == "" then null else $subagent_type end),
       command: (if $command == "" then null else $command end)}'
+}
+
+# user_prompt_multiblock_event <count> [text]
+#
+# A genuine user prompt whose content is an array of COUNT text blocks — the
+# shape a prompt takes when the harness delivers attachments or reminders
+# alongside the typed words. It is still ONE transcript object on ONE line, so
+# the boundary classifier must produce exactly one verdict for it: a
+# classifier that emits one verdict per text block desynchronises every line
+# number after it, and the boundary then lands past the events it must cover.
+user_prompt_multiblock_event() {
+  local count="$1"
+  local text="${2:-a genuine prompt split across several text blocks}"
+  jq -nc --argjson count "$count" --arg text "$text" \
+    '{type:"user", message:{role:"user",
+      content:[range($count) | {type:"text", text:"\($text) \(.)"}]}}'
+}
+
+# tool_result_embedding_marker_event
+#
+# A tool_result that carries a transcript record inside its own structured
+# result, so the raw line contains the text {"type":"last-prompt"} unescaped
+# while the record itself is a tool_result. Reading or testing a transcript
+# produces exactly this shape, and this repository does that constantly. A
+# fallback that greps the raw file for the marker text matches here and moves
+# the boundary FORWARD, past the turn's own events, which is fail-open for the
+# code gate. Neither a genuine prompt nor a genuine marker: never a boundary.
+tool_result_embedding_marker_event() {
+  jq -nc '{type:"user",
+           message:{role:"user", content:[{type:"tool_result", content:"read the fixture"}]},
+           toolUseResult:{lines:[{type:"last-prompt"}]}}'
 }

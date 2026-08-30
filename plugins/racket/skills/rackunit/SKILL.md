@@ -1,5 +1,6 @@
 ---
-description: Write Racket tests with rackunit — the check vocabulary (check-equal?, check-pred, check-=, check-exn, check-match), grouping with test-case and test-suite (#:before/#:after), running via raco test or run-tests, custom failure context with with-check-info, and BDD-style describe/context/it from rackunit/spec. Use when writing or organizing Racket tests, adding a test submodule, choosing a check, or structuring specs.
+description: "Write Racket tests with rackunit — the check vocabulary (check-equal?, check-pred, check-=, check-exn, check-match), grouping with test-case and test-suite (#:before/#:after), running via raco test or run-tests, custom failure context with with-check-info, and BDD-style describe/context/it from the separate rackunit-spec package. Use when writing or organizing Racket tests, adding a test submodule, choosing a check, or structuring specs."
+allowed-tools: Bash(racket:*), Bash(raco:*), Read, Grep, Glob
 ---
 
 # Testing with rackunit
@@ -8,7 +9,7 @@ description: Write Racket tests with rackunit — the check vocabulary (check-eq
 records a failure (with actual/expected/location) instead of throwing. The
 idiomatic home for tests is a `test` submodule, run by `raco test` — no
 separate test file, and the tests can see the module's private bindings (see
-[[modules]]).
+[modules](../modules/SKILL.md)).
 
 For the complete check vocabulary and the test-grouping, runner, and custom-
 check signatures, read `reference.md` in this skill directory.
@@ -110,7 +111,16 @@ use it to build domain-specific checks that explain themselves:
 
 ## BDD style: rackunit/spec
 
-`rackunit/spec` adds `describe`, `context` (an alias for `describe`), and
+`rackunit/spec` is **not** part of `rackunit`. Despite the collection path it
+ships in the separate `rackunit-spec` package, and on a stock install
+`(require rackunit/spec)` fails with `open-input-file: cannot open module
+file`. Install it first:
+
+```
+raco pkg install rackunit-spec
+```
+
+It adds `describe`, `context` (an alias for `describe`), and
 `it` for readable, nested specs. `describe`/`context` just nest a
 description; `it` expands to a `test-case` whose name is the descriptions
 joined and indented. Checks inside `it` are ordinary rackunit checks.
@@ -138,7 +148,8 @@ rackunit checks and suites for everything else.
 
 - **Default to `(module+ test …)` + `raco test`.** Tests live beside the code
   they cover, see its private bindings, and don't run on `require` (see
-  [[modules]]). Reserve `test-suite` + `run-tests` for custom runners.
+  [modules](../modules/SKILL.md)). Reserve `test-suite` + `run-tests` for
+  custom runners.
 - **Choose the specific check.** `(check-equal? x 42)` reports actual vs
   expected; `(check-true (= x 42))` reports only "got #f". Reach for
   `check-pred`, `check-=`, `check-match` over `check-true` of a predicate.
@@ -146,6 +157,7 @@ rackunit checks and suites for everything else.
   in `(lambda () …)`; pass `exn:fail:…?` or a regexp to say *which* error.
 - **Name groups with `test-case`.** A labeled case turns an anonymous failure
   into one you can locate; suites without names are hard to read in output.
-- **`rackunit/spec` is structure, not a framework.** It has no hooks or
-  fixtures — combine it with plain rackunit for setup, and don't expect
-  before/after blocks.
+- **`rackunit/spec` is a separate package, and structure rather than a
+  framework.** `raco pkg install rackunit-spec` before requiring it; it has no
+  hooks or fixtures — combine it with plain rackunit for setup, and don't
+  expect before/after blocks.

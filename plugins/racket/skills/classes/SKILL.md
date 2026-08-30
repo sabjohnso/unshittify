@@ -1,5 +1,6 @@
 ---
 description: Object-oriented programming in Racket with racket/class — define classes over object%, create objects with new/make-object and message them with send, inheritance (super, override, the pubment/augment/inner hole), interfaces (interface, is-a?), composition via mixins and traits, abstract methods, and class/object contracts (class/c, object/c, is-a?/c, ->m). Use when writing stateful objects, working with racket/gui, or extending classes through mixins and interfaces.
+allowed-tools: Read, Grep, Glob
 ---
 
 # Object-Oriented Racket with racket/class
@@ -15,10 +16,11 @@ directory.
 
 Reach for `racket/class` when you need **stateful objects with behavior** or
 must interoperate with a class-based library (notably `racket/gui`). For
-plain data with operations, a [[structs]] + [[generics]] design is usually
-simpler and more functional. When you do use classes, favor interfaces and
-composition (mixins/traits) over deep inheritance hierarchies — open
-extension without editing existing classes.
+plain data with operations, a [structs](../structs/SKILL.md) +
+[generics](../generics/SKILL.md) design is usually simpler and more
+functional. When you do use classes, favor interfaces and composition
+(mixins/traits) over deep inheritance hierarchies — open extension without
+editing existing classes.
 
 ## Defining a class
 
@@ -152,7 +154,8 @@ mix several independent method sets and resolve conflicts explicitly
 
 ## Contracts
 
-`racket/contract` interoperates with objects (see [[contracts]]):
+`racket/contract` interoperates with objects (see
+[contracts](../contracts/SKILL.md)):
 
 - **`(is-a?/c iface-or-class)`** — the everyday boundary contract: "an object
   that implements this interface (or extends this class)". Demand the
@@ -181,7 +184,8 @@ mix several independent method sets and resolve conflicts explicitly
   keeps the superclass in control (a hook); `override`/`super` hands control
   to the subclass. Pick deliberately and declare the method accordingly.
 - **Contract with `is-a?/c` at boundaries.** Accept any implementer of the
-  interface so new classes and mixins keep working ([[contracts]]).
+  interface so new classes and mixins keep working
+  ([contracts](../contracts/SKILL.md)).
 - **Encapsulate state.** Keep `field`s private and expose behavior through
   methods; objects earn their place by hiding mutable state behind a stable
   interface.

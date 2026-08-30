@@ -620,3 +620,207 @@ GITW=git
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }
+
+# --- Fourth review round, and the matcher rather than the masker. Every
+# --- command below is fully intact - no comment, no heredoc, nothing that
+# --- masking touches at all - and the pattern still failed to see it,
+# --- because a quote character sat where it demanded whitespace, or a
+# --- separator inside a quoted path ended a segment that the shell never
+# --- ends. Each one runs a real gated command.
+
+@test "BYPASS: a gated command inside bash -c is still gated" {
+  stdin="$(pretooluse_payload "bash -c \"$GITW commit -m x\"")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+@test "BYPASS: a gated command inside sh -c is still gated" {
+  stdin="$(pretooluse_payload "sh -c '$GITW commit -m x'")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+@test "BYPASS: a double-quoted subcommand is still gated" {
+  stdin="$(pretooluse_payload "$GITW \"commit\" -m x")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+@test "BYPASS: a single-quoted subcommand is still gated" {
+  stdin="$(pretooluse_payload "$GITW 'commit' -m x")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+@test "BYPASS: a quoted command name is still gated" {
+  stdin="$(pretooluse_payload "\"$GITW\" commit -m x")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+@test "BYPASS: a separator quoted inside a -C path does not end the segment" {
+  stdin="$(pretooluse_payload "$GITW -C \"/a;b\" commit -m x")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+@test "BYPASS: a push inside a quoted interpreter argument is still gated" {
+  stdin="$(pretooluse_payload "bash -c \"$GITW push --force\"")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+# --- the two below split the COMMAND WORD itself with a quote. The shell
+# --- reads g"it" as git and runs it, and is_git_subcommand tokenizes it as
+# --- git too - but main's fast path tests the raw string for the substring
+# --- "git", which g"it" does not contain, so the matcher was never reached.
+# --- A prefilter that is not quote-aware must not be able to overrule a
+# --- matcher that is.
+
+@test "BYPASS: a quote inside the command word is still gated" {
+  stdin="$(pretooluse_payload "${GITW:0:1}\"${GITW:1}\" commit -m x")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+@test "BYPASS: a single quote inside the command word is still gated" {
+  stdin="$(pretooluse_payload "${GITW:0:1}'${GITW:1}' push origin main")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+# --- the subcommand is the FIRST non-option word after the command word and
+# --- its global options. Anywhere else the same word is data: a manual page,
+# --- a search pattern, a ref name. All three below were DENIED outright
+# --- before this rule, instructing the model to prose-review a message that
+# --- does not exist.
+
+@test "help for the commit subcommand is not itself a commit" {
+  stdin="$(pretooluse_payload "$GITW help commit")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "a log search for the word commit is not a commit" {
+  stdin="$(pretooluse_payload "$GITW log --grep commit")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "rev-parse verifying a ref named commit is not a commit" {
+  stdin="$(pretooluse_payload "$GITW rev-parse --verify commit")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "a log search for the word push is not a push" {
+  stdin="$(pretooluse_payload "$GITW log --grep push")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+# --- a payload the hook cannot parse must not open the gate. To a PreToolUse
+# --- hook every exit status but 2 is a non-blocking error, so a jq assignment
+# --- failing under `set -e` lets the tool call through with no gate at all.
+
+@test "malformed stdin asks rather than failing open" {
+  run_hook "$SCRIPT" 'not json'
+  [ "$status" -eq 0 ]
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+@test "stdin that is valid JSON but not an object asks rather than failing open" {
+  run_hook "$SCRIPT" '[1,2,3]'
+  [ "$status" -eq 0 ]
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+@test "empty stdin asks rather than failing open" {
+  run_hook "$SCRIPT" ''
+  [ "$status" -eq 0 ]
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+# --- the splitting pass reaches inside a quoted string, and must reach only
+# --- where the quoted string is a command line. A search pattern or an echo
+# --- argument that MENTIONS the watched words is the very case the masker
+# --- above exists to let through; the interpreter list is what separates a
+# --- mention from an interpreter's argument.
+
+@test "a quoted mention in a search pattern is not gated" {
+  stdin="$(pretooluse_payload "grep -rn \"$GITW commit\" hooks/")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "a quoted mention echoed to the terminal is not gated" {
+  stdin="$(pretooluse_payload "echo \"$GITW push origin main\"")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "BYPASS: a quoted command line handed to a remote shell is still gated" {
+  stdin="$(pretooluse_payload "ssh host \"$GITW push --force\"")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+# BYPASS: shapes that survived the tokenizer rewrite. Both put the watched
+# word where the scanner could not read it: ANSI-C quoting ($'...') hides it
+# behind a "$" the scanner treated as an ordinary word character, and an
+# inline alias definition (-c alias.ci=commit) names the subcommand in the
+# value of a global option the scanner skipped without reading.
+
+@test "BYPASS: ANSI-C quoting around the subcommand is still gated" {
+  stdin="$(pretooluse_payload "$GITW \$'commit' -m x")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+@test "BYPASS: ANSI-C quoting around the command word is still gated" {
+  stdin="$(pretooluse_payload "\$'$GITW' commit -m x")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+@test "BYPASS: ANSI-C quoting around a push subcommand is still gated" {
+  stdin="$(pretooluse_payload "$GITW \$'push' origin main")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+@test "BYPASS: an inline alias defining commit is gated" {
+  stdin="$(pretooluse_payload "$GITW -c alias.ci=commit ci -m x")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+@test "BYPASS: an inline alias defining push is gated" {
+  stdin="$(pretooluse_payload "$GITW -c alias.pp=push pp")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+@test "BYPASS: an inline alias whose body starts with commit is gated" {
+  stdin="$(pretooluse_payload "$GITW -c alias.save='commit -a -m wip' save")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+@test "an inline alias unrelated to a gated subcommand is not gated" {
+  stdin="$(pretooluse_payload "$GITW -c alias.st=status st")"
+  run_hook "$SCRIPT" "$stdin"
+  [ -z "$output" ]
+}
+
+@test "a dollar sign that is not ANSI-C quoting is still an ordinary character" {
+  stdin="$(pretooluse_payload "$GITW log --grep \$'commit'")"
+  run_hook "$SCRIPT" "$stdin"
+  [ -z "$output" ]
+}

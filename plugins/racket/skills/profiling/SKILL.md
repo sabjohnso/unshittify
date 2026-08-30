@@ -1,5 +1,6 @@
 ---
 description: Profile and time Racket code — time/time-apply for quick cpu/real/gc numbers, the statistical profiler (profile, profile-thunk, raco profile) to find hot spots, contract-profile for contract overhead, and current-memory-use for allocation. Use when code is slow and you need evidence of where time goes before optimizing, reading a profiler report, or measuring contract/GC cost.
+allowed-tools: Bash(racket:*), Bash(raco:*), Read, Grep, Glob
 ---
 
 # Profiling Racket
@@ -106,7 +107,8 @@ contracts and which contracts cost the most:
 
 A high percentage means the boundary is too hot — move the contract outward,
 relax it on an internal path, or drop to `define/contract`-free code there
-(see [[contracts]]). Confirm with evidence before removing any check.
+(see [contracts](../contracts/SKILL.md)). Confirm with evidence before
+removing any check.
 
 ## Memory
 
@@ -135,4 +137,4 @@ and more.
   consing; reducing allocation often beats tuning the inner arithmetic.
 - **Measure contract cost before deleting contracts.** Use `contract-profile`
   to prove a boundary is the bottleneck rather than removing safety on a hunch
-  ([[contracts]]).
+  ([contracts](../contracts/SKILL.md)).

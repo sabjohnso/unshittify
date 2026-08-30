@@ -1,7 +1,7 @@
 ---
 description: Review code — a diff, a file, or the working tree's pending changes — against this project's Normalized Systems Theory (NST) principles for evolvable code (encapsulation, separation of concerns, programming to interfaces, composition over inheritance, local reasoning, small focused units, declarative style, isolated side effects, the open-closed principle, and refactor-friendly tests), and report each violation with its principle and a concrete fix. Use automatically after any code is added or changed — a bug fix, a new feature, a refactor — as a standing post-condition on the change, not only when the user explicitly asks to review for evolvability or NST compliance.
 argument-hint: "[file path, or none for working tree changes]"
-allowed-tools: Read, Grep, Glob, Bash(git diff:*), Bash(git status:*), Bash(git log:*)
+allowed-tools: Read, Grep, Glob, Bash(git diff:*), Bash(git status:*), Bash(git log:*), Bash(git show:*)
 ---
 
 # Review code against Normalized Systems Theory

@@ -14,7 +14,6 @@ and Comprehensions" and "Sequences". Checked against Racket v9.1 [cs].
 (for/and  ...)  (for/or ...)                    ; short-circuiting
 (for/sum  ...)  (for/product ...)
 (for/first ...) (for/last ...)
-(for/string ...) (for/bytes ...)
 (for/lists (id ...) (for-clause ...) body ...+) ; body -> (values ...)
 (for/fold  ([accum-id init-expr] ... maybe-result) (for-clause ...) body ...+)
 (for/foldr ([accum-id init-expr] ... maybe-result-or-delay) (for-clause ...) body ...+)
@@ -22,6 +21,8 @@ and Comprehensions" and "Sequences". Checked against Racket v9.1 [cs].
 ;; every form above has a for*/... variant that nests the clauses.
 (for/fold/derived orig-stx ...)                 ; for building custom comprehensions
 (for*/fold/derived ...)
+;; NOT in racket: for/string, for/bytes. Use (list->string (for/list ...))
+;; and (list->bytes (for/list ...)) instead.
 ```
 
 ## for-clause grammar

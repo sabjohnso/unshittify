@@ -5,15 +5,19 @@ allowed-tools: Bash(clang-query:*), Read, Grep, Glob
 
 # Querying the AST with clang-query
 
+Goal: express the requested structural pattern as a Clang AST matcher, run it with clang-query against source compiled with the project's real flags, and report exactly the matching locations.
+
 clang-query runs Clang's AST matcher language — the same matcher DSL used to write clang-tidy checks and Tooling library passes — against real, compiled C++ source, so a structural pattern can be searched for precisely instead of approximated with a text search or regex.
 
-## Prerequisites: a compilation database
+## Prerequisites: a compilation database the caller supplies
 
 clang-query needs the same include paths, defines, and language standard the file was actually compiled with, or it will fail to build a complete AST.
 
-- With CMake, configure with `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON`; this produces `compile_commands.json` in the build directory. Point clang-query at it with `-p <build-dir>`.
-- With a build system that doesn't emit one directly, generate it with `bear -- <build command>` (Bear) or `intercept-build <build command>`.
-- Without a compilation database, pass the compiler flags directly after `--`: `clang-query file.cpp -- -std=c++20 -Iinclude`.
+This skill runs `clang-query` and nothing else. Configuring or running a build is the caller's job: `bear -- <build command>` and a CMake configure run arbitrary project commands, which is a far wider grant than a read-only structural search needs. When no compilation database and no flags are available, report which of the following the caller should run, and stop — do not build the project to obtain one.
+
+- With CMake, configuring with `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON` writes `compile_commands.json` into the build directory. Point clang-query at it with `-p <build-dir>`.
+- With a build system that doesn't emit one directly, `bear -- <build command>` (Bear) or `intercept-build <build command>` records one from an actual build.
+- Without a compilation database, the compiler flags can be passed directly after `--`: `clang-query file.cpp -- -std=c++20 -Iinclude`.
 
 ## Running: batch vs. interactive
 
@@ -48,6 +52,15 @@ clang-query needs the same include paths, defines, and language standard the fil
 - `set output diag` — print only `file:line:col`, like a compiler diagnostic.
 - `set bind-root false` — suppress printing the outermost matched node when only a `.bind()`ed inner node is of interest.
 - `set traversal-kind IgnoreUnlessSpelledInSource` — hide implicit AST nodes (implicit casts, compiler-generated constructors) that otherwise clutter matches against ordinary source code.
+
+## Steps
+
+1. Locate the compilation database: look for `compile_commands.json` in the working directory or an obvious build directory (`build/`, `out/`). If there is none, ask the caller for one, or for the compiler flags to pass after `--`, per "Prerequisites" above.
+2. Draft the narrowest matcher that plausibly captures the requested pattern, adding `isExpansionInMainFile()` unless matches from included headers are wanted too.
+3. Run it in batch mode against one representative file first: `clang-query -p <build-dir> -c "set output diag" -c 'match <matcher>' <file>`.
+4. Read the result and adjust: zero matches usually means the flags or the matcher are wrong rather than that the pattern is absent — check the flags first, then broaden the matcher. Too many matches means another narrowing predicate is needed.
+5. Repeat steps 2-4 until the matches are exactly the intended set, then re-run across every file in scope.
+6. Report the final matcher expression, the match locations as `file:line:col`, and the exact command line, so the search can be re-run without reconstructing it.
 
 ## Rules that prevent rework
 

@@ -1,7 +1,7 @@
 {
   "name": "git",
   "description": "Git-related Claude Code tooling.",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "author": {
     "name": "Samuel Bryant Johnson",
     "email": "samuel.bryant.johnson@gmail.com"

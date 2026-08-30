@@ -1,5 +1,6 @@
 ---
-description: Draw graphics in Racket with racket/draw and pict — imperative drawing on a dc<%> (bitmaps, SVG/PDF/PS files, pens/brushes/paths/transforms) and functional, composable pictures with pict (circle/text/append/superimpose, colorize/scale/rotate, pin-line connectors, pict->bitmap). Use when rendering images, building diagrams, composing pictures, producing vector output, or drawing custom graphics outside or inside a GUI.
+description: Render Racket graphics with racket/draw and pict, independent of any window — imperative drawing on a dc<%> (bitmap-dc%, svg-dc%, pdf-dc%, post-script-dc%, pens, brushes, dc-path%, transforms, text metrics) and composable pictures with pict (circle/text/append/superimpose, colorize/scale/rotate, pin-arrow-line connectors, pict->bitmap). Use when producing an image, a diagram, or an SVG/PDF/PostScript file, composing or measuring picts, or looking up a dc<%> or pict procedure; for the window and widgets around a canvas see ../gui/SKILL.md, and for a timer-driven redraw loop see ../canvas-animation/SKILL.md.
+allowed-tools: Read, Grep, Glob
 ---
 
 # Drawing: racket/draw and pict
@@ -13,7 +14,8 @@ directory.
 - **`racket/draw`** is imperative drawing onto a **drawing context**
   (`dc<%>`): you set a pen and brush, then issue `draw-line`,
   `draw-rectangle`, `draw-text`, … The same `dc<%>` API targets bitmaps,
-  GUI canvases ([[gui]]), and vector files (SVG/PDF/PostScript).
+  GUI canvases ([gui](../gui/SKILL.md)), and vector files
+  (SVG/PDF/PostScript).
 - **`pict`** is a functional picture library built on top: a `pict` is an
   immutable value with a bounding box, created and combined by pure functions
   (`hc-append`, `cc-superimpose`, `colorize`). It renders to a `dc<%>` when
@@ -21,7 +23,8 @@ directory.
 
 Choose **pict** to compose and lay out pictures and diagrams declaratively;
 drop to **`racket/draw`** for pixel-level control or to produce image files.
-DrRacket shows a `pict` inline, and Scribble embeds them ([[scribble-docs]]).
+DrRacket shows a `pict` inline, and Scribble embeds them
+([scribble-docs](../scribble-docs/SKILL.md)).
 
 ## racket/draw — drawing on a dc<%>
 
@@ -40,8 +43,9 @@ offscreen with no window:
 (send bm save-file "out.png" 'png)        ; PNG/JPEG/etc.
 ```
 
-Other contexts: a GUI `canvas%`'s `get-dc` ([[gui]]); and vector backends
-`svg-dc%`, `pdf-dc%`, `post-script-dc%` for resolution-independent files.
+Other contexts: a GUI `canvas%`'s `get-dc` ([gui](../gui/SKILL.md)); and
+vector backends `svg-dc%`, `pdf-dc%`, `post-script-dc%` for
+resolution-independent files.
 The vector backends build a **stateful document** — construct with
 `[interactive #f]`, then bracket drawing with the page lifecycle:
 
@@ -132,7 +136,7 @@ Sub-libraries add effects: `pict/color` (`red`, `green`, …), `pict/shadow`
   skewed by leftover transforms.
 - **Reuse pens and brushes from the caches.** `the-pen-list`/`the-brush-list`
   return shared instances; allocating a `new pen%` per draw call is wasted
-  work in a hot paint loop ([[profiling]]).
+  work in a hot paint loop ([profiling](../profiling/SKILL.md)).
 - **`pin-over` overflows the bounding box — use `panorama`.** Content pinned
   past the edges is clipped by the parent unless you `panorama` to widen the
   box.

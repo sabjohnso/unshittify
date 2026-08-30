@@ -8,7 +8,8 @@ reference. Flags checked against Racket v9.1 [cs] (`raco <cmd> --help`).
 ```
 raco pkg install [opt ...] [<src> ...]   ; install; no src => current dir
 raco pkg update  [opt ...] [<src> ...]   ; update installed packages
-raco pkg remove  [opt ...] <name> ...    ; (alias: uninstall)
+raco pkg uninstall [opt ...] <name> ...  ; remove packages
+                                         ; `raco pkg remove` redirects here
 raco pkg new     <name>                  ; scaffold a package directory
 raco pkg show    [opt ...] [<name> ...]  ; list installed packages
 raco pkg create  [opt ...] <dir>         ; bundle a directory into an archive
@@ -47,7 +48,7 @@ raco pkg empty-trash
 ```
 --format <fmt>        zip (default) | tgz | plt   (archive format)
 --manifest            write a directory manifest instead of an archive
---original <pkg>      base the bundle on an installed package
+--original <pkg>      record <pkg> as the original package source
 --dest <dir>          output directory
 ```
 

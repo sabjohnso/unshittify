@@ -1,0 +1,23 @@
+# Everything in this repository is checked by tests/run_tests.sh and by
+# nothing else. Until this workflow existed, running it depended on someone
+# remembering to - which is the failure mode the validator was written to
+# eliminate in the first place.
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install bats and shellcheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends bats shellcheck jq
+
+      - name: Run the whole suite
+        run: tests/run_tests.sh

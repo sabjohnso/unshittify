@@ -1,8 +1,11 @@
 # Canvas Animation Reference — signatures
 
 Companion to SKILL.md. Source: docs.racket-lang.org/gui/ (canvas%, timer%).
-Checked against Racket v9.1 [cs] (constructed/run under Xvfb). See the gui and
-drawing skills for the full widget and dc<%> APIs.
+Member names checked against Racket v9.1 [cs] by interface introspection
+(`interface->method-names`) with no display attached. That confirms a method
+exists; it does NOT confirm an init-argument name, which only realising a
+window would catch. See ../gui/SKILL.md and ../drawing/SKILL.md for the full
+widget and dc<%> APIs.
 
 ## canvas% — animation-relevant members
 

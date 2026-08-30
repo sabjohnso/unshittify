@@ -1,5 +1,6 @@
 ---
 description: "Define and use Racket structs — the struct form and its options (#:transparent, #:mutable, #:prefab, #:guard, #:auto, #:constructor-name), inheritance and subtype predicates, struct-copy functional update, and generic interfaces via #:methods (gen:custom-write, gen:equal+hash, prop:procedure). Use when defining a struct, choosing transparent/opaque/prefab, controlling construction, customizing printing or equality, or deciding struct vs list/hash."
+allowed-tools: Read, Grep, Glob
 ---
 
 # Racket Structs
@@ -28,6 +29,10 @@ serialization:
 | opaque (default) | identity (`eq?`)      | `#<posn>`            | encapsulated state, hidden invariants |
 | `#:transparent`  | structural (by field) | `#(struct:posn 3 4)` | value types, test data, most cases    |
 | `#:prefab`       | structural            | `#s(posn 3 4)`       | data that must `read`/serialize       |
+
+The "Prints as" column is `write`/`display` output. `print` — what the REPL
+and `~v` use — shows a transparent struct as `(posn 3 4)` and a prefab one as
+`'#s(posn 3 4)`.
 
 ```racket
 (equal? (posn 1 2) (posn 1 2))   ; #f when opaque, #t when transparent/prefab
@@ -133,9 +138,23 @@ Implement a generic interface inline. Common ones:
         (lambda (self) (list (point-x self) (point-y self)))))])
   ```
 
-- **`gen:equal+hash`** — give an opaque struct value equality (three procs:
-  `equal-proc`, `hash-proc`, `hash2-proc`). Only needed when you want custom
-  equality; `#:transparent` already gives structural `equal?`.
+- **`gen:equal+hash`** — give an opaque struct value equality. It needs all
+  three procedures: `equal-proc`, `hash-proc`, `hash2-proc` (omit one and the
+  struct definition fails with "required method is not implemented").
+  `gen:equal-mode+hash` is the newer two-method alternative — `equal-mode-proc`
+  and `hash-mode-proc`, each taking one extra `mode` argument that is `#t`
+  under `equal?` and `#f` under `equal-always?`, so one struct can distinguish
+  the two equalities:
+
+  ```racket
+  (struct box2 (v)
+    #:methods gen:equal-mode+hash
+    [(define (equal-mode-proc a b recur mode) (recur (box2-v a) (box2-v b)))
+     (define (hash-mode-proc a recur mode)    (recur (box2-v a)))])
+  ```
+
+  Either is only needed when you want custom equality; `#:transparent`
+  already gives structural `equal?`.
 
 - **`#:property prop:procedure`** — make instances applicable like
   functions:
@@ -152,7 +171,7 @@ Implement a generic interface inline. Common ones:
 access via `struct-info` requires a transparent struct (or the right
 inspector) — another reason opaque hides data. To contract a struct's fields
 at a module boundary, use the `struct` clause of `contract-out` (see
-[[contracts]]).
+[contracts](../contracts/SKILL.md)).
 
 ## Rules that prevent rework
 

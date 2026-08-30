@@ -1,5 +1,6 @@
 ---
-description: Animate a racket/gui canvas% — the timer-driven update/render loop, frame-rate-independent motion with dt timing, flicker-free drawing (double buffering, refresh vs refresh-now, suspend-flush/resume-flush, offscreen bitmaps), input-driven animation, and testing animation by splitting model from view. Use when building a game loop, animating graphics, achieving smooth motion, or fixing canvas flicker.
+description: Drive a repeating redraw loop on a racket/gui canvas% — the timer% tick that advances a model and then requests a repaint, frame-rate-independent motion from a dt clock, flicker-free rendering (double buffering, refresh vs refresh-now, suspend-flush/resume-flush, offscreen bitmaps), input that feeds the model, and splitting the pure update from the render so it can be tested without a window. Use when building a game loop or an animation, making motion smooth or frame-rate independent, or diagnosing canvas flicker; for one-off painting see ../drawing/SKILL.md, and for the surrounding window, widgets and dialogs see ../gui/SKILL.md.
+allowed-tools: Read, Grep, Glob
 ---
 
 # Canvas Animation with racket/gui
@@ -7,8 +8,8 @@ description: Animate a racket/gui canvas% — the timer-driven update/render loo
 Animation on a `canvas%` is a loop: a **timer** advances the model state,
 then asks the canvas to repaint, and the **paint-callback** renders the
 current state. Data flows one way — *update the model, then draw it* — never
-the reverse. This builds on `[[gui]]` (the canvas, eventspace, and input)
-and `[[drawing]]` (the `dc<%>` you paint with).
+the reverse. This builds on [gui](../gui/SKILL.md) (the canvas, eventspace,
+and input) and [drawing](../drawing/SKILL.md) (the `dc<%>` you paint with).
 
 For the animation-relevant `canvas%` and `timer%` members, the timing
 primitives, and the offscreen double-buffer pattern, read `reference.md` in
@@ -95,8 +96,8 @@ redrawing the bitmap only when the scene changes:
 ## Input-driven animation
 
 Read input into the model, never draw from an input handler. Subclass
-`canvas%` and override `on-char`/`on-event` (see `[[gui]]`) to set state that
-the next paint reflects:
+`canvas%` and override `on-char`/`on-event` (see [gui](../gui/SKILL.md)) to
+set state that the next paint reflects:
 
 ```racket
 (define game-canvas%
@@ -114,8 +115,9 @@ the next paint reflects:
 Update and paint run on the handler thread, so a slow frame freezes input.
 Keep per-frame work small; push heavy computation (path-finding, asset
 loading) to a worker thread and feed results back with `queue-callback`
-(see `[[concurrency]]`). A `timer%` interval shorter than a frame's work just
-queues callbacks faster than they drain — measure with `[[profiling]]`.
+(see [concurrency](../concurrency/SKILL.md)). A `timer%` interval shorter than
+a frame's work just queues callbacks faster than they drain — measure with
+[profiling](../profiling/SKILL.md).
 
 ## Testing animation
 
@@ -128,9 +130,10 @@ a window:
 (check-equal? (world-x (step (world 0 100) 0.5)) 50.0)
 ```
 
-Render the model to an offscreen `bitmap-dc%` (`[[drawing]]`) to snapshot a
-frame in a test. Remember a shown `frame%` keeps the eventspace — and the
-process — alive; close the frame or `(exit)` to stop a standalone run.
+Render the model to an offscreen `bitmap-dc%` ([drawing](../drawing/SKILL.md))
+to snapshot a frame in a test. Remember a shown `frame%` keeps the eventspace
+— and the process — alive; close the frame or `(exit)` to stop a standalone
+run.
 
 ## Rules that prevent rework
 
@@ -147,5 +150,6 @@ process — alive; close the frame or `(exit)` to stop a standalone run.
   rather than patching the previous one; cache to an offscreen bitmap only
   when a scene is expensive and changes rarely.
 - **Stop the timer and keep frames cheap.** `(send timer stop)` on teardown,
-  and move heavy work off the handler thread (`[[concurrency]]`) so input and
-  rendering stay smooth.
+  and move heavy work off the handler thread
+  ([concurrency](../concurrency/SKILL.md)) so input and rendering stay
+  smooth.
