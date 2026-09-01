@@ -190,10 +190,10 @@ transcript_path_from() {
   printf '%s' "$1" | jq -r '.transcript_path // empty'
 }
 
-# The turn boundary and the tool_use event schema live in the shared library
-# (find_turn_start_line, tool_use_events_since_turn_start), so this hook and
-# enforce-prose-review.sh agree on where a turn begins and how events are
-# shaped.
+# The turn boundary, the tool_use event schema, and the brief-turn opt-out
+# live in the shared library (find_turn_start_line, tool_use_events_since_line,
+# turn_requests_brevity), so this hook and enforce-prose-review.sh agree on
+# where a turn begins, how events are shaped, and which turns are exempt.
 
 # Each of the three predicates below answers one question about the turn's
 # events, and code_was_edited is their disjunction. They are separate so a
@@ -321,16 +321,28 @@ missing_reviews() {
 
 # missing_reviews_for_transcript <transcript-file>
 #
-# Composes tool_use_events_since_turn_start + code_was_edited +
-# missing_reviews against a real transcript file, so this single function is
-# what tests exercise directly with synthetic transcript fixtures instead of
-# only end-to-end via stdin. Prints nothing if no code was edited since the
-# turn start, or if all required reviews were satisfied.
+# Composes find_turn_start_line + tool_use_events_since_line +
+# code_was_edited + turn_requests_brevity + missing_reviews against a real
+# transcript file, so this single function is what tests exercise directly
+# with synthetic transcript fixtures instead of only end-to-end via stdin.
+# Prints nothing if there is no turn to judge, if no code was edited since
+# the turn start, if the turn's prompt opted out, or if all required reviews
+# were satisfied.
 missing_reviews_for_transcript() {
   local transcript="$1"
-  local events
-  events=$(tool_use_events_since_turn_start "$transcript")
+  local start_line events
+  start_line=$(find_turn_start_line "$transcript") || return 0
+
+  events=$(tool_use_events_since_line "$transcript" "$start_line")
   code_was_edited "$events" || return 0
+
+  # The brief-turn opt-out; see turn_requests_brevity in lib/transcript.sh.
+  # Checked only once an edit is known: most turns edit nothing, and on those
+  # its answer cannot change the verdict, so they should not pay its spawns.
+  if turn_requests_brevity "$transcript" "$start_line"; then
+    return 0
+  fi
+
   missing_reviews "$events"
 }
 

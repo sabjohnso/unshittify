@@ -271,3 +271,27 @@ MSG
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }
+
+@test "a prompt starting with Briefly suppresses the prose gate for the turn" {
+  transcript="$(write_transcript "$(user_prompt_event 'Briefly, what changed here?')")"
+  stdin="$(stdin_payload last_assistant_message="$LONG_MSG" transcript_path="$transcript")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "a prompt starting with lowercase briefly suppresses the prose gate" {
+  transcript="$(write_transcript "$(user_prompt_event 'briefly summarize the diff')")"
+  stdin="$(stdin_payload last_assistant_message="$LONG_MSG" transcript_path="$transcript")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "briefly mid-sentence does not suppress the prose gate" {
+  transcript="$(write_transcript "$(user_prompt_event 'Explain briefly what changed')")"
+  stdin="$(stdin_payload last_assistant_message="$LONG_MSG" transcript_path="$transcript")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$status" -eq 0 ]
+  [ "$(decision_field "$output")" = "block" ]
+}

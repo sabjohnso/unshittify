@@ -55,7 +55,7 @@ setup() {
 
 @test "code_was_edited detects an Edit at the head of a very long event list" {
   # Shaped events ({name, skill, subagent_type}), as
-  # tool_use_events_since_turn_start emits them - not raw transcript lines.
+  # tool_use_events_since_line emits them - not raw transcript lines.
   # seq/awk rather than `yes | head`: the latter's own SIGPIPE would fail the
   # fixture's command substitution under bats' pipefail, masking the result.
   events="$( { printf '%s\n' '{"name":"Edit","skill":null,"subagent_type":null}'

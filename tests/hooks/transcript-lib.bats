@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
 # Unit tests for the shared transcript helpers in hooks/lib/transcript.sh,
 # exercised by sourcing the library directly (it defines functions only, runs
-# nothing) and calling find_turn_start_line / tool_use_events_since_turn_start
+# nothing) and calling find_turn_start_line / tool_use_events_since_line
 # against synthetic transcript fixtures.
 
 load helpers
@@ -84,7 +84,11 @@ setup() {
   [[ "$output" == *"no user prompt or last-prompt marker in non-empty transcript"* ]]
 }
 
-# --- tool_use_events_since_turn_start -------------------------------------
+# --- tool_use_events_since_line, anchored at the boundary ------------------
+# These compose find_turn_start_line + tool_use_events_since_line the way the
+# hooks themselves now do (there is no wrapper for it any more - the hooks
+# need the boundary separately for the brevity check, so each composes the
+# two calls itself and the composition is pinned end-to-end in their suites).
 
 @test "emits one shaped event per tool_use since the turn start" {
   transcript="$(write_transcript "$(printf '%s\n%s\n%s\n%s\n' \
@@ -92,18 +96,12 @@ setup() {
     "$(tool_use_event Edit)" \
     "$(tool_use_event Skill skill=development:review-nst)" \
     "$(tool_use_event Agent subagent_type=nst-reviewer)")")"
-  run tool_use_events_since_turn_start "$transcript"
+  start="$(find_turn_start_line "$transcript")"
+  run tool_use_events_since_line "$transcript" "$start"
   [ "$status" -eq 0 ]
   [ "$(printf '%s\n' "$output" | grep -c '"name":"Edit"')" -eq 1 ]
   [[ "$output" == *'"skill":"development:review-nst"'* ]]
   [[ "$output" == *'"subagent_type":"nst-reviewer"'* ]]
-}
-
-@test "emits nothing on stdout when there is no turn start" {
-  transcript="$(write_transcript "$(tool_use_event Edit)")"
-  # stderr carries the schema-anomaly warning; stdout must be empty.
-  result="$(tool_use_events_since_turn_start "$transcript" 2>/dev/null)"
-  [ -z "$result" ]
 }
 
 @test "excludes tool_use events that precede the turn boundary" {
@@ -113,7 +111,8 @@ setup() {
     "$(user_prompt_event 'now do the work')" \
     "$(tool_use_event Edit)" \
     "$(tool_use_event Skill skill=development:review-tdd)")")"
-  run tool_use_events_since_turn_start "$transcript"
+  start="$(find_turn_start_line "$transcript")"
+  run tool_use_events_since_line "$transcript" "$start"
   [ "$status" -eq 0 ]
   [[ "$output" != *'"skill":"development:review-nst"'* ]]
   [[ "$output" == *'"skill":"development:review-tdd"'* ]]
@@ -130,7 +129,8 @@ setup() {
     "$(tool_use_event Edit)" \
     '{"type":"assistant","message":{"content":[{"type":"tool_' \
     "$(tool_use_event Read)")")"
-  result="$(tool_use_events_since_turn_start "$transcript" 2>/dev/null)"
+  start="$(find_turn_start_line "$transcript" 2>/dev/null)"
+  result="$(tool_use_events_since_line "$transcript" "$start" 2>/dev/null)"
   [[ "$result" == *'"name":"Edit"'* ]]
   [[ "$result" == *'"name":"Read"'* ]]
 }
@@ -140,7 +140,8 @@ setup() {
     "$(user_prompt_event 'do the work')" \
     "$(tool_use_event Edit)" \
     'this is not json')")"
-  run tool_use_events_since_turn_start "$transcript"
+  start="$(find_turn_start_line "$transcript")"
+  run tool_use_events_since_line "$transcript" "$start"
   [[ "$output" == *"malformed"* ]]
 }
 
@@ -149,7 +150,8 @@ setup() {
     "$(user_prompt_event 'do the work')" \
     "$(tool_use_event Edit)" \
     'this is not json')")"
-  result="$(tool_use_events_since_turn_start "$transcript" 2>/dev/null)"
+  start="$(find_turn_start_line "$transcript" 2>/dev/null)"
+  result="$(tool_use_events_since_line "$transcript" "$start" 2>/dev/null)"
   run bash -c 'printf "%s" "$1" | jq -e -c . >/dev/null' _ "$result"
   [ "$status" -eq 0 ]
 }
@@ -389,7 +391,8 @@ setup() {
     "$(user_prompt_multiblock_event 4 'do the work')" \
     "$(tool_use_event Edit)" \
     "$(tool_use_event Skill skill=development:review-tdd)")")"
-  run tool_use_events_since_turn_start "$transcript"
+  start="$(find_turn_start_line "$transcript")"
+  run tool_use_events_since_line "$transcript" "$start"
   [ "$status" -eq 0 ]
   [[ "$output" == *'"name":"Edit"'* ]]
   [[ "$output" == *'"skill":"development:review-tdd"'* ]]
@@ -569,4 +572,120 @@ harness_line() {
       return 1
     }
   done
+}
+
+# --- turn_requests_brevity ------------------------------------------------
+# The user's one-turn opt-out from the Stop hooks: a genuine prompt whose
+# text opens with "Briefly" or "briefly". Only positive evidence counts - a
+# marker fallback or a mid-sentence "briefly" must never stand a gate down.
+
+@test "a prompt starting with Briefly requests brevity" {
+  transcript="$(write_transcript "$(user_prompt_event 'Briefly, what does this function do?')")"
+  run turn_requests_brevity "$transcript" 1
+  [ "$status" -eq 0 ]
+}
+
+@test "a prompt starting with lowercase briefly requests brevity" {
+  transcript="$(write_transcript "$(user_prompt_event 'briefly explain the turn boundary')")"
+  run turn_requests_brevity "$transcript" 1
+  [ "$status" -eq 0 ]
+}
+
+@test "an array-content prompt starting with Briefly requests brevity" {
+  transcript="$(write_transcript "$(user_prompt_array_event 'Briefly describe the fix')")"
+  run turn_requests_brevity "$transcript" 1
+  [ "$status" -eq 0 ]
+}
+
+@test "leading whitespace before Briefly still requests brevity" {
+  transcript="$(write_transcript "$(user_prompt_event '  Briefly: is this correct?')")"
+  run turn_requests_brevity "$transcript" 1
+  [ "$status" -eq 0 ]
+}
+
+@test "briefly mid-sentence does not request brevity" {
+  transcript="$(write_transcript "$(user_prompt_event 'Explain briefly what this does')")"
+  run turn_requests_brevity "$transcript" 1
+  [ "$status" -ne 0 ]
+}
+
+@test "a prompt starting with Brief alone does not request brevity" {
+  transcript="$(write_transcript "$(user_prompt_event 'Brief me on the hooks')")"
+  run turn_requests_brevity "$transcript" 1
+  [ "$status" -ne 0 ]
+}
+
+@test "a last-prompt marker boundary never requests brevity" {
+  transcript="$(write_transcript "$(printf '%s\n%s' \
+    "$(last_prompt_marker)" \
+    "$(tool_use_event Edit)")")"
+  run turn_requests_brevity "$transcript" 1
+  [ "$status" -ne 0 ]
+}
+
+@test "a line jq cannot parse never requests brevity" {
+  transcript="$(write_transcript 'Briefly - not json at all')"
+  run turn_requests_brevity "$transcript" 1
+  [ "$status" -ne 0 ]
+}
+
+@test "a word merely prefixed by briefly does not request brevity" {
+  transcript="$(write_transcript "$(user_prompt_event 'Brieflyish notes are fine here')")"
+  run turn_requests_brevity "$transcript" 1
+  [ "$status" -ne 0 ]
+}
+
+@test "Briefly followed by punctuation or end still requests brevity" {
+  local text
+  for text in 'Briefly' 'Briefly.' 'briefly: the gist' 'Briefly, please'; do
+    transcript="$(write_transcript "$(user_prompt_event "$text")")"
+    turn_requests_brevity "$transcript" 1 || {
+      echo "did not match: $text" >&2
+      return 1
+    }
+  done
+}
+
+@test "law: a harness-authored record starting with Briefly never requests brevity" {
+  # The opt-out needs a GENUINE prompt. Every harness-authored shape the
+  # boundary classifier rejects must also fail this check, even when the text
+  # it carries opens with the trigger word - otherwise a subagent completion
+  # or an injected instruction could stand the gates down on the user's
+  # behalf.
+  local line
+  for line in \
+    "$(meta_injection_event 'Briefly injected instructions')" \
+    "$(task_notification_event)" \
+    "$(slash_command_marker_event '/briefly')" \
+    "$(local_command_stdout_event)" \
+    "$(tool_result_event)" \
+    "$(tool_result_embedding_marker_event)"; do
+    transcript="$(write_transcript "$line")"
+    if turn_requests_brevity "$transcript" 1; then
+      echo "harness record requested brevity: $line" >&2
+      return 1
+    fi
+  done
+}
+
+# --- turn_prompt_text -----------------------------------------------------
+
+@test "turn_prompt_text round-trips a string prompt's text" {
+  transcript="$(write_transcript "$(user_prompt_event 'the exact words the user typed')")"
+  run turn_prompt_text "$transcript" 1
+  [ "$status" -eq 0 ]
+  [ "$output" = "the exact words the user typed" ]
+}
+
+@test "turn_prompt_text round-trips an array prompt's text" {
+  transcript="$(write_transcript "$(user_prompt_array_event 'array words the user typed')")"
+  run turn_prompt_text "$transcript" 1
+  [ "$status" -eq 0 ]
+  [ "$output" = "array words the user typed" ]
+}
+
+@test "turn_prompt_text prints nothing for a non-prompt record" {
+  transcript="$(write_transcript "$(last_prompt_marker)")"
+  run turn_prompt_text "$transcript" 1
+  [ -z "$output" ]
 }

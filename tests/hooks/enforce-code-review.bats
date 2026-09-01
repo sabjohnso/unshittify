@@ -286,3 +286,33 @@ substantial_prose() {
   [ "$status" -eq 0 ]
   [ "$(decision_field "$output")" = "block" ]
 }
+
+@test "a prompt starting with Briefly suppresses the code gate for the turn" {
+  transcript="$(write_transcript "$(printf '%s\n%s' \
+    "$(user_prompt_event 'Briefly patch the typo in the readme')" \
+    "$(tool_use_event Edit)")")"
+  stdin="$(stdin_payload transcript_path="$transcript")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "a prompt starting with lowercase briefly suppresses the code gate" {
+  transcript="$(write_transcript "$(printf '%s\n%s' \
+    "$(user_prompt_event 'briefly fix that off-by-one')" \
+    "$(tool_use_event Edit)")")"
+  stdin="$(stdin_payload transcript_path="$transcript")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+@test "briefly mid-sentence does not suppress the code gate" {
+  transcript="$(write_transcript "$(printf '%s\n%s' \
+    "$(user_prompt_event 'Fix that off-by-one briefly please')" \
+    "$(tool_use_event Edit)")")"
+  stdin="$(stdin_payload transcript_path="$transcript")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$status" -eq 0 ]
+  [ "$(decision_field "$output")" = "block" ]
+}

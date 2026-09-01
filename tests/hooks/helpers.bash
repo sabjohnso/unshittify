@@ -221,7 +221,7 @@ bash_command_event() {
 # shaped_event <name> [skill=<skill>] [subagent_type=<type>] [command=<cmd>]
 #
 # Prints one SHAPED event, the {name, skill, subagent_type, command} form
-# tool_use_events_since_turn_start emits - which is what code_was_edited and
+# tool_use_events_since_line emits - which is what code_was_edited and
 # review_satisfied consume. Distinct from tool_use_event, which prints the
 # raw assistant transcript LINE those are derived from; passing a raw line
 # where a shaped event is expected silently reports "nothing happened".

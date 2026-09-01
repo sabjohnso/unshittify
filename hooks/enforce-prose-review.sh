@@ -104,8 +104,13 @@ unreviewed_prose_word_count() {
   # No genuine user prompt (and no fallback marker) means there is no turn to
   # judge - stay silent. find_turn_start_line encapsulates the turn-boundary
   # rule, shared with the other hooks so it cannot drift; the boundary is
-  # computed once and reused for the invocation check below.
+  # computed once and reused for the checks below.
   start_line=$(find_turn_start_line "$transcript") || return 0
+
+  # The brief-turn opt-out; see turn_requests_brevity in lib/transcript.sh.
+  if turn_requests_brevity "$transcript" "$start_line"; then
+    return 0
+  fi
 
   # agent_invoked_since_line encapsulates the exact-name match rule (whole-name
   # equality, so a near-miss like "communication:prose-reviewer-preview" does

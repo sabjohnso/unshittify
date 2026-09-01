@@ -6,7 +6,9 @@
 # enforce-prose-review.sh, enforce-code-review.sh, and
 # confirm-git-commit-push.sh all depend on it so the schema lives in one
 # place and the turn-boundary and name-matching rules cannot drift between
-# them.
+# them. It also carries one piece of shared Stop-hook POLICY,
+# turn_requests_brevity, kept beside the schema helpers for the same
+# no-drift reason - see its docstring.
 
 # Every scan below reads the transcript RAW, one line at a time, and parses
 # each line inside jq instead of letting jq read the file as JSON. Two
@@ -39,6 +41,34 @@ MALFORMED_MARKER='MALFORMED'
 # transcript record, so the callers need not tell them apart.
 TRANSCRIPT_JQ_PRELUDE='
   def record: [fromjson?] | first;
+'
+
+# jq definitions for reading a user record: its text, whether the harness
+# authored it, and whether it is a genuine prompt. One copy, used by both
+# scan_boundary_candidates and turn_prompt_text, so the two can never
+# disagree about what counts as a prompt - the disease the validator's
+# read_markdown exists to cure in its own domain. See
+# scan_boundary_candidates for why each harness_authored rule exists.
+TRANSCRIPT_JQ_PROMPT_DEFS='
+  def content_text:
+    if (.message.content | type) == "string" then .message.content
+    else [.message.content[]? | select(.type? == "text") | .text] | join("\n")
+    end;
+  def harness_authored:
+    ((.origin.kind? // "human") != "human")
+    or ((.promptSource? // "") == "system")
+    or (content_text | sub("^[[:space:]]+"; "")
+        | startswith("<task-notification>")
+          or startswith("<command-name>")
+          or startswith("<local-command-stdout>")
+          or startswith("<system-reminder>"));
+  def genuine_prompt:
+    .type == "user"
+    and ((.isMeta // false) != true)
+    and (harness_authored | not)
+    and (((.message.content | type) == "string")
+         or ((.message.content | type) == "array"
+             and (all(.message.content[]?; (.type? // "") != "tool_result"))));
 '
 
 # drop_malformed_lines <what-the-scan-was-doing>
@@ -165,26 +195,7 @@ find_turn_start_line() {
 scan_boundary_candidates() {
   local transcript="$1"
 
-  jq -R -r --arg malformed "$MALFORMED_MARKER" "${TRANSCRIPT_JQ_PRELUDE}"'
-      def content_text:
-        if (.message.content | type) == "string" then .message.content
-        else [.message.content[]? | select(.type? == "text") | .text] | join("\n")
-        end;
-      def harness_authored:
-        ((.origin.kind? // "human") != "human")
-        or ((.promptSource? // "") == "system")
-        or (content_text | sub("^[[:space:]]+"; "")
-            | startswith("<task-notification>")
-              or startswith("<command-name>")
-              or startswith("<local-command-stdout>")
-              or startswith("<system-reminder>"));
-      def genuine_prompt:
-        .type == "user"
-        and ((.isMeta // false) != true)
-        and (harness_authored | not)
-        and (((.message.content | type) == "string")
-             or ((.message.content | type) == "array"
-                 and (all(.message.content[]?; (.type? // "") != "tool_result"))));
+  jq -R -r --arg malformed "$MALFORMED_MARKER" "${TRANSCRIPT_JQ_PRELUDE}${TRANSCRIPT_JQ_PROMPT_DEFS}"'
       record as $line
       | if ($line | type) != "object" then "\($malformed) \(input_line_number)"
         elif ($line | genuine_prompt) then "PROMPT \(input_line_number)"
@@ -232,17 +243,6 @@ tool_use_events_since_line() {
   printf '%s\n' "$scanned" | drop_malformed_lines "reading tool_use events from ${transcript}"
 }
 
-# tool_use_events_since_turn_start <transcript-file>
-#
-# tool_use_events_since_line anchored at the turn start. Prints nothing when
-# no turn start is found.
-tool_use_events_since_turn_start() {
-  local transcript="$1"
-  local start_line
-  start_line=$(find_turn_start_line "$transcript") || return 0
-  tool_use_events_since_line "$transcript" "$start_line"
-}
-
 # agent_invoked_since_line <transcript-file> <start-line> <agent-name>
 #
 # Succeeds when a tool_use event at or after start-line names <agent-name> as
@@ -259,4 +259,52 @@ agent_invoked_since_line() {
     | jq -r '.subagent_type // empty' \
     | grep -Fxc "$agent") || true
   [ "${count:-0}" -gt 0 ]
+}
+
+# turn_prompt_text <transcript-file> <start-line>
+#
+# Prints the text of the record at start-line when that record is a genuine
+# user prompt, and nothing otherwise: a last-prompt marker fallback carries
+# no text the user typed, and a line jq cannot parse carries no evidence at
+# all. Takes the precomputed boundary, like tool_use_events_since_line, so a
+# caller that already ran find_turn_start_line pays one single-line read
+# rather than a second full-transcript scan.
+turn_prompt_text() {
+  local transcript="$1"
+  local start_line="$2"
+
+  # The q makes sed stop at the target line; a bare `Np` would keep reading
+  # to EOF and turn this into the second full scan the docstring rules out.
+  sed -n "${start_line}{p;q}" "$transcript" \
+    | jq -R -r "${TRANSCRIPT_JQ_PRELUDE}${TRANSCRIPT_JQ_PROMPT_DEFS}"'
+        record as $line
+        | if ($line | type) == "object" and ($line | genuine_prompt)
+          then ($line | content_text)
+          else empty
+          end'
+}
+
+# turn_requests_brevity <transcript-file> <start-line>
+#
+# Succeeds when the genuine user prompt at start-line opens with "Briefly" or
+# "briefly" (leading whitespace ignored) - the user's one-turn opt-out from
+# the Stop hooks. This is shared POLICY rather than schema, and it lives here
+# for the same reason the boundary rule does: enforce-prose-review.sh and
+# enforce-code-review.sh must stand down on exactly the same turns, and two
+# private copies of the prefix rule would drift the way this repository's
+# duplicated prose keeps drifting.
+#
+# Only positive evidence opts out. A marker-based boundary, a missing prompt,
+# or an unparseable line all fail this check, so a transcript the hooks
+# cannot read keeps whatever guarantee each hook already made about it. The
+# word must END after "briefly" - a following letter ("Brieflyish") is some
+# other word, and a false opt-out here removes a gate the user never asked
+# to remove.
+turn_requests_brevity() {
+  local transcript="$1"
+  local start_line="$2"
+
+  local text
+  text=$(turn_prompt_text "$transcript" "$start_line")
+  [[ "$text" =~ ^[[:space:]]*[Bb]riefly([^[:alpha:]]|$) ]]
 }
