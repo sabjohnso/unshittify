@@ -1,14 +1,12 @@
 #!/usr/bin/env bash
 # Shared transcript-parsing helpers for the hook scripts. This file is
 # sourced, never executed on its own. It is the single place that knows the
-# raw JSONL transcript schema: where a turn begins, how tool_use events are
-# shaped, and what counts as an exact agent-invocation match.
-# enforce-prose-review.sh, enforce-code-review.sh, and
-# confirm-git-commit-push.sh all depend on it so the schema lives in one
-# place and the turn-boundary and name-matching rules cannot drift between
-# them. It also carries one piece of shared Stop-hook POLICY,
-# turn_requests_brevity, kept beside the schema helpers for the same
-# no-drift reason - see its docstring.
+# raw JSONL transcript schema: where a turn begins and how tool_use events are
+# shaped. enforce-code-review.sh is its one consumer today; the schema stays
+# here, not in the hook, so a second hook can share it without a copy that
+# drifts. It also carries one piece of Stop-hook POLICY, turn_requests_brevity,
+# kept beside the schema helpers for the same no-drift reason - see its
+# docstring.
 
 # Every scan below reads the transcript RAW, one line at a time, and parses
 # each line inside jq instead of letting jq read the file as JSON. Two
@@ -162,11 +160,11 @@ find_turn_start_line() {
 # than a hypothetical one. When a subagent is delegated asynchronously, the
 # harness writes its completion notification AFTER the Agent tool_use that
 # spawned it. A boundary placed on that notification therefore lands after
-# the delegation, so enforce-prose-review.sh could never see a review it had
-# just demanded - and every review in this harness is delegated that way.
+# the delegation, so a Stop hook could never see a review it had just
+# demanded - and every review in this harness is delegated that way.
 # Measured on a live transcript: lines 198 and 221 of one session were
 # task-notifications that qualified as boundaries, sitting immediately after
-# the communication:prose-reviewer invocations they were reporting on.
+# the review-agent invocations they were reporting on.
 #
 # Two rules, in order of reliability:
 #
@@ -243,24 +241,6 @@ tool_use_events_since_line() {
   printf '%s\n' "$scanned" | drop_malformed_lines "reading tool_use events from ${transcript}"
 }
 
-# agent_invoked_since_line <transcript-file> <start-line> <agent-name>
-#
-# Succeeds when a tool_use event at or after start-line names <agent-name> as
-# its exact subagent_type. Whole-name equality (grep -Fx): a near-miss like
-# "<agent-name>-preview" never counts, and neither does a skill invocation
-# carrying the same name - only a subagent satisfies this.
-agent_invoked_since_line() {
-  local transcript="$1"
-  local start_line="$2"
-  local agent="$3"
-
-  local count
-  count=$(tool_use_events_since_line "$transcript" "$start_line" \
-    | jq -r '.subagent_type // empty' \
-    | grep -Fxc "$agent") || true
-  [ "${count:-0}" -gt 0 ]
-}
-
 # turn_prompt_text <transcript-file> <start-line>
 #
 # Prints the text of the record at start-line when that record is a genuine
@@ -289,10 +269,10 @@ turn_prompt_text() {
 # Succeeds when the genuine user prompt at start-line opens with "Briefly" or
 # "briefly" (leading whitespace ignored) - the user's one-turn opt-out from
 # the Stop hooks. This is shared POLICY rather than schema, and it lives here
-# for the same reason the boundary rule does: enforce-prose-review.sh and
-# enforce-code-review.sh must stand down on exactly the same turns, and two
-# private copies of the prefix rule would drift the way this repository's
-# duplicated prose keeps drifting.
+# for the same reason the boundary rule does: every Stop hook must stand
+# down on exactly the same turns, and a private copy of the prefix rule in
+# each hook would drift the way this repository's duplicated prose keeps
+# drifting.
 #
 # Only positive evidence opts out. A marker-based boundary, a missing prompt,
 # or an unparseable line all fail this check, so a transcript the hooks

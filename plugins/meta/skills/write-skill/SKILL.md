@@ -18,6 +18,7 @@ Goal: produce a `SKILL.md` that fits this repository's house style and place it 
   - `allowed-tools` (optional) — scope tool access as tightly as the task allows. Prefer argument-scoped Bash patterns (`Bash(git status:*)`) over a bare `Bash`, and list only the tools actually needed.
 - **Quote any frontmatter value containing a space followed by `#`.** YAML ends an unquoted scalar at that point, so a description mentioning a Racket `#:keyword` reaches the harness cut in half — usually losing the `Use when...` clause that makes the skill triggerable at all, while the file on disk still reads correctly. Four Racket descriptions shipped this way before anything noticed. `tests/plugins/validate-plugins.sh` now rejects it.
 - Body: start with a one-line `Goal:` statement, then any reference material (tables, decision maps) the skill needs, then a numbered steps section (`## Steps` or `## 1. ...`, `## 2. ...`).
+- Body prose follows Simplified Technical English (ASD-STE100): the imperative for steps, the active voice, one instruction per sentence, no sentence over 20 words in a step or 25 words in description, no "-ing" verb forms, and "must" for a requirement. The condensed rules are in `plugins/communication/skills/simplified-technical-english/SKILL.md`.
 - Keep everything in the single `SKILL.md` file. Skills in this repo do not use `references/`, `scripts/`, or `assets/` subdirectories — only add one if the content genuinely cannot fit inline (e.g. a large lookup table, or a script that must run deterministically), and say why.
 
 ## Steps

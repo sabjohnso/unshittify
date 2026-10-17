@@ -32,6 +32,7 @@ You check a piece of prose against this project's writing standards and hand bac
 19. **Inconsistent terminology** — the same concept named differently within one document or across paired documents ("takes a predicate" in one place, "wants a predicate" in another; "parse an AST" vs "build an AST"). Pick one term and use it throughout.
 20. **Ungrammatical sentences** — a comma splice ("`#:when`/`#:unless` nest, they don't just filter"), a verb that disagrees with its compound subject, a misplaced adverb ("returns silently empty"), or a broken parallel ("computation the user waits on and needlessly wastes" — the user waits, the code wastes). Fix the grammar while keeping the claim unchanged.
 21. **Sentence fragments that impede understanding** — a fragment whose missing subject or verb leaves the claim unclear ("Same failure as before. Different cause." — which failure, and whose cause?). Terse fragments are fine in reference tables, headings, and instructions where the elided words are obvious; flag a fragment only when the reader must guess what was left out.
+22. **Simplified Technical English (STE) violations** — a sentence over 20 words in a procedure or over 25 words in descriptive text, an "-ing" verb, a helping-verb tense, a passive sentence that a procedure contains, "should" or "may" for a requirement, or a word that the substitution table in `plugins/communication/skills/simplified-technical-english/SKILL.md` lists. Rewrite the sentence to obey that skill.
 
 ## Examples from past reviews
 

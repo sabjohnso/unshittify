@@ -25,21 +25,20 @@ claude plugin list --json          # confirm what is installed and enabled
 | `development` | Language-agnostic discipline: a "make changing easy" precondition, and test-driven-development, Normalized Systems Theory, property-test, and efficiency reviews. |
 | `cxx` | C++ work: sanitizer builds, structural search with `clang-query`, and editing idioms. |
 | `racket` | Reference skills for Racket - classes, contracts, macros, concurrency, exceptions, GUI, drawing, testing, packaging, and more - each a `SKILL.md` with a signature-level `reference.md` beside it. |
-| `communication` | Reviews drafted prose against a written style bar before it reaches you; aligns markdown tables. |
+| `communication` | Holds the condensed rules of Simplified Technical English (ASD-STE100), reviews prose against the house style on request, and aligns markdown tables. |
 | `meta` | Skills for authoring new skills and agents in this repository's house style. |
 
 ## The hooks
 
 `hooks/` is not a plugin and the marketplace manifest does not load it. These
-are three bash scripts you wire into `~/.claude/settings.json` yourself, by
+are two bash scripts you wire into `~/.claude/settings.json` yourself, by
 absolute path, after which they apply in **every** project on the machine -
 not only in this one.
 
 | Script | Event | What it does |
 |--------|-------|--------------|
-| `enforce-prose-review.sh` | `Stop` | Blocks ending a turn when the final message is substantial prose that the `communication:prose-reviewer` agent has not seen. |
 | `enforce-code-review.sh` | `Stop` | Blocks ending a turn when a file was changed but the four required reviews did not all run. Counts changes made through `Bash` and through a delegated subagent, not only through the `Edit` tool. |
-| `confirm-git-commit-push.sh` | `PreToolUse` (`Bash`) | Denies `git commit` until the message has been prose-reviewed; asks before any commit or push. |
+| `confirm-git-commit-push.sh` | `PreToolUse` (`Bash`) | Asks before any commit or push. It never denies. |
 
 ### Wiring them up
 
@@ -52,7 +51,6 @@ then `/global:repair-hook-wiring`, which adds it with your approval - or edit
   "hooks": {
     "Stop": [
       { "hooks": [
-          { "type": "command", "command": "bash /home/you/src/unshittify/hooks/enforce-prose-review.sh" },
           { "type": "command", "command": "bash /home/you/src/unshittify/hooks/enforce-code-review.sh" }
       ] }
     ],
@@ -75,13 +73,10 @@ recorded in the subagent's transcript and never reach the one the hook is
 handed. Its `READ_ONLY_AGENTS` table is a judgement about what each listed
 agent is told to do, not a fact read off that agent's `tools:` line - no
 entry earned its place by looking harmless there, and every one defined in
-this repository holds a tool that writes (`Bash`, or `Edit` in
-`communication:prose-reviewer`'s case). Delegating to an agent the table does not name
-costs a redundant review. For `communication:prose-reviewer` it cost more
-than that: `enforce-prose-review.sh` demands that agent on every substantial
-reply, so until the table exempted it the two hooks left no move that
-satisfied both - one required the review, the other blocked the turn for
-having run it.
+this repository holds `Bash`. Delegating to an agent the table does not name
+costs a redundant review. `communication:prose-reviewer` is not in the table:
+it holds `Edit`, and no hook mandates it, so a delegation to it counts as a
+possible file change.
 
 ## Developing
 

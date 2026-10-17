@@ -1,7 +1,7 @@
 ---
 description: Draft and apply a git commit message in this repo's format — emoji, [module] summary, Problem/Solution bullets, and a closing haiku. This is the required path for every commit in this repository — invoke it whenever the user asks to commit staged or working-tree changes, even when the request is phrased conversationally (e.g. "commit this") rather than as the literal slash command. Skip it only if the user explicitly says not to use the template or asks for a freehand message.
 argument-hint: "[module hint]"
-allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git add:*), Bash(git commit:*), Agent(communication:prose-reviewer)
+allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git add:*), Bash(git commit:*)
 ---
 
 # Write a commit message in this repo's format
@@ -36,7 +36,7 @@ Solution:
 1. Gather context in parallel: `git status`, `git diff` (staged and unstaged), and `git log --oneline -10` for recent style precedent in this repo.
 2. If nothing is staged, stage the specific files relevant to the request — never `git add -A` or `git add .` — and show what was staged.
 3. Draft the message following the template above.
-4. Delegate the draft to the `communication:prose-reviewer` agent and apply any confirmed fixes before committing. The template's structure (emoji, `[module]` subject, Problem/Solution bullets, haiku) is required, not a style violation — the review covers the prose inside it: the subject phrasing, the bullets, and the haiku's wording.
+4. Write the subject and the bullets in Simplified Technical English (ASD-STE100). The haiku is the one exception to that standard.
 5. Create the commit with the message passed via a heredoc, so multi-line formatting survives:
    ```
    git commit -m "$(cat <<'EOF'

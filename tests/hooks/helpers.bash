@@ -167,7 +167,7 @@ meta_injection_event() {
 # origin.kind - and it is always written AFTER the Agent tool_use that
 # spawned the subagent. Treating it as a turn boundary therefore hides the
 # very delegation that produced it, which is what defeated
-# enforce-prose-review.sh's check for every asynchronously delegated review.
+# every Stop hook's check for an asynchronously delegated review.
 # Not a genuine prompt: it must never act as a boundary.
 task_notification_event() {
   local task_id="${1:-a96433995f69d06a7}"

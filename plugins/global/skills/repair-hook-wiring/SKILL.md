@@ -1,5 +1,5 @@
 ---
-description: Add missing repository hook wiring to the user's global Claude Code settings (~/.claude/settings.json) — the Stop and PreToolUse entries for a marketplace's enforce-prose-review.sh, enforce-code-review.sh, and confirm-git-commit-push.sh — after showing the exact JSON and getting explicit approval. Use only when the user types this slash command, having already seen a check-settings report naming the missing wiring.
+description: Add missing repository hook wiring to the user's global Claude Code settings (~/.claude/settings.json) — the Stop and PreToolUse entries for a marketplace's enforce-code-review.sh and confirm-git-commit-push.sh — after showing the exact JSON and getting explicit approval. Use only when the user types this slash command, having already seen a check-settings report naming the missing wiring.
 argument-hint: "[marketplace path, if more than one has hooks]"
 disable-model-invocation: true
 allowed-tools: Read, Bash(jq:*), Bash(cp ~/.claude/settings.json:*), Bash(mv ~/.claude/settings.json.new:*)
@@ -25,7 +25,6 @@ The command is `bash <path>/hooks/<script>`, where `<path>` is the `extraKnownMa
 
 | Script                      | Event        | Matcher |
 |-----------------------------|--------------|---------|
-| `enforce-prose-review.sh`   | `Stop`       | none    |
 | `enforce-code-review.sh`    | `Stop`       | none    |
 | `confirm-git-commit-push.sh`| `PreToolUse` | `Bash`  |
 

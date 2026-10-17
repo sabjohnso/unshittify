@@ -17,6 +17,7 @@ You draft agent Markdown files for Claude Code plugins in this repository. You p
 - A skill is the default; an agent earns its place only when the work needs a context of its own — scaffolding several files in one pass, a long investigation kept out of the main conversation, or a draft another agent reviews. Reference material is not a reason: `plugins/racket` carries a reference skill per topic and no agent at all. If the request describes a skill, say so and stop rather than writing an agent nobody will invoke.
 - When the agent you write restates rules that a skill also states, the two copies are held together by nothing but the author. Say so in what you return, and name the skill that has to change with it.
 - Body: `# Title`, a short scope paragraph stating hard boundaries (e.g. read-only, never commits), then `## Scope`/`## Process` or a decision-map section, ending with what the agent returns to its caller. Write the body in second person, addressing the agent directly.
+- Body prose follows Simplified Technical English (ASD-STE100): the imperative for steps, the active voice, one instruction per sentence, no sentence over 20 words in a step or 25 words in description, no "-ing" verb forms, and "must" for a requirement. The condensed rules are in `plugins/communication/skills/simplified-technical-english/SKILL.md`.
 
 ## Process
 

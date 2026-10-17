@@ -1,19 +1,9 @@
 #!/usr/bin/env bash
-# PreToolUse hook (matcher: Bash): gates git commit and push. A git commit is
-# denied until the communication:prose-reviewer agent has been invoked this
-# turn (the commit-message skill's required review step for the drafted
-# message). A commit that passes that gate - and any push - still asks for
-# confirmation, per the standing instruction that commits and pushes require
-# an explicit instruction in the current turn. When the transcript cannot be
-# judged (missing path or file, no turn boundary), the review gate degrades
-# to the plain ask rather than blocking the commit.
+# PreToolUse hook (matcher: Bash): gates git commit and push. A commit and a
+# push each ask for confirmation, because the standing instruction says that
+# a commit or a push needs an explicit instruction in the current turn, and a
+# hook cannot read that instruction. The hook never denies.
 set -euo pipefail
-
-# The agent that satisfies the commit gate. Kept in lockstep with
-# enforce-prose-review.sh's REVIEW_AGENT - the two hooks enforce the same
-# prose-review policy at different moments (commit time vs turn end), so a
-# rename must change both.
-REVIEW_AGENT="communication:prose-reviewer"
 
 # Commands that can execute text handed to them, so a heredoc body near one
 # may be executed rather than merely written. Add a name here to widen the
@@ -26,8 +16,10 @@ SHELL_FEEDS="bash sh zsh ksh dash fish csh tcsh busybox eval source ssh su sudo 
 # matcher cannot come to disagree about what counts as an interpreter.
 FEED_PATTERN="(^|[[:space:];&|(])([^[:space:];&|(]*/)?(${SHELL_FEEDS// /|})([[:space:]<;&|)]|\$)"
 
-# shellcheck source=lib/transcript.sh disable=SC1091
-source "$(dirname "${BASH_SOURCE[0]}")/lib/transcript.sh"
+# The git subcommands that ask for confirmation. Add a name here to gate
+# another subcommand - no other code changes needed. The matcher reads the
+# list once, so a command is tokenized once however long the list is.
+GATED_SUBCOMMANDS="commit push"
 
 # mask_nonexecuting <command-string>
 #
@@ -175,17 +167,18 @@ mask_nonexecuting() {
   '
 }
 
-# is_git_subcommand <masked-command-string> <subcommand>
+# is_git_subcommand <masked-command-string> <subcommands>
 #
-# Succeeds when the text runs git with <subcommand> as its subcommand. The
+# Succeeds when the text runs git with one of the space-separated
+# <subcommands> as its subcommand. The
 # argument is already-masked text (main calls mask_nonexecuting once), so this
 # is a pure matcher over what the shell will execute.
 #
 # The subcommand is the FIRST non-option word after a git command word, not
 # any occurrence of the word: "git help commit", "git log --grep commit" and
 # "git rev-parse --verify commit" are read-only commands whose ARGUMENT
-# happens to be the watched word, and gating one denies a commit that does not
-# exist - telling the model to prose-review a message it never wrote. The
+# happens to be the watched word, and gating one asks the user to confirm a
+# commit that does not exist. The
 # global options git accepts before its subcommand are skipped, including the
 # value of the ones that take a separate token (-C, -c, --git-dir and the rest
 # of GIT_GLOBAL_OPTS_WITH_VALUE).
@@ -237,7 +230,7 @@ mask_nonexecuting() {
 GIT_GLOBAL_OPTS_WITH_VALUE="-C -c --git-dir --work-tree --namespace --exec-path --super-prefix --config-env"
 
 is_git_subcommand() {
-  awk -v want="$2" -v valued="$GIT_GLOBAL_OPTS_WITH_VALUE" -v FEED="$FEED_PATTERN" '
+  awk -v wanted="$2" -v valued="$GIT_GLOBAL_OPTS_WITH_VALUE" -v FEED="$FEED_PATTERN" '
     # The token stream is TOK/KIND, 1..NT. KIND is "word" or "sep"; a sep is a
     # shell separator, and a word holds what the shell would hand the program,
     # quotes removed.
@@ -303,7 +296,7 @@ is_git_subcommand() {
       split("", TOK); split("", KIND); split("", alias_expands_to); NT = 0; T = ""; Q = ""
       for (i = 1; i <= n; i++) tokenize(line[i], split_quotes)
       for (i = 1; i <= NT; i++)
-        if (KIND[i] == "word" && is_git(TOK[i]) && subcommand_after(i) == want) return 1
+        if (KIND[i] == "word" && is_git(TOK[i]) && (subcommand_after(i) in want_set)) return 1
       return 0
     }
 
@@ -312,6 +305,8 @@ is_git_subcommand() {
       SEPS = ";&|()<>" sprintf("%c", 96)
       split(valued, opts, " ")
       for (k in opts) takes_value[opts[k]] = 1
+      split(wanted, wants, " ")
+      for (k in wants) want_set[wants[k]] = 1
     }
     { line[++n] = $0; if ($0 ~ FEED) feeds_present = 1 }
     END { exit (matches(0) || (feeds_present && matches(1))) ? 0 : 1 }
@@ -328,33 +323,8 @@ ask_confirmation() {
   }'
 }
 
-deny_unreviewed_commit() {
-  jq -n --arg agent "$REVIEW_AGENT" '{
-    hookSpecificOutput: {
-      hookEventName: "PreToolUse",
-      permissionDecision: "deny",
-      permissionDecisionReason: "This commit message has not been prose-reviewed: delegate the drafted message to the \($agent) agent, apply any confirmed fixes, then retry the commit."
-    }
-  }'
-}
-
-# commit_prose_reviewed <transcript-path>
-#
-# Succeeds when the review agent was invoked since the turn start, or when
-# the transcript cannot be judged (unjudgeable path or no turn boundary) -
-# the gate denies only when the turn's events are readable and contain no
-# review. The boundary is computed once and reused, so the transcript is
-# scanned a single time.
-commit_prose_reviewed() {
-  local transcript="$1"
-  local start_line
-  transcript_judgeable "$transcript" || return 0
-  start_line=$(find_turn_start_line "$transcript") || return 0
-  agent_invoked_since_line "$transcript" "$start_line" "$REVIEW_AGENT"
-}
-
 main() {
-  local input cmd transcript
+  local input cmd
   input=$(cat)
 
   # A payload the hook cannot read - nothing at all, or text jq rejects - says
@@ -395,17 +365,7 @@ main() {
   esac
   cmd=$(mask_nonexecuting "$cmd")
 
-  if is_git_subcommand "$cmd" commit; then
-    # An unreadable transcript path is the degraded case commit_prose_reviewed
-    # already handles by asking, so a second jq failure lands there too rather
-    # than aborting between the decision and its output.
-    transcript=$(printf '%s' "$input" | jq -r '.transcript_path // empty') || transcript=""
-    if commit_prose_reviewed "$transcript"; then
-      ask_confirmation
-    else
-      deny_unreviewed_commit
-    fi
-  elif is_git_subcommand "$cmd" push; then
+  if is_git_subcommand "$cmd" "$GATED_SUBCOMMANDS"; then
     ask_confirmation
   fi
 }

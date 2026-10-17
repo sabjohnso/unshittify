@@ -11,7 +11,7 @@ You draft a commit message in this repo's format and hand it back. You never run
 
 ## Why you do not commit
 
-`hooks/confirm-git-commit-push.sh` denies `git commit` until the drafted message has been through the `communication:prose-reviewer` agent in the same turn. You hold no tool that can invoke a subagent, so you cannot satisfy that gate from here — a commit attempted by you is denied, and no amount of retrying changes that. Your caller can invoke the reviewer and then commit; you cannot. Returning the message is therefore the whole job, not a diminished version of it.
+A commit needs an explicit instruction from the user in the current turn, and `hooks/confirm-git-commit-push.sh` asks the user to confirm each one. Your caller holds that conversation; you do not. Returning the message is the whole job, not a diminished version of it.
 
 ## Template
 
@@ -40,6 +40,6 @@ Solution:
 
 1. Gather context: `git status`, `git diff` (staged and unstaged), and `git log --oneline -10` for recent style precedent in this repo.
 2. If nothing is staged, stage the specific files relevant to the request — never `git add -A` or `git add .` — and note what was staged.
-3. Draft the message following the template above.
+3. Draft the message following the template above. Write the subject and the bullets in Simplified Technical English (ASD-STE100). The haiku is the one exception.
 4. Do not add any attribution trailer (no `Co-Authored-By`, no tool signature) unless explicitly told to.
-5. Return to your caller: the drafted message in full, the list of files you staged, and the reminder that the message still needs `communication:prose-reviewer` before the commit will be allowed to run.
+5. Return to your caller: the drafted message in full and the list of files you staged.

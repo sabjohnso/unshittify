@@ -149,29 +149,17 @@ BASH_WRITE_EXEMPTIONS=(
 # whole body, not checking its tools line for Edit. Two consequences of the
 # judgement as it stands:
 #
-#   communication:prose-reviewer   Holds Edit, and is listed anyway. It is
-#                                  the one agent another Stop hook MANDATES:
-#                                  enforce-prose-review.sh blocks a
-#                                  substantial reply until this agent has run
-#                                  on it. Treating that mandated delegation
-#                                  as a possible code change left the two
-#                                  hooks with no move that satisfies both -
-#                                  one demanded the review, the other blocked
-#                                  the turn for having run it. What it edits
-#                                  is the prose it was handed, and reviewing
-#                                  that prose is the invocation itself.
-#   communication:table-formatter  Holds the same tools and is NOT listed. No
-#                                  hook mandates it, so listing it would buy
-#                                  no deadlock relief, and its own
-#                                  instructions tell it to apply the rewrite
-#                                  with Edit when it is given a file path -
-#                                  in this repository that file is a Markdown
-#                                  skill or agent, which is the product.
+#   communication:prose-reviewer   Holds Edit and is NOT listed. Its own
+#   communication:table-formatter  instructions tell each one to apply its
+#                                  rewrite with Edit when it is given a file
+#                                  path - in this repository that file is a
+#                                  Markdown skill or agent, which is the
+#                                  product. No hook mandates either agent, so
+#                                  neither earns an exemption.
 READ_ONLY_AGENTS=(
   Explore
   Plan
   claude-code-guide
-  communication:prose-reviewer
   cxx:clang-query-runner
   development:efficiency-reviewer
   development:nst-reviewer
@@ -192,8 +180,8 @@ transcript_path_from() {
 
 # The turn boundary, the tool_use event schema, and the brief-turn opt-out
 # live in the shared library (find_turn_start_line, tool_use_events_since_line,
-# turn_requests_brevity), so this hook and enforce-prose-review.sh agree on
-# where a turn begins, how events are shaped, and which turns are exempt.
+# turn_requests_brevity). This hook is the library's one consumer today; the
+# schema stays there so a second hook can share it without a copy.
 
 # Each of the three predicates below answers one question about the turn's
 # events, and code_was_edited is their disjunction. They are separate so a
