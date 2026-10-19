@@ -1,54 +1,54 @@
 #!/usr/bin/env bash
-# Shared transcript-parsing helpers for the hook scripts. This file is
-# sourced, never executed on its own. It is the single place that knows the
-# raw JSONL transcript schema: where a turn begins, how tool_use events are
-# shaped, and what counts as an exact agent-invocation match.
+# Shared transcript-parsing helpers for the hook scripts. A hook sources this
+# file. Nothing executes it on its own. It is the single place that knows the
+# raw JSONL transcript schema: where a turn starts, the shape of a tool_use
+# event, and what counts as an exact agent-call match.
 # enforce-prose-review.sh, enforce-code-review.sh, and
-# confirm-git-commit-push.sh all depend on it so the schema lives in one
-# place and the turn-boundary and name-matching rules cannot drift between
-# them. It also carries one piece of shared Stop-hook POLICY,
-# turn_requests_brevity, kept beside the schema helpers for the same
-# no-drift reason - see its docstring.
+# confirm-git-commit-push.sh all depend on it. Thus the schema is in one
+# place, and the turn-boundary rule and the name-match rule cannot drift
+# between the hooks. The file also holds one piece of shared Stop-hook
+# POLICY, turn_requests_brevity. It is beside the schema helpers for the same
+# no-drift reason. See its comment.
 
 # Every scan below reads the transcript RAW, one line at a time, and parses
-# each line inside jq instead of letting jq read the file as JSON. Two
-# properties follow, and both are load-bearing:
+# each line inside jq. It does not let jq read the file as JSON. Two
+# properties follow, and both are necessary:
 #
 #   partial reads  The harness appends to the transcript while a hook reads
-#                  it, so the final line is routinely half-written. A parse
-#                  failure must cost that one line and no more: jq aborting
-#                  after it has already emitted events, with those events
-#                  then discarded, tells enforce-code-review.sh that nothing
-#                  was edited - fail-open, on the commonest input there is.
+#                  it, so the final line is often half-written. A parse
+#                  failure must cost that one line and no more. When jq
+#                  aborts after it has emitted events, and those events are
+#                  then discarded, enforce-code-review.sh reads that nothing
+#                  was edited. That is a fail-open result on the most common
+#                  input there is.
 #   position       input_line_number is then the line number of the record
 #                  itself, so each scan reports the positions it found.
 #                  Nothing downstream counts lines a second time, so no
-#                  second count can drift out of step with the first. It
-#                  counts newlines consumed, so a final line the harness has
-#                  not finished writing is numbered one low - which reports
-#                  a boundary EARLIER than the record sits, the direction
-#                  that costs a redundant review rather than a missed one.
+#                  second count can drift from the first. It counts the
+#                  newlines consumed, so a final line that the harness has
+#                  not finished is numbered one low. That reports a boundary
+#                  EARLIER than the record, and that direction costs a
+#                  redundant review and not a missed one.
 #
-# jq has no way to report a line it skipped except through its own output, so
-# a skipped line arrives on stdout as this marker and drop_malformed_lines
-# converts it to a warning. The conversion cannot be skipped: a scan's stdout
-# is read by its caller as events, so a diagnostic left there becomes a
-# fabricated event.
+# jq can report a skipped line only through its own output. A skipped line
+# arrives on stdout as this marker, and drop_malformed_lines converts it to a
+# warning. The conversion is mandatory. A caller reads a scan's stdout as
+# events, so a diagnostic left there becomes a fabricated event.
 MALFORMED_MARKER='MALFORMED'
 
-# jq definitions shared by the scans. `record` is null both for a line that
-# is not JSON and for a line that is the literal `null`; neither is a
-# transcript record, so the callers need not tell them apart.
+# jq definitions that the scans share. `record` is null for a line that is
+# not JSON and for a line that is the literal `null`. Neither is a transcript
+# record, so the callers do not need to tell them apart.
 TRANSCRIPT_JQ_PRELUDE='
   def record: [fromjson?] | first;
 '
 
-# jq definitions for reading a user record: its text, whether the harness
-# authored it, and whether it is a genuine prompt. One copy, used by both
-# scan_boundary_candidates and turn_prompt_text, so the two can never
-# disagree about what counts as a prompt - the disease the validator's
-# read_markdown exists to cure in its own domain. See
-# scan_boundary_candidates for why each harness_authored rule exists.
+# jq definitions for a user record: its text, whether the harness wrote it,
+# and whether it is a genuine prompt. There is one copy. Both
+# scan_boundary_candidates and turn_prompt_text use it, so the two can never
+# disagree about what counts as a prompt. That disagreement is the defect
+# that the validator's read_markdown cures in its own domain. See
+# scan_boundary_candidates for the reason behind each harness_authored rule.
 TRANSCRIPT_JQ_PROMPT_DEFS='
   def content_text:
     if (.message.content | type) == "string" then .message.content
@@ -73,9 +73,9 @@ TRANSCRIPT_JQ_PROMPT_DEFS='
 
 # drop_malformed_lines <what-the-scan-was-doing>
 #
-# Filter. Copies a scan's output through, except for the malformed-line
-# markers, which are collected into a single warning on stderr naming the
-# lines that were skipped.
+# Filter. It copies the output of a scan, except for the malformed-line
+# markers. It collects those into a single warning on stderr that names the
+# skipped lines.
 drop_malformed_lines() {
   local context="$1"
   local line
@@ -95,28 +95,29 @@ drop_malformed_lines() {
 
 # transcript_judgeable <transcript-path>
 #
-# Succeeds when the path names an existing transcript file that can be judged
-# at all. Hooks degrade (skip their transcript-based check) when this fails,
-# rather than blocking on evidence they cannot read.
+# Succeeds when the path names an existing transcript file. When this fails,
+# a hook skips its transcript-based check. It does not block on evidence it
+# cannot read.
 transcript_judgeable() {
   [ -n "$1" ] && [ -f "$1" ]
 }
 
 # find_turn_start_line <transcript-file>
 #
-# Prints the 1-based line number of the last genuine user prompt: a user
-# message whose content is a string, or an array of blocks none of which is a
-# tool_result, which is not an isMeta skill/system injection, and which the
-# harness did not write on the user's behalf. Falls back to the last
-# last-prompt record for transcripts with no recognizable prompt. Returns 1
-# (printing nothing) when neither is present; warns on stderr when the
-# transcript is non-empty but has neither, since that is a schema anomaly
-# rather than the ordinary "hook fired before any prompt was recorded" case.
+# Prints the 1-based line number of the last genuine user prompt. A genuine
+# prompt is a user message whose content is a string, or an array of blocks
+# with no tool_result. It is not an isMeta skill or system injection, and the
+# harness did not write it for the user. When the transcript has no such
+# prompt, the function falls back to the last last-prompt record. When
+# neither is present, it returns 1 and prints nothing. When the transcript
+# is not empty and has neither, it warns on stderr. That is a schema anomaly,
+# not the ordinary case of a hook that fired before the first prompt.
 #
-# Anchoring on the genuine prompt rather than the marker is deliberate: the
-# harness appends last-prompt markers out of chronological order, sometimes
-# after the very tool calls that belong to the turn the marker names, so a
-# marker-anchored search can skip a tool call (such as a review) that did run.
+# The anchor is the genuine prompt, not the marker, and that is deliberate.
+# The harness appends last-prompt markers out of chronological order,
+# sometimes after the tool calls that belong to the turn the marker names. A
+# search anchored on the marker can skip a tool call, such as a review, that
+# did run.
 find_turn_start_line() {
   local transcript="$1"
   local candidates line
@@ -139,59 +140,61 @@ find_turn_start_line() {
 
 # scan_boundary_candidates <transcript-file>
 #
-# Prints one line per record that could start a turn: "PROMPT <line>" for a
-# genuine user prompt and "MARKER <line>" for a last-prompt record. Exactly
-# one verdict per record, whatever the record contains - a user message may
-# carry several text blocks, and a classifier that spoke once per block would
-# shift every line number after it forward, landing the boundary past the
-# turn's own tool calls.
+# Prints one line per record that can start a turn: "PROMPT <line>" for a
+# genuine user prompt and "MARKER <line>" for a last-prompt record. Each
+# record gets exactly one verdict, whatever the record holds. A user message
+# can carry several text blocks. A classifier that spoke once per block moved
+# every later line number forward and put the boundary after the tool calls
+# of the turn.
 #
-# The last-prompt record is recognised by its parsed type, never by the text
-# {"type":"last-prompt"} appearing in the line. That text occurs inside any
-# record that embeds a transcript - which this repository's own tests and
-# hook development produce constantly - and matching one would move the
-# boundary FORWARD, hiding the turn's events from the enforce hooks.
+# The function recognizes the last-prompt record by its parsed type, never by
+# the text {"type":"last-prompt"} in the line. That text occurs inside any
+# record that embeds a transcript. The tests and the hook development in this
+# repository produce such records all the time. A match on that text moves
+# the boundary FORWARD and hides the events of the turn from the enforce
+# hooks.
 #
-# HARNESS INJECTIONS ARE EXCLUDED, and this is the load-bearing part. The
-# harness records several of its OWN messages in the user role with plain
-# string content, structurally identical to something the user typed. Every
-# one of them that counts as a boundary discards the evidence of everything
-# the assistant did earlier in the same turn.
+# HARNESS INJECTIONS ARE EXCLUDED. This is the necessary part. The harness
+# records several of its OWN messages in the user role with plain string
+# content. In structure, they are identical to a message the user typed.
+# Each one that counts as a boundary discards the evidence of all that the
+# assistant did earlier in the same turn.
 #
-# The task-notification case is the one that broke a real guarantee rather
-# than a hypothetical one. When a subagent is delegated asynchronously, the
-# harness writes its completion notification AFTER the Agent tool_use that
-# spawned it. A boundary placed on that notification therefore lands after
-# the delegation, so enforce-prose-review.sh could never see a review it had
-# just demanded - and every review in this harness is delegated that way.
-# Measured on a live transcript: lines 198 and 221 of one session were
-# task-notifications that qualified as boundaries, sitting immediately after
-# the communication:prose-reviewer invocations they were reporting on.
+# The task-notification case broke a real guarantee, not a hypothetical one.
+# When the model delegates a subagent asynchronously, the harness writes the
+# completion notification AFTER the Agent tool_use that started the subagent.
+# A boundary on that notification is after the delegation, so
+# enforce-prose-review.sh could never see a review it had just demanded. And
+# every review in this harness is delegated that way. Measured on a live
+# transcript: lines 198 and 221 of one session were task-notifications that
+# qualified as boundaries. Each sat immediately after the
+# communication:prose-reviewer call that it reported on.
 #
 # Two rules, in order of reliability:
 #
-#   structural   origin.kind names who authored the message. "human" is a
-#                genuine prompt; anything else ("task-notification") is the
-#                harness. promptSource == "system" says the same thing.
+#   structural   origin.kind names the author of the message. "human" is a
+#                genuine prompt. All other values ("task-notification") are
+#                the harness. promptSource == "system" says the same thing.
 #                Both fields are ABSENT in older transcripts, so their
-#                absence must stay permissive - the fallback below is what
-#                covers those.
-#   content      A message opening with a harness wrapper tag
+#                absence must stay permissive. The fallback below covers
+#                those transcripts.
+#   content      A message that opens with a harness wrapper tag
 #                (<task-notification>, <command-name>, <local-command-stdout>,
-#                <system-reminder>) is an injection whatever its metadata
-#                says. This is the rule that catches transcripts predating
-#                the origin field, and slash-command markers, which carry no
-#                origin field even now. ALL leading whitespace is trimmed
-#                before the tag is looked for, not one newline: ltrimstr
-#                removes its argument exactly once, so a second newline or a
-#                leading space left the tag unseen and the injection acting
-#                as a boundary - forward, past the delegation, the one
-#                direction this rule must never move the boundary.
+#                <system-reminder>) is an injection, whatever its metadata
+#                says. This rule catches transcripts from before the origin
+#                field, and slash-command markers, which carry no origin
+#                field even now. The rule trims ALL leading whitespace before
+#                it looks for the tag, not one newline. ltrimstr removes its
+#                argument exactly once, so a second newline or a leading
+#                space left the tag unseen, and the injection then acted as a
+#                boundary. That moved the boundary forward, past the
+#                delegation, in the one direction this rule must never move
+#                it.
 #
-# Both rules only ever REJECT a candidate boundary, moving the turn start
-# earlier. That direction is the safe one for the enforce hooks: an earlier
-# boundary can only make them see more of the turn's tool calls, never
-# fewer, so a misjudgement costs a redundant review rather than a missed one.
+# Both rules only REJECT a candidate boundary, so they move the turn start
+# earlier. That direction is the safe one for the enforce hooks. An earlier
+# boundary can only make them see more of the tool calls of the turn, never
+# fewer. A wrong judgement costs a redundant review and not a missed one.
 scan_boundary_candidates() {
   local transcript="$1"
 
@@ -208,14 +211,15 @@ scan_boundary_candidates() {
 # tool_use_events_since_line <transcript-file> <start-line>
 #
 # Prints one compact JSON object per tool_use event from the given 1-based
-# line onward, each shaped {name, skill, subagent_type, command} (every field
-# but name null when not applicable to that tool). Consumers filter this
-# shape instead of re-deriving it from the raw transcript. command carries a
-# Bash call's command string, since the tool NAME alone cannot say whether a
-# Bash call read a file or rewrote one. Takes a precomputed boundary so
-# a caller that already ran find_turn_start_line does not pay a second
-# full-transcript scan. A line jq cannot read costs that line alone; every
-# event found before and after it is still reported.
+# line to the end. Each object has the shape {name, skill, subagent_type,
+# command}. Every field but name is null when it does not apply to that tool.
+# Consumers filter this shape. They do not derive it from the raw transcript
+# again. command carries the command string of a Bash call, because the tool
+# NAME alone cannot say whether a Bash call read a file or rewrote one. The
+# function takes a precomputed boundary, so a caller that already ran
+# find_turn_start_line does not pay a second full-transcript scan. A line
+# that jq cannot read costs that line alone. The function reports every
+# event before and after it.
 tool_use_events_since_line() {
   local transcript="$1"
   local start_line="$2"
@@ -246,9 +250,9 @@ tool_use_events_since_line() {
 # agent_invoked_since_line <transcript-file> <start-line> <agent-name>
 #
 # Succeeds when a tool_use event at or after start-line names <agent-name> as
-# its exact subagent_type. Whole-name equality (grep -Fx): a near-miss like
-# "<agent-name>-preview" never counts, and neither does a skill invocation
-# carrying the same name - only a subagent satisfies this.
+# its exact subagent_type. The match is on the whole name (grep -Fx). A near
+# miss such as "<agent-name>-preview" never counts. A skill call with the
+# same name does not count. Only a subagent satisfies this check.
 agent_invoked_since_line() {
   local transcript="$1"
   local start_line="$2"
@@ -264,17 +268,19 @@ agent_invoked_since_line() {
 # turn_prompt_text <transcript-file> <start-line>
 #
 # Prints the text of the record at start-line when that record is a genuine
-# user prompt, and nothing otherwise: a last-prompt marker fallback carries
-# no text the user typed, and a line jq cannot parse carries no evidence at
-# all. Takes the precomputed boundary, like tool_use_events_since_line, so a
-# caller that already ran find_turn_start_line pays one single-line read
-# rather than a second full-transcript scan.
+# user prompt. Otherwise it prints nothing. A last-prompt marker fallback
+# carries no text that the user typed, and a line that jq cannot parse
+# carries no evidence at all. The function takes the precomputed boundary,
+# as tool_use_events_since_line does. A caller that already ran
+# find_turn_start_line pays one single-line read and not a second
+# full-transcript scan.
 turn_prompt_text() {
   local transcript="$1"
   local start_line="$2"
 
-  # The q makes sed stop at the target line; a bare `Np` would keep reading
-  # to EOF and turn this into the second full scan the docstring rules out.
+  # The q makes sed stop at the target line. A bare `Np` reads to the end of
+  # the file, and that is the second full scan that the comment above
+  # forbids.
   sed -n "${start_line}{p;q}" "$transcript" \
     | jq -R -r "${TRANSCRIPT_JQ_PRELUDE}${TRANSCRIPT_JQ_PROMPT_DEFS}"'
         record as $line
@@ -287,19 +293,19 @@ turn_prompt_text() {
 # turn_requests_brevity <transcript-file> <start-line>
 #
 # Succeeds when the genuine user prompt at start-line opens with "Briefly" or
-# "briefly" (leading whitespace ignored) - the user's one-turn opt-out from
-# the Stop hooks. This is shared POLICY rather than schema, and it lives here
-# for the same reason the boundary rule does: enforce-prose-review.sh and
-# enforce-code-review.sh must stand down on exactly the same turns, and two
-# private copies of the prefix rule would drift the way this repository's
-# duplicated prose keeps drifting.
+# "briefly". Leading whitespace is ignored. This is the one-turn opt-out of
+# the user from the Stop hooks. It is shared POLICY, not schema, and it is in
+# this file for the same reason as the boundary rule. enforce-prose-review.sh
+# and enforce-code-review.sh must stand down on exactly the same turns. Two
+# private copies of the prefix rule would drift, as the duplicated prose of
+# this repository drifts.
 #
 # Only positive evidence opts out. A marker-based boundary, a missing prompt,
-# or an unparseable line all fail this check, so a transcript the hooks
-# cannot read keeps whatever guarantee each hook already made about it. The
-# word must END after "briefly" - a following letter ("Brieflyish") is some
-# other word, and a false opt-out here removes a gate the user never asked
-# to remove.
+# and an unparseable line all fail this check. Thus a transcript that the
+# hooks cannot read keeps the guarantee that each hook made about it. The
+# word must END after "briefly". A letter after it ("Brieflyish") makes a
+# different word, and a false opt-out removes a gate that the user did not
+# ask to remove.
 turn_requests_brevity() {
   local transcript="$1"
   local start_line="$2"
