@@ -1,31 +1,33 @@
 #!/usr/bin/env bash
-# Republishes this repository's plugins into the local Claude Code install.
+# Publishes the plugins of this repository again into the local Claude Code
+# install.
 #
-# Editing a file under plugins/ changes nothing a session sees. Installing
-# copies the tree into ~/.claude/plugins/cache/<marketplace>/<plugin>/<version>/,
-# and that copy - never the working tree - is what a session loads. So an edit
-# reaches a session only after the marketplace is refreshed and the plugin is
-# reinstalled.
+# An edit of a file under plugins/ changes nothing that a session sees. An
+# install copies the tree into
+# ~/.claude/plugins/cache/<marketplace>/<plugin>/<version>/, and a session
+# loads that copy, never the working tree. So an edit reaches a session only
+# after a refresh of the marketplace and a new install of the plugin.
 #
-# The reason this is a script rather than a documented pair of commands is the
-# no-op. `claude plugin update` is keyed on the version STRING: when the tree's
-# version equals the installed one it reports "already at the latest version"
-# and leaves the stale snapshot in place, whatever the content says. A plugin
-# edited without a version bump is therefore silently not published, and the
-# report says success. This script detects that case ahead of time and
-# reinstalls those plugins instead, then verifies every snapshot against the
-# tree so "published" is a measured claim rather than an assumed one.
+# This is a script and not a documented pair of commands because of the
+# no-op. `claude plugin update` keys on the version STRING. When the version
+# in the tree equals the installed one, it reports "already at the latest
+# version" and leaves the stale snapshot in place, whatever the content
+# says. So a plugin edited with no version increase is not published, and
+# the report says success. This script finds that case before it occurs and
+# reinstalls those plugins instead. Then it verifies every snapshot against
+# the tree, so "published" is a measured claim and not an assumed one.
 #
-# Nothing here writes to the repository. The only state it changes is the
-# local install, and only when neither --dry-run nor --verify-only is given.
+# Nothing here writes to the repository. The only state that the script
+# changes is the local install, and only when neither --dry-run nor
+# --verify-only is given.
 set -euo pipefail
 
 DEFAULT_MARKETPLACE="unshittify"
 
-# The parts of a plugin directory the harness loads, per the documented plugin
-# structure. Comparing these rather than the whole directory keeps an untracked
-# working note or an editor backup beside a plugin from reading as a stale
-# snapshot - the copy legitimately does not contain them.
+# The parts of a plugin directory that the harness loads, per the documented
+# plugin structure. The comparison covers these and not the whole directory.
+# Thus an untracked working note or an editor backup beside a plugin does not
+# read as a stale snapshot. The copy correctly does not hold them.
 PLUGIN_COMPONENTS=(
   .claude-plugin
   skills
@@ -43,9 +45,10 @@ PLUGIN_COMPONENTS=(
 
 # marketplace_plugin_names <marketplace.json>
 #
-# The plugin names the manifest declares, one per line, in manifest order.
-# Reading them here rather than hardcoding a list means adding a plugin to the
-# marketplace is the only edit needed to have it published.
+# The plugin names that the manifest declares, one per line, in manifest
+# order. The function reads them and does not hold a fixed list. Thus the
+# only edit necessary to publish a new plugin is its entry in the
+# marketplace.
 marketplace_plugin_names() {
   local manifest="$1"
   [ -f "$manifest" ] || {
@@ -73,9 +76,9 @@ tree_version() {
 
 # installed_version <installed_plugins.json> <marketplace> <plugin>
 #
-# Empty output means "not installed", which is not an error: a plugin added to
-# the marketplace since the last install has no entry yet and needs installing
-# rather than updating.
+# Empty output means "not installed", and that is not an error. A plugin
+# added to the marketplace after the last install has no entry yet. It needs
+# an install, not an update.
 installed_version() {
   local installed="$1" marketplace="$2" plugin="$3"
   [ -f "$installed" ] || return 0
@@ -87,9 +90,9 @@ installed_version() {
 
 # update_would_skip <root> <installed.json> <marketplace> <plugin>
 #
-# Succeeds when `claude plugin update` would report the plugin already current
-# and copy nothing, because the tree's version equals the installed one. Those
-# are the plugins an update silently fails to publish.
+# Succeeds when `claude plugin update` reports the plugin as current and
+# copies nothing, because the version in the tree equals the installed one.
+# Those are the plugins that an update fails to publish with no error.
 update_would_skip() {
   local root="$1" installed="$2" marketplace="$3" plugin="$4"
   local tree have
@@ -100,25 +103,26 @@ update_would_skip() {
 
 # snapshot_matches_tree <root> <cache-root> <marketplace> <plugin> <version>
 #
-# Succeeds when the installed snapshot is byte-identical to the tree. This is
-# the check that makes "published" verifiable: the update command's own success
-# message cannot distinguish a copy that happened from one that was skipped.
+# Succeeds when the installed snapshot is identical to the tree byte for
+# byte. This check makes "published" verifiable. The success message of the
+# update command cannot tell a copy that occurred from one that was skipped.
 #
-# Neither side alone is authoritative, so the names compared are the union of
-# both. Everything the install actually COPIED is compared, whatever its name -
-# a component kind the harness starts loading after PLUGIN_COMPONENTS was
-# written would otherwise go uncompared, and silently reporting a match is
-# worse here than a false alarm. Every component named in PLUGIN_COMPONENTS is
-# compared too, which catches the reverse: one the install failed to copy at
-# all.
+# Neither side alone is authoritative, so the names in the comparison are
+# the union of both. The comparison covers all that the install COPIED,
+# whatever its name. Otherwise a component kind that the harness starts to
+# load after PLUGIN_COMPONENTS was written is never compared, and a false
+# match with no error is worse here than a false alarm. The comparison also
+# covers every component in PLUGIN_COMPONENTS. That catches the reverse
+# case, a component that the install did not copy at all.
 snapshot_matches_tree() {
   local root="$1" cache="$2" marketplace="$3" plugin="$4" version="$5"
   local snapshot="${cache}/${marketplace}/${plugin}/${version}"
   local source="${root}/plugins/${plugin}"
   [ -d "$snapshot" ] || return 1
 
-  # The names are collected before any comparison so a component present on
-  # both sides is diffed once rather than once per reason for looking at it.
+  # The function collects the names before the first comparison. Thus a
+  # component present on both sides gets one diff, not one diff per reason
+  # to read it.
   local -A names=()
   local component entry name
   for component in "${PLUGIN_COMPONENTS[@]}"; do names["$component"]=1; done
@@ -137,10 +141,10 @@ snapshot_matches_tree() {
 
 # run_claude <dry-run> <args...>
 #
-# The single place the CLI is invoked, so --dry-run is one branch rather than
-# one per call site, and a test can drive every decision above without the
-# `claude` binary being present at all. The flag is a parameter rather than a
-# global so this function's behaviour is readable from its own signature.
+# The single place that runs the CLI. Thus --dry-run is one branch and not
+# one branch per call site, and a test can drive every decision above with
+# no `claude` binary present. The flag is a parameter and not a global, so
+# the signature of this function shows its behavior.
 run_claude() {
   local dry_run="$1"; shift
   if [ "$dry_run" -eq 1 ]; then
@@ -156,8 +160,8 @@ run_claude() {
 publish_plugin() {
   local dry_run="$1" force="$2" root="$3" installed="$4" marketplace="$5" plugin="$6"
   if [ "$force" -eq 1 ] || update_would_skip "$root" "$installed" "$marketplace" "$plugin"; then
-    # An unchanged version makes `update` a no-op, so the only way to replace
-    # the snapshot is to remove it and install again.
+    # An unchanged version makes `update` a no-op. So the only way to
+    # replace the snapshot is to remove it and install again.
     run_claude "$dry_run" plugin uninstall "${plugin}@${marketplace}" --yes
     run_claude "$dry_run" plugin install "${plugin}@${marketplace}" --yes
   else
@@ -167,8 +171,8 @@ publish_plugin() {
 
 # verify <root> <cache> <marketplace> <plugin...>
 #
-# Prints one line per plugin whose snapshot does not match the tree, and fails
-# if there were any. Silence is the success report.
+# Prints one line per plugin whose snapshot does not match the tree, and
+# fails if there was one. Silence is the success report.
 verify() {
   local root="$1" cache="$2" marketplace="$3"; shift 3
   local plugin version stale=0
@@ -179,7 +183,7 @@ verify() {
       continue
     }
     if ! snapshot_matches_tree "$root" "$cache" "$marketplace" "$plugin" "$version"; then
-      printf '  %s: stale - the installed copy at %s does not match the tree\n' \
+      printf '  %s: stale. The installed copy at %s does not match the tree.\n' \
         "$plugin" "${cache}/${marketplace}/${plugin}/${version}"
       stale=1
     fi
@@ -191,16 +195,16 @@ usage() {
   cat <<'USAGE'
 Usage: update-install.sh [options]
 
-Refreshes the local Claude Code install from this repository's working tree,
-then verifies that every installed snapshot matches it.
+Refreshes the local Claude Code install from the working tree of this
+repository, then verifies that every installed snapshot matches it.
 
   --marketplace NAME   marketplace to refresh (default: unshittify)
   --root DIR           repository root (default: this script's repository)
   --installed FILE     installed_plugins.json to read
   --cache DIR          plugin cache root to verify against
-  --force              reinstall every plugin, not only the ones an update skips
-  --dry-run            print the commands without running them
-  --verify-only        skip the update entirely and only report stale snapshots
+  --force              reinstall every plugin, not only the ones that an update skips
+  --dry-run            print the commands and do not run them
+  --verify-only        skip the update and only report the stale snapshots
   -h, --help           this message
 
 Restart Claude Code, or run /reload-plugins, before the new copies take effect.
@@ -235,7 +239,7 @@ main() {
   done
 
   command -v jq >/dev/null 2>&1 || {
-    printf 'update-install: jq is required and is not on PATH.\n' >&2
+    printf 'update-install: jq is required and is not on PATH. Install it.\n' >&2
     return 2
   }
 
@@ -252,8 +256,8 @@ main() {
     done
   fi
 
-  # A dry run copied nothing, so every snapshot would report stale and the
-  # report would be noise rather than news.
+  # A dry run copied nothing. So every snapshot reports stale, and the
+  # report is noise and not news.
   if [ "$dry_run" -eq 1 ]; then
     printf '\nDry run: nothing was changed.\n'
     return 0
