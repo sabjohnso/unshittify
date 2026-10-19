@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
-# Unit tests for the shared transcript helpers in hooks/lib/transcript.sh,
-# exercised by sourcing the library directly (it defines functions only, runs
-# nothing) and calling find_turn_start_line / tool_use_events_since_line
+# Unit tests for the shared transcript helpers in hooks/lib/transcript.sh.
+# Each test sources the library directly (it defines functions only and runs
+# nothing) and calls find_turn_start_line or tool_use_events_since_line
 # against synthetic transcript fixtures.
 
 load helpers
@@ -13,7 +13,7 @@ setup() {
 
 # --- find_turn_start_line -------------------------------------------------
 
-@test "the last genuine user prompt is the boundary even when a marker follows it" {
+@test "the last genuine user prompt is the boundary, also when a marker follows it" {
   transcript="$(write_transcript "$(printf '%s\n%s\n%s\n' \
     "$(user_prompt_event 'do the thing')" \
     "$(tool_use_event Skill skill=communication:review-prose)" \
@@ -41,7 +41,7 @@ setup() {
   [ "$output" -eq 1 ]
 }
 
-@test "an array-content prompt is a boundary" {
+@test "a prompt with array content is a boundary" {
   transcript="$(write_transcript "$(printf '%s\n%s\n' \
     "$(tool_use_event Read)" \
     "$(user_prompt_array_event 'do the thing')")")"
@@ -60,7 +60,7 @@ setup() {
   [ "$output" -eq 3 ]
 }
 
-@test "falls back to the last-prompt marker when no genuine prompt exists" {
+@test "the function falls back to the last-prompt marker when no genuine prompt exists" {
   transcript="$(write_transcript "$(printf '%s\n%s\n' \
     "$(last_prompt_marker)" \
     "$(tool_use_event Edit)")")"
@@ -77,7 +77,7 @@ setup() {
   [ -z "$output" ]
 }
 
-@test "a non-empty transcript with no prompt or marker returns 1 and warns" {
+@test "a transcript that is not empty and has no prompt or marker returns 1 and warns" {
   transcript="$(write_transcript "$(tool_use_event Edit)")"
   run find_turn_start_line "$transcript"
   [ "$status" -eq 1 ]
@@ -85,12 +85,12 @@ setup() {
 }
 
 # --- tool_use_events_since_line, anchored at the boundary ------------------
-# These compose find_turn_start_line + tool_use_events_since_line the way the
-# hooks themselves now do (there is no wrapper for it any more - the hooks
-# need the boundary separately for the brevity check, so each composes the
-# two calls itself and the composition is pinned end-to-end in their suites).
+# These tests compose find_turn_start_line and tool_use_events_since_line as
+# the hooks do. There is no wrapper for it. The hooks need the boundary on
+# its own for the brevity check, so each hook composes the two calls itself,
+# and its suite pins the composition end to end.
 
-@test "emits one shaped event per tool_use since the turn start" {
+@test "the function emits one shaped event per tool_use after the start of the turn" {
   transcript="$(write_transcript "$(printf '%s\n%s\n%s\n%s\n' \
     "$(user_prompt_event 'do and review')" \
     "$(tool_use_event Edit)" \
@@ -104,8 +104,8 @@ setup() {
   [[ "$output" == *'"subagent_type":"nst-reviewer"'* ]]
 }
 
-@test "excludes tool_use events that precede the turn boundary" {
-  # A review from a previous turn (before the current prompt) must not count.
+@test "the function excludes the tool_use events before the turn boundary" {
+  # A review from an earlier turn (before the current prompt) must not count.
   transcript="$(write_transcript "$(printf '%s\n%s\n%s\n%s\n' \
     "$(tool_use_event Skill skill=development:review-nst)" \
     "$(user_prompt_event 'now do the work')" \
@@ -119,11 +119,11 @@ setup() {
   [[ "$output" == *'"name":"Edit"'* ]]
 }
 
-# A half-written trailing line is the normal case, not an exotic one: the
-# harness appends to the transcript while the hook reads it. Losing the events
-# already scanned because the last line arrived incomplete tells
-# enforce-code-review.sh that nothing was edited, which is fail-open.
-@test "a malformed line is skipped and the events around it survive" {
+# A half-written final line is the normal case, not a rare one. The harness
+# appends to the transcript while the hook reads it. When the scan loses the
+# events it already found because the last line is incomplete, it tells
+# enforce-code-review.sh that nothing was edited. That is fail-open.
+@test "the scan skips a malformed line, and the events around it remain" {
   transcript="$(write_transcript "$(printf '%s\n%s\n%s\n%s\n' \
     "$(user_prompt_event 'do the work')" \
     "$(tool_use_event Edit)" \
@@ -135,7 +135,7 @@ setup() {
   [[ "$result" == *'"name":"Read"'* ]]
 }
 
-@test "a malformed line after the boundary is still reported on stderr" {
+@test "the scan reports a malformed line after the boundary on stderr" {
   transcript="$(write_transcript "$(printf '%s\n%s\n%s\n' \
     "$(user_prompt_event 'do the work')" \
     "$(tool_use_event Edit)" \
@@ -187,7 +187,7 @@ setup() {
   [ "$status" -ne 0 ]
 }
 
-@test "agent_invoked_since_line fails when only a skill by the same name ran" {
+@test "agent_invoked_since_line fails when only a skill with the same name ran" {
   transcript="$(write_transcript "$(printf '%s\n%s\n' \
     "$(user_prompt_event)" \
     "$(tool_use_event Skill skill=communication:prose-reviewer)")")"
@@ -195,7 +195,7 @@ setup() {
   [ "$status" -ne 0 ]
 }
 
-@test "agent_invoked_since_line is duplicate-insensitive" {
+@test "agent_invoked_since_line gives the same result for duplicate calls" {
   transcript="$(write_transcript "$(printf '%s\n%s\n%s\n' \
     "$(user_prompt_event)" \
     "$(tool_use_event Task subagent_type=communication:prose-reviewer)" \
@@ -204,7 +204,7 @@ setup() {
   [ "$status" -eq 0 ]
 }
 
-@test "agent_invoked_since_line ignores invocations before the start line" {
+@test "agent_invoked_since_line ignores the calls before the start line" {
   transcript="$(write_transcript "$(printf '%s\n%s\n%s\n' \
     "$(tool_use_event Task subagent_type=communication:prose-reviewer)" \
     "$(user_prompt_event)" \
@@ -220,7 +220,7 @@ setup() {
   [ "$status" -ne 0 ]
 }
 
-@test "transcript_judgeable fails on a nonexistent file" {
+@test "transcript_judgeable fails on a file that does not exist" {
   run transcript_judgeable /nonexistent/transcript.jsonl
   [ "$status" -ne 0 ]
 }
@@ -233,15 +233,15 @@ setup() {
 
 # --- harness injections are not turn boundaries ---------------------------
 #
-# A boundary must be a message the USER actually sent. The harness records
-# several of its own messages in the user role with plain string content;
-# each one that is treated as a boundary silently discards the evidence of
-# everything the assistant did before it in the same turn.
+# A boundary must be a message that the USER sent. The harness records
+# several of its own messages in the user role with plain string content.
+# Each one that counts as a boundary discards, with no error, the evidence
+# of all that the assistant did before it in the same turn.
 #
-# The task-notification case is the damaging one, and it is not hypothetical:
-# it is written after the Agent tool_use that spawned the subagent, so an
-# asynchronously delegated review can never be seen by a hook that anchors on
-# the last qualifying user message.
+# The task-notification case is the one that causes damage, and it is not
+# hypothetical. The harness writes it after the Agent tool_use that started
+# the subagent. So a hook that anchors on the last qualifying user message
+# can never see a review that was delegated asynchronously.
 
 @test "a task notification is not a boundary" {
   transcript="$(write_transcript "$(printf '%s\n%s\n%s\n' \
@@ -272,12 +272,13 @@ setup() {
   [ "$output" -eq 1 ]
 }
 
-# The content rule is the fallback for transcripts recorded before the origin
-# field existed, so it must recognise the wrapper tag wherever the harness put
-# it in the leading whitespace. ltrimstr removes its argument exactly once, so
-# a second leading newline (or a leading space) left the tag unrecognised and
-# the injection acting as a boundary - moving the turn start FORWARD, past the
-# delegation, which is the one direction this rule must never move it.
+# The content rule is the fallback for transcripts recorded before the
+# origin field existed. So it must find the wrapper tag wherever the harness
+# put it inside the leading whitespace. ltrimstr removes its argument exactly
+# once. A second leading newline (or a leading space) left the tag unseen,
+# and the injection then acted as a boundary. That moved the turn start
+# FORWARD, past the delegation, in the one direction this rule must never
+# move it.
 
 @test "a wrapper tag behind two newlines is not a boundary" {
   injection="$(jq -nc '{type:"user", message:{role:"user",
@@ -333,12 +334,12 @@ setup() {
 
 # --- the boundary rule only ever moves the boundary earlier -----------------
 #
-# The rejection rules in find_turn_start_line are stated in the code and in
-# CLAUDE.md as only ever moving the turn start EARLIER, which is what makes a
-# misjudgement cost a redundant review rather than a missed one. A stated
-# invariant with no test is exactly the gap this suite exists to close.
+# The code and CLAUDE.md state that the rejection rules in
+# find_turn_start_line only move the turn start EARLIER. That is what makes a
+# wrong judgement cost a redundant review and not a missed one. A stated
+# invariant with no test is exactly the gap that this suite closes.
 
-@test "rejecting a harness message never moves the boundary later" {
+@test "the rejection of a harness message never moves the boundary later" {
   local injection
   for injection in "$(task_notification_event)" \
                    "$(slash_command_marker_event)" \
@@ -354,7 +355,7 @@ setup() {
   done
 }
 
-@test "appending harness messages is idempotent for the boundary" {
+@test "harness messages added at the end do not change the boundary" {
   local one many
   one="$(write_transcript "$(printf '%s\n%s\n' \
     "$(typed_prompt_event 'the real prompt')" \
@@ -369,11 +370,11 @@ setup() {
 
 # --- one transcript object is one boundary verdict --------------------------
 #
-# The boundary is a LINE NUMBER, so the classifier's output and the file's
-# lines must stay in step. A user message may carry several text blocks; a
-# classifier that inspects the blocks rather than the message emits one
-# verdict per block, and every line number after it is shifted forward. The
-# boundary then lands past the turn's own tool calls, which is fail-open for
+# The boundary is a LINE NUMBER, so the output of the classifier and the
+# lines of the file must stay in step. A user message can carry several text
+# blocks. A classifier that reads the blocks and not the message emits one
+# verdict per block, and every line number after it moves forward. The
+# boundary then lands after the tool calls of the turn. That is fail-open for
 # both enforce hooks.
 
 @test "a prompt of several text blocks is one boundary, not one per block" {
@@ -386,7 +387,7 @@ setup() {
   [ "$output" -eq 1 ]
 }
 
-@test "the events after a multi-block prompt are all still visible" {
+@test "all the events after a multi-block prompt are visible" {
   transcript="$(write_transcript "$(printf '%s\n%s\n%s\n' \
     "$(user_prompt_multiblock_event 4 'do the work')" \
     "$(tool_use_event Edit)" \
@@ -418,7 +419,7 @@ setup() {
 
 # --- the last-prompt fallback matches records, not quoted text --------------
 
-@test "a tool_result embedding the last-prompt marker is not a boundary" {
+@test "a tool_result that embeds the last-prompt marker is not a boundary" {
   transcript="$(write_transcript "$(printf '%s\n%s\n' \
     "$(tool_use_event Edit)" \
     "$(tool_result_embedding_marker_event)")")"
@@ -438,9 +439,9 @@ setup() {
 
 # --- schema drift in the boundary scan is visible ---------------------------
 #
-# The boundary classifier is the more load-bearing of the two scans: every
-# hook anchors on it. A line it cannot read must be reported, not silently
-# treated as "nothing here".
+# The boundary classifier is the more important of the two scans. Every
+# hook anchors on it. It must report a line that it cannot read. It must not
+# treat that line as "nothing here" with no error.
 
 @test "the boundary scan reports a line it could not parse" {
   transcript="$(write_transcript "$(printf '%s\n%s\n' \
@@ -453,9 +454,9 @@ setup() {
 
 # --- a partially written final line ----------------------------------------
 #
-# The harness appends while the hook reads, so the final line is routinely
+# The harness appends while the hook reads, so the final line is often
 # incomplete. Whatever the scan makes of it, the boundary must not land after
-# the events of the turn it opens.
+# the events of the turn that it opens.
 
 @test "a prompt on an unterminated final line does not push the boundary past it" {
   transcript="$(mktemp "$(fixture_dir)/partial.XXXXXX.jsonl")"
@@ -468,17 +469,19 @@ setup() {
 
 # --- the boundary invariant, over generated transcripts ---------------------
 #
-# transcript.sh states the rule as a law: rejecting a harness-authored message
-# only ever moves the turn start EARLIER, and an earlier boundary can only let
-# a hook see more of the turn, never less. CLAUDE.md repeats it. It was pinned
-# by fixed examples - three injection strings against one transcript shape,
-# and six prompt shapes always followed by the same two lines - which is what
-# let the boundary once run past the end of a three-line file.
+# transcript.sh states the rule as a law. The rejection of a message that
+# the harness wrote only moves the turn start EARLIER, and an earlier
+# boundary can only let a hook see more of the turn, never less. CLAUDE.md
+# repeats it. Fixed examples pinned it: three injection strings against one
+# transcript shape, and six prompt shapes that the same two lines always
+# followed. That is what once let the boundary run past the end of a file of
+# three lines.
 #
-# The generator below varies what the examples held constant: the transcript's
-# length, how many harness messages are appended and in what order, and
-# whether malformed lines are interleaved. It reuses the seeded-LCG idiom from
-# enforce-code-review-internals.bats so a failing trial reproduces on a rerun.
+# The generator below varies what the examples held constant: the length of
+# the transcript, the number and the order of the harness messages at the
+# end, and whether malformed lines are between them. It uses the seeded LCG
+# idiom from enforce-code-review-internals.bats, so a failed trial occurs
+# again on a rerun.
 
 BOUNDARY_SEED=20260830
 BOUNDARY_TRIALS=12
@@ -490,9 +493,9 @@ boundary_prng_next() {
   BOUNDARY_VALUE=$(( (BOUNDARY_STATE / 65536) % $1 ))
 }
 
-# One harness-authored line of each kind the boundary rule must reject, plus
-# the two shapes that previously fooled it: a tool_result quoting the marker
-# text, and a prompt carrying several text blocks.
+# One line of each kind that the harness writes and the boundary rule must
+# reject, plus the two shapes that fooled it before: a tool_result that
+# quotes the marker text, and a prompt with several text blocks.
 harness_line() {
   case "$1" in
     0) task_notification_event ;;
@@ -544,7 +547,7 @@ harness_line() {
   done
 }
 
-@test "law: appending a harness message never moves the boundary later" {
+@test "law: a harness message added at the end never moves the boundary later" {
   boundary_prng_reset
   for _ in $(seq "$BOUNDARY_TRIALS"); do
     boundary_prng_next 4
@@ -575,41 +578,42 @@ harness_line() {
 }
 
 # --- turn_requests_brevity ------------------------------------------------
-# The user's one-turn opt-out from the Stop hooks: a genuine prompt whose
-# text opens with "Briefly" or "briefly". Only positive evidence counts - a
-# marker fallback or a mid-sentence "briefly" must never stand a gate down.
+# The one-turn opt-out of the user from the Stop hooks: a genuine prompt
+# whose text opens with "Briefly" or "briefly". Only positive evidence
+# counts. A marker fallback or a "briefly" in the middle of a sentence must
+# never stand a gate down.
 
-@test "a prompt starting with Briefly requests brevity" {
+@test "a prompt that starts with Briefly requests brevity" {
   transcript="$(write_transcript "$(user_prompt_event 'Briefly, what does this function do?')")"
   run turn_requests_brevity "$transcript" 1
   [ "$status" -eq 0 ]
 }
 
-@test "a prompt starting with lowercase briefly requests brevity" {
+@test "a prompt that starts with lowercase briefly requests brevity" {
   transcript="$(write_transcript "$(user_prompt_event 'briefly explain the turn boundary')")"
   run turn_requests_brevity "$transcript" 1
   [ "$status" -eq 0 ]
 }
 
-@test "an array-content prompt starting with Briefly requests brevity" {
+@test "a prompt with array content that starts with Briefly requests brevity" {
   transcript="$(write_transcript "$(user_prompt_array_event 'Briefly describe the fix')")"
   run turn_requests_brevity "$transcript" 1
   [ "$status" -eq 0 ]
 }
 
-@test "leading whitespace before Briefly still requests brevity" {
+@test "a prompt with leading whitespace before Briefly requests brevity" {
   transcript="$(write_transcript "$(user_prompt_event '  Briefly: is this correct?')")"
   run turn_requests_brevity "$transcript" 1
   [ "$status" -eq 0 ]
 }
 
-@test "briefly mid-sentence does not request brevity" {
+@test "briefly in the middle of a sentence does not request brevity" {
   transcript="$(write_transcript "$(user_prompt_event 'Explain briefly what this does')")"
   run turn_requests_brevity "$transcript" 1
   [ "$status" -ne 0 ]
 }
 
-@test "a prompt starting with Brief alone does not request brevity" {
+@test "a prompt that starts with Brief alone does not request brevity" {
   transcript="$(write_transcript "$(user_prompt_event 'Brief me on the hooks')")"
   run turn_requests_brevity "$transcript" 1
   [ "$status" -ne 0 ]
@@ -623,19 +627,19 @@ harness_line() {
   [ "$status" -ne 0 ]
 }
 
-@test "a line jq cannot parse never requests brevity" {
+@test "a line that jq cannot parse never requests brevity" {
   transcript="$(write_transcript 'Briefly - not json at all')"
   run turn_requests_brevity "$transcript" 1
   [ "$status" -ne 0 ]
 }
 
-@test "a word merely prefixed by briefly does not request brevity" {
+@test "a word that only starts with briefly does not request brevity" {
   transcript="$(write_transcript "$(user_prompt_event 'Brieflyish notes are fine here')")"
   run turn_requests_brevity "$transcript" 1
   [ "$status" -ne 0 ]
 }
 
-@test "Briefly followed by punctuation or end still requests brevity" {
+@test "Briefly with punctuation or the end of the text after it requests brevity" {
   local text
   for text in 'Briefly' 'Briefly.' 'briefly: the gist' 'Briefly, please'; do
     transcript="$(write_transcript "$(user_prompt_event "$text")")"
@@ -646,12 +650,11 @@ harness_line() {
   done
 }
 
-@test "law: a harness-authored record starting with Briefly never requests brevity" {
-  # The opt-out needs a GENUINE prompt. Every harness-authored shape the
-  # boundary classifier rejects must also fail this check, even when the text
-  # it carries opens with the trigger word - otherwise a subagent completion
-  # or an injected instruction could stand the gates down on the user's
-  # behalf.
+@test "law: a record that the harness wrote and that starts with Briefly never requests brevity" {
+  # The opt-out needs a GENUINE prompt. Every shape that the harness writes
+  # and the boundary classifier rejects must also fail this check, also when
+  # its text opens with the trigger word. Otherwise a subagent completion or
+  # an injected instruction could stand the gates down for the user.
   local line
   for line in \
     "$(meta_injection_event 'Briefly injected instructions')" \
@@ -670,21 +673,21 @@ harness_line() {
 
 # --- turn_prompt_text -----------------------------------------------------
 
-@test "turn_prompt_text round-trips a string prompt's text" {
+@test "turn_prompt_text returns the text of a string prompt unchanged" {
   transcript="$(write_transcript "$(user_prompt_event 'the exact words the user typed')")"
   run turn_prompt_text "$transcript" 1
   [ "$status" -eq 0 ]
   [ "$output" = "the exact words the user typed" ]
 }
 
-@test "turn_prompt_text round-trips an array prompt's text" {
+@test "turn_prompt_text returns the text of an array prompt unchanged" {
   transcript="$(write_transcript "$(user_prompt_array_event 'array words the user typed')")"
   run turn_prompt_text "$transcript" 1
   [ "$status" -eq 0 ]
   [ "$output" = "array words the user typed" ]
 }
 
-@test "turn_prompt_text prints nothing for a non-prompt record" {
+@test "turn_prompt_text prints nothing for a record that is not a prompt" {
   transcript="$(write_transcript "$(last_prompt_marker)")"
   run turn_prompt_text "$transcript" 1
   [ -z "$output" ]

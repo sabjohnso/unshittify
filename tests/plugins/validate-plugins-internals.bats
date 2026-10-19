@@ -1,10 +1,12 @@
 #!/usr/bin/env bats
-# Unit tests against the internal functions of validate-plugins.sh, sourcing
-# it directly (its BASH_SOURCE guard means sourcing does not run main).
+# Unit tests for the internal functions of validate-plugins.sh. Each test
+# sources the script directly. The BASH_SOURCE guard of the script means that
+# a source does not run main.
 #
-# These are possible because the check functions only PRINT violations - the
-# violation count lives in main, not in a global the checks mutate. Testing a
-# check in isolation was impossible while `report` incremented shared state.
+# These tests are possible because the check functions only PRINT the
+# violations. The violation count is in main, not in a global that the
+# checks change. A test of one check on its own was impossible while
+# `report` incremented shared state.
 
 load helpers
 
@@ -18,19 +20,19 @@ teardown() {
   cleanup_fixtures
 }
 
-# write_frontmatter <frontmatter-body>  - writes FIXTURE and parses it
+# write_frontmatter <frontmatter-body>. Writes FIXTURE and parses it.
 write_frontmatter() {
   printf -- '---\n%s\n---\n\n# Title\n\nBody.\n' "$1" > "$FIXTURE"
   read_markdown "$FIXTURE"
 }
 
-@test "sourcing the script does not execute main" {
+@test "a source of the script does not run main" {
   [ "$(type -t main)" = "function" ]
 }
 
 # --- frontmatter parsing ----------------------------------------------------
 
-@test "read_markdown records each key's value and line number" {
+@test "read_markdown records the value and the line number of each key" {
   write_frontmatter 'description: A thing.
 argument-hint: "[hint]"
 allowed-tools: Read, Grep'
@@ -40,18 +42,18 @@ allowed-tools: Read, Grep'
   [ "${FM_LINE[allowed-tools]}" -eq 4 ]
 }
 
-@test "an absent key yields an empty value and an empty line" {
+@test "an absent key gives an empty value and an empty line" {
   write_frontmatter 'description: A thing.'
   [ -z "${FM_RAW[model]:-}" ]
   [ -z "${FM_LINE[model]:-}" ]
 }
 
-@test "read_markdown keeps the quotes, leaving unquoting to the caller" {
+@test "read_markdown keeps the quotes and leaves their removal to the caller" {
   write_frontmatter 'description: "A quoted thing with a (#:keyword) in it."'
   [ "$(unquote "${FM_RAW[description]}")" = "A quoted thing with a (#:keyword) in it." ]
 }
 
-@test "read_markdown strips all leading blanks, however many" {
+@test "read_markdown strips all leading blanks, whatever their number" {
   write_frontmatter "$(printf 'description:  two spaces\nargument-hint:\ta tab')"
   [ "${FM_RAW[description]}" = "two spaces" ]
   [ "${FM_RAW[argument-hint]}" = "a tab" ]
@@ -78,20 +80,20 @@ allowed-tools: Read, Grep'
   [ "${FM_LINE[tools]}" -eq 2 ]
 }
 
-@test "read_markdown records a duplicate key rather than letting the last win" {
+@test "read_markdown records a duplicate key and does not take the last value" {
   write_frontmatter 'tools: Taks
 tools: Read'
   [ "${#FM_DUPLICATES[@]}" -eq 1 ]
   [[ "${FM_DUPLICATES[0]}" == *"tools"* ]]
 }
 
-@test "read_markdown exposes the body without the frontmatter" {
+@test "read_markdown gives the body without the frontmatter" {
   write_frontmatter 'description: A thing.'
   [[ "$FM_BODY" == *"Body."* ]]
   [[ "$FM_BODY" != *"description:"* ]]
 }
 
-@test "read_markdown tolerates CRLF endings and a byte-order mark" {
+@test "read_markdown accepts CRLF line ends and a byte-order mark" {
   printf -- '\xef\xbb\xbf---\r\ndescription: A thing.\r\n---\r\n\r\nBody.\r\n' > "$FIXTURE"
   read_markdown "$FIXTURE"
   [ "$FM_STATUS" = "ok" ]
@@ -107,7 +109,7 @@ tools: Read'
   [ "$(unquote '')" = "" ]
 }
 
-@test "unquote leaves an inner quote alone" {
+@test "unquote does not change an inner quote" {
   [ "$(unquote '"say \"hi\""')" = 'say \"hi\"' ]
 }
 
@@ -132,16 +134,17 @@ tools: Read'
   [ -z "$output" ]
 }
 
-@test "check_yaml_truncation reports every affected key, not just the first" {
+@test "check_yaml_truncation reports every affected key, not only the first" {
   write_frontmatter 'description: One (#:a, #:b).
 argument-hint: Two (#:c, #:d).'
   run check_yaml_truncation "$FIXTURE"
   [ "$(printf '%s\n' "$output" | grep -c 'fixture')" -eq 2 ]
 }
 
-@test "check_yaml_truncation consumes the same normalised value the loader made" {
-  # One input, one parser. The check once stripped a single leading space of
-  # its own, so a quoted value indented by two was reported as truncated.
+@test "check_yaml_truncation reads the same normalized value that the loader made" {
+  # One input, one parser. The check once stripped a single leading space
+  # on its own, so it reported a quoted value with an indent of two as
+  # truncated.
   write_frontmatter 'description:  "Options (#:transparent). Use when defining."'
   run check_yaml_truncation "$FIXTURE"
   [ -z "$output" ]
@@ -155,9 +158,9 @@ argument-hint: Two (#:c, #:d).'
 }
 
 @test "check_tool_names reports the last tool in a list" {
-  # The token loop once dropped the final entry, because `read` returns
-  # nonzero on a line with no trailing newline - and a stale tool name sits
-  # at the end of a list as often as anywhere else.
+  # The token loop once dropped the final entry, because `read` returns a
+  # nonzero status on a line with no newline at the end. A stale tool name
+  # sits at the end of a list as often as at any other position.
   run check_tool_names "$FIXTURE" 3 'Read, Grep, Nonexistent'
   [[ "$output" == *"Nonexistent"* ]]
 }
@@ -174,9 +177,10 @@ argument-hint: Two (#:c, #:d).'
 
 # --- check_bare_tool_names --------------------------------------------------
 #
-# check_tool_names strips the argument off each token before matching it,
-# which is what lets a skill scope one. An agent's list is bare names, so the
-# scoping rule needs a check that reads the token before that strip.
+# check_tool_names strips the argument off each token before it matches the
+# token. That is what lets a skill scope a tool. The list of an agent holds
+# bare names, so the scope rule needs a check that reads the token before
+# that strip.
 
 @test "check_bare_tool_names reports an argument-scoped tool on the given line" {
   run check_bare_tool_names "$FIXTURE" 4 'Read, Bash(git status:*)'
@@ -196,9 +200,9 @@ argument-hint: Two (#:c, #:d).'
 
 # --- check_frontmatter_common -----------------------------------------------
 #
-# It returns 1 on a file with no usable frontmatter so its callers can stop,
-# rather than reporting a cascade of missing keys against a file that has
-# none of them.
+# It returns 1 on a file with no usable frontmatter, so its callers can
+# stop. Otherwise they report a cascade of missing keys against a file that
+# has none of them.
 
 @test "check_frontmatter_common reports a missing block and returns 1" {
   printf '# Title\n\nBody.\n' > "$FIXTURE"
@@ -237,7 +241,7 @@ argument-hint: Two (#:c, #:d).'
   [[ "$output" == *"sibling reference.md"* ]]
 }
 
-@test "check_reference_cited is satisfied by a whole-word mention" {
+@test "a whole-word mention satisfies check_reference_cited" {
   local dir
   dir="$(mktemp -d "$(fixture_dir)/fixture.XXXXXX")"
   printf 'A table.\n' > "${dir}/reference.md"
@@ -245,7 +249,7 @@ argument-hint: Two (#:c, #:d).'
   [ -z "$output" ]
 }
 
-@test "check_reference_cited is not satisfied by a longer name containing it" {
+@test "a longer name that holds the filename does not satisfy check_reference_cited" {
   local dir
   dir="$(mktemp -d "$(fixture_dir)/fixture.XXXXXX")"
   printf 'A table.\n' > "${dir}/reference.md"
@@ -261,14 +265,14 @@ argument-hint: Two (#:c, #:d).'
   [[ "$output" == *"references"* ]]
 }
 
-@test "check_reference_cited reports a citation that resolves to nothing" {
+@test "check_reference_cited reports a citation that resolves to no file" {
   local dir
   dir="$(mktemp -d "$(fixture_dir)/fixture.XXXXXX")"
   run check_reference_cited "${dir}/SKILL.md" "$dir" 'Read `missing.md` here.'
   [[ "$output" == *"missing.md"* ]]
 }
 
-@test "check_reference_cited accepts a citation resolving at the marketplace root" {
+@test "check_reference_cited accepts a citation that resolves at the marketplace root" {
   local dir
   dir="$(mktemp -d "$(fixture_dir)/fixture.XXXXXX")"
   printf '# rules\n' > "${dir}/CLAUDE.md"
@@ -312,7 +316,7 @@ argument-hint: Two (#:c, #:d).'
   [[ "$output" != *"does not match"* ]]
 }
 
-@test "check_agent reports a mismatched name on the name's own line" {
+@test "check_agent reports a mismatched name on the line of the name" {
   local dir
   dir="$(mktemp -d "$(fixture_dir)/fixture.XXXXXX")"
   printf -- '---\ndescription: A thing.\nname: other\ntools: Read\nmodel: haiku\n---\n\nBody.\n' \
@@ -330,7 +334,7 @@ argument-hint: Two (#:c, #:d).'
   [[ "$output" == *"no tools list"* ]]
 }
 
-@test "check_agent reports an unknown model on the model's own line" {
+@test "check_agent reports an unknown model on the line of the model" {
   local dir
   dir="$(mktemp -d "$(fixture_dir)/fixture.XXXXXX")"
   printf -- '---\nname: doer\ndescription: A thing.\ntools: Read\nmodel: gpt\n---\n\nBody.\n' \
@@ -376,7 +380,7 @@ argument-hint: Two (#:c, #:d).'
   [[ "$output" == *"wrong"* ]]
 }
 
-@test "check_manifests reports a source that resolves to nothing" {
+@test "check_manifests reports a source that resolves to no directory" {
   root="$(new_marketplace)"
   add_plugin "$root" demo
   jq '.plugins[0].source = "./plugins/elsewhere"' \
@@ -386,7 +390,7 @@ argument-hint: Two (#:c, #:d).'
   [[ "$output" == *"source"* ]]
 }
 
-@test "check_manifests reports the same plugin name listed twice" {
+@test "check_manifests reports a plugin name that is listed twice" {
   root="$(new_marketplace)"
   add_plugin "$root" demo
   jq '.plugins += [.plugins[0]]' "${root}/.claude-plugin/marketplace.json" > "${root}/m.tmp"
@@ -395,7 +399,7 @@ argument-hint: Two (#:c, #:d).'
   [[ "$output" == *"listed twice"* ]]
 }
 
-@test "check_manifests stays silent on two agreeing manifests" {
+@test "check_manifests stays silent on two manifests that agree" {
   root="$(new_marketplace)"
   add_plugin "$root" demo
   run check_manifests "$root"
@@ -411,7 +415,7 @@ argument-hint: Two (#:c, #:d).'
   [[ "$output" == *"plugins"* ]]
 }
 
-@test "all_violations reports a plugins tree holding no skills and no agents" {
+@test "all_violations reports a plugins tree that holds no skills and no agents" {
   root="$(new_marketplace)"
   add_plugin "$root" demo
   run all_violations "$root"
@@ -450,9 +454,9 @@ argument-hint: Two (#:c, #:d).'
 }
 
 @test "main exits 2 with a diagnostic when jq is not on PATH" {
-  # A missing tool is an environment failure, not a plugin defect, and must
-  # not be reported as one - a broken jq once read as "invalid JSON" on a
-  # perfectly valid manifest.
+  # A missing tool is an environment failure, not a plugin defect, and the
+  # validator must not report it as one. A broken jq once read as "invalid
+  # JSON" on a valid manifest.
   root="$(new_marketplace)"
   add_plugin "$root" demo
   add_skill "$root" demo thing "$(valid_skill_frontmatter)"
@@ -469,8 +473,8 @@ argument-hint: Two (#:c, #:d).'
 }
 
 @test "report keeps no count of its own" {
-  # The checks are pure output; main counts. Two reports print two lines and
-  # leave no shared state behind for a later check to inherit.
+  # The checks are pure output. main counts. Two reports print two lines
+  # and leave no shared state for a later check to inherit.
   run bash -c "source '$VALIDATOR'; report a.md 1 one; report b.md 2 two"
   [ "$(printf '%s\n' "$output" | wc -l)" -eq 2 ]
 }

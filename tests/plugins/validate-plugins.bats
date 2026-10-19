@@ -1,10 +1,10 @@
 #!/usr/bin/env bats
-# Tests for validate-plugins.sh, the structural validator over plugins/.
+# Tests for validate-plugins.sh, the structural validator of plugins/.
 #
-# Everything under plugins/ is a JSON manifest or a Markdown prompt the
-# harness loads directly, so nothing in the ordinary build catches a defect
-# there. Each test below pins one rule that had already gone wrong in this
-# repository at least once.
+# Everything under plugins/ is a JSON manifest or a Markdown prompt that the
+# harness loads directly. So nothing in the ordinary build catches a defect
+# there. Each test below pins one rule that went wrong in this repository at
+# least once.
 
 load helpers
 
@@ -23,12 +23,13 @@ teardown() {
 
 # --- YAML comment truncation ----------------------------------------------
 #
-# An unquoted YAML scalar ends at a space-then-#, so a description mentioning
-# a Racket #:keyword loses everything after it - including the "Use when..."
-# clause that makes the skill triggerable at all. The file on disk looks
-# complete, which is why four skills shipped this way unnoticed.
+# An unquoted YAML scalar ends at a space and then a #. So a description
+# that mentions a Racket #:keyword loses all the text after it, with the
+# "Use when..." clause that makes the skill triggerable at all. The file on
+# disk looks complete. That is why four skills shipped this way and nobody
+# saw it.
 
-@test "an unquoted description truncated by a YAML comment fails" {
+@test "an unquoted description that a YAML comment truncates fails" {
   root="$(new_marketplace)"
   add_plugin "$root" demo
   add_skill "$root" demo structs \
@@ -49,8 +50,9 @@ teardown() {
 }
 
 @test "a hash with no preceding space does not trip the check" {
-  # YAML only starts a comment at a space-then-#, so a # that opens a
-  # parenthesis or follows one directly is inert and must not be reported.
+  # YAML starts a comment only at a space and then a #. So a # that opens a
+  # parenthesis or directly follows one is inert, and the validator must not
+  # report it.
   root="$(new_marketplace)"
   add_plugin "$root" demo
   add_skill "$root" demo lang \
@@ -61,8 +63,9 @@ teardown() {
 
 # --- uncited reference files ----------------------------------------------
 #
-# A reference.md the SKILL.md never names is unreachable: nothing instructs
-# the model to open it, so its content may as well not be in the repository.
+# A reference.md that the SKILL.md never names is unreachable. Nothing
+# tells the model to open it, so its content is as good as absent from the
+# repository.
 
 @test "a reference.md the SKILL.md never cites fails" {
   root="$(new_marketplace)"
@@ -87,7 +90,8 @@ teardown() {
 # --- unknown tool names ---------------------------------------------------
 #
 # allowed-tools and tools name harness tools. A renamed tool (Task became
-# Agent) leaves a skill unable to do the one step its own body requires.
+# Agent) leaves a skill unable to do the one step that its own body
+# requires.
 
 @test "an unknown tool in allowed-tools fails" {
   root="$(new_marketplace)"
@@ -123,10 +127,11 @@ model: haiku'
 
 # --- agent tool lists take bare names --------------------------------------
 #
-# A skill's allowed-tools may scope a tool's arguments; an agent's tools list
-# is bare names in this repository. The known-name check strips the argument
-# off each token before matching it, so a scoped token in an agent validated
-# clean and the rule lived only in the meta plugin's prose.
+# The allowed-tools of a skill can scope the arguments of a tool. The tools
+# list of an agent holds bare names in this repository. The known-name check
+# strips the argument off each token before it matches the token. So a
+# scoped token in an agent validated clean, and the rule lived only in the
+# prose of the meta plugin.
 
 @test "an argument-scoped tool in an agent tools list fails" {
   root="$(new_marketplace)"
@@ -141,7 +146,7 @@ model: haiku'
   [[ "$output" == *"Bash(git status:*)"* ]]
 }
 
-@test "an argument-scoped tool in a skill allowed-tools list still passes" {
+@test "an argument-scoped tool in the allowed-tools list of a skill passes" {
   root="$(new_marketplace)"
   add_plugin "$root" demo
   add_skill "$root" demo thing \
@@ -152,8 +157,8 @@ model: haiku'
 
 # --- manifest agreement ---------------------------------------------------
 #
-# Each plugin's description is written twice, in its own plugin.json and in
-# the root marketplace.json. They have drifted before.
+# The description of each plugin is written twice, in its own plugin.json
+# and in the root marketplace.json. They drifted before.
 
 @test "a description that differs between the two manifests fails" {
   root="$(new_marketplace)"
@@ -166,7 +171,7 @@ model: haiku'
   [[ "$output" == *"description"* ]]
 }
 
-@test "a plugin directory missing from the marketplace manifest fails" {
+@test "a plugin directory that is absent from the marketplace manifest fails" {
   root="$(new_marketplace)"
   add_plugin "$root" demo
   mkdir -p "${root}/plugins/orphan/.claude-plugin"
@@ -188,8 +193,9 @@ model: haiku'
 
 # --- agent frontmatter ----------------------------------------------------
 #
-# Every agent in this repository names its model, so an agent's cost and
-# capability do not swing with the session's model. Nothing enforced it.
+# Every agent in this repository names its model. So the cost and the
+# capability of an agent do not change with the model of the session.
+# Nothing enforced it.
 
 @test "an agent with no model field fails" {
   root="$(new_marketplace)"
@@ -227,7 +233,7 @@ model: haiku'
 
 # --- reporting ------------------------------------------------------------
 
-@test "every violation is reported, not just the first" {
+@test "the validator reports every violation, not only the first" {
   root="$(new_marketplace)"
   add_plugin "$root" demo
   add_skill "$root" demo one 'argument-hint: "[a hint]"'
@@ -248,8 +254,8 @@ model: haiku'
 
 # --- tools written as a YAML block sequence -------------------------------
 #
-# `tools:` with the entries on following indented lines is the other legal
-# YAML spelling of the same list. The check that exists to catch a stale
+# `tools:` with the entries on the indented lines that follow is the other
+# legal YAML spelling of the same list. The check that catches a stale
 # `Task` saw an empty value there and reported nothing.
 
 @test "an unknown tool in a block-sequence tools list fails" {
@@ -281,7 +287,7 @@ tools:
   [ "$status" -eq 0 ]
 }
 
-@test "a block-sequence allowed-tools list is checked too" {
+@test "the validator checks a block-sequence allowed-tools list too" {
   root="$(new_marketplace)"
   add_plugin "$root" demo
   add_skill "$root" demo thing \
@@ -296,7 +302,7 @@ allowed-tools:
 
 # --- frontmatter framing --------------------------------------------------
 
-@test "frontmatter that opens but never closes is reported" {
+@test "the validator reports frontmatter that opens but never closes" {
   root="$(new_marketplace)"
   add_plugin "$root" demo
   write_raw_agent "$root" demo doer \
@@ -315,7 +321,7 @@ You do the fixture thing.
   [[ "$output" == *"never closes"* ]]
 }
 
-@test "CRLF line endings still parse as frontmatter" {
+@test "a file with CRLF line ends parses as frontmatter" {
   root="$(new_marketplace)"
   add_plugin "$root" demo
   write_raw_skill "$root" demo thing \
@@ -324,7 +330,7 @@ You do the fixture thing.
   [ "$status" -eq 0 ]
 }
 
-@test "a UTF-8 byte-order mark still parses as frontmatter" {
+@test "a file with a UTF-8 byte-order mark parses as frontmatter" {
   root="$(new_marketplace)"
   add_plugin "$root" demo
   write_raw_skill "$root" demo thing \
@@ -333,7 +339,7 @@ You do the fixture thing.
   [ "$status" -eq 0 ]
 }
 
-@test "a file with no frontmatter is reported once, with no cascade" {
+@test "the validator reports a file with no frontmatter once, with no cascade" {
   root="$(new_marketplace)"
   add_plugin "$root" demo
   write_raw_agent "$root" demo doer '# doer
@@ -348,12 +354,12 @@ You do the fixture thing.
 
 # --- the leading-blank false positive -------------------------------------
 #
-# One input was parsed by two parsers: the truncation check stripped exactly
-# one leading space before looking for the opening quote, while the
-# frontmatter loader stripped all of them. Two spaces, or a tab, and a
-# properly quoted description was reported as truncated.
+# Two parsers read one input. The truncation check stripped exactly one
+# leading space before it looked for the opening quote, and the frontmatter
+# loader stripped all of them. With two spaces, or a tab, the validator
+# reported a correctly quoted description as truncated.
 
-@test "extra spaces before a quoted value do not fake a truncation" {
+@test "extra spaces before a quoted value do not look like a truncation" {
   root="$(new_marketplace)"
   add_plugin "$root" demo
   add_skill "$root" demo structs \
@@ -362,7 +368,7 @@ You do the fixture thing.
   [ "$status" -eq 0 ]
 }
 
-@test "a tab before a quoted value does not fake a truncation" {
+@test "a tab before a quoted value does not look like a truncation" {
   root="$(new_marketplace)"
   add_plugin "$root" demo
   add_skill "$root" demo structs \
@@ -373,7 +379,7 @@ You do the fixture thing.
 
 # --- the known-tool list --------------------------------------------------
 
-@test "harness tools missing from the known list are accepted" {
+@test "the validator accepts harness tools that are absent from the known list" {
   root="$(new_marketplace)"
   add_plugin "$root" demo
   add_agent "$root" demo doer \
@@ -385,7 +391,7 @@ model: haiku'
   [ "$status" -eq 0 ]
 }
 
-@test "an MCP tool name is accepted by pattern" {
+@test "the validator accepts an MCP tool name by pattern" {
   root="$(new_marketplace)"
   add_plugin "$root" demo
   add_agent "$root" demo doer \
@@ -399,7 +405,7 @@ model: haiku'
 
 # --- duplicate frontmatter keys -------------------------------------------
 
-@test "a duplicate frontmatter key is reported, not silently overridden" {
+@test "the validator reports a duplicate frontmatter key and does not take the last value" {
   root="$(new_marketplace)"
   add_plugin "$root" demo
   add_agent "$root" demo doer \
@@ -415,11 +421,11 @@ model: haiku'
 
 # --- unknown frontmatter keys ---------------------------------------------
 #
-# A skill that writes `tools:` where the harness reads `allowed-tools:` gets
-# no tools and no complaint. Rejecting unknown keys catches the whole
-# misspelling class rather than one key at a time.
+# A skill that writes `tools:` where the harness reads `allowed-tools:`
+# gets no tools and no complaint. A rejection of unknown keys catches the
+# whole class of misspelled keys, not one key at a time.
 
-@test "a skill using tools instead of allowed-tools is reported" {
+@test "the validator reports a skill that uses tools instead of allowed-tools" {
   root="$(new_marketplace)"
   add_plugin "$root" demo
   add_skill "$root" demo thing \
@@ -430,7 +436,7 @@ tools: Read, Taks'
   [[ "$output" == *"unknown frontmatter key 'tools'"* ]]
 }
 
-@test "an agent with an unknown frontmatter key is reported" {
+@test "the validator reports an agent with an unknown frontmatter key" {
   root="$(new_marketplace)"
   add_plugin "$root" demo
   add_agent "$root" demo doer \
@@ -444,7 +450,7 @@ allowed-tools: Read'
   [[ "$output" == *"unknown frontmatter key 'allowed-tools'"* ]]
 }
 
-@test "every documented skill frontmatter key is accepted" {
+@test "the validator accepts every documented skill frontmatter key" {
   root="$(new_marketplace)"
   add_plugin "$root" demo
   add_skill "$root" demo thing \
@@ -458,7 +464,7 @@ allowed-tools: Read, Grep'
 
 # --- sibling files and citations ------------------------------------------
 
-@test "a sibling that is not Markdown must still be cited" {
+@test "a sibling that is not Markdown must be cited too" {
   root="$(new_marketplace)"
   add_plugin "$root" demo
   add_skill "$root" demo thing "$(valid_skill_frontmatter)"
@@ -468,7 +474,7 @@ allowed-tools: Read, Grep'
   [[ "$output" == *"reference.txt"* ]]
 }
 
-@test "a subdirectory inside a skill directory is reported" {
+@test "the validator reports a subdirectory inside a skill directory" {
   root="$(new_marketplace)"
   add_plugin "$root" demo
   add_skill "$root" demo thing "$(valid_skill_frontmatter)"
@@ -478,7 +484,7 @@ allowed-tools: Read, Grep'
   [[ "$output" == *"references"* ]]
 }
 
-@test "a scripts subdirectory inside a skill directory is reported" {
+@test "the validator reports a scripts subdirectory inside a skill directory" {
   root="$(new_marketplace)"
   add_plugin "$root" demo
   add_skill "$root" demo thing "$(valid_skill_frontmatter)"
@@ -489,7 +495,7 @@ allowed-tools: Read, Grep'
   [[ "$output" == *"scripts"* ]]
 }
 
-@test "a citation naming a file that does not exist is reported" {
+@test "the validator reports a citation that names a file that does not exist" {
   root="$(new_marketplace)"
   add_plugin "$root" demo
   add_skill "$root" demo thing "$(valid_skill_frontmatter)" \
@@ -499,7 +505,7 @@ allowed-tools: Read, Grep'
   [[ "$output" == *"missing-table.md"* ]]
 }
 
-@test "citing a different file does not satisfy the requirement for reference.md" {
+@test "a citation of a different file does not satisfy the requirement for reference.md" {
   root="$(new_marketplace)"
   add_plugin "$root" demo
   add_skill "$root" demo thing "$(valid_skill_frontmatter)" \
@@ -522,7 +528,7 @@ allowed-tools: Read, Grep'
   [[ "$output" == *"sibling reference.md"* ]]
 }
 
-@test "a document at the marketplace root may be named without being a sibling" {
+@test "a document at the marketplace root can be named although it is not a sibling" {
   root="$(new_marketplace)"
   add_plugin "$root" demo
   printf '# House rules\n' > "${root}/CLAUDE.md"
@@ -534,7 +540,7 @@ allowed-tools: Read, Grep'
 
 # --- manifests ------------------------------------------------------------
 
-@test "a marketplace manifest with no plugins array is reported, not leaked" {
+@test "the validator reports a marketplace manifest with no plugins array and leaks no jq error" {
   root="$(new_marketplace)"
   add_plugin "$root" demo
   add_skill "$root" demo thing "$(valid_skill_frontmatter)"
@@ -546,7 +552,7 @@ allowed-tools: Read, Grep'
   [[ "$output" != *"jq: error"* ]]
 }
 
-@test "a missing marketplace manifest is reported" {
+@test "the validator reports a missing marketplace manifest" {
   root="$(new_marketplace)"
   add_plugin "$root" demo
   add_skill "$root" demo thing "$(valid_skill_frontmatter)"
@@ -556,7 +562,7 @@ allowed-tools: Read, Grep'
   [[ "$output" == *"missing marketplace manifest"* ]]
 }
 
-@test "invalid JSON in the marketplace manifest is reported" {
+@test "the validator reports invalid JSON in the marketplace manifest" {
   root="$(new_marketplace)"
   add_plugin "$root" demo
   add_skill "$root" demo thing "$(valid_skill_frontmatter)"
@@ -566,7 +572,7 @@ allowed-tools: Read, Grep'
   [[ "$output" == *"invalid JSON"* ]]
 }
 
-@test "a marketplace entry with no matching plugin directory is reported" {
+@test "the validator reports a marketplace entry with no matching plugin directory" {
   root="$(new_marketplace)"
   add_plugin "$root" demo
   add_skill "$root" demo thing "$(valid_skill_frontmatter)"
@@ -578,7 +584,7 @@ allowed-tools: Read, Grep'
   [[ "$output" == *"ghost"* ]]
 }
 
-@test "a plugin.json whose name differs from its directory is reported" {
+@test "the validator reports a plugin.json whose name differs from its directory" {
   root="$(new_marketplace)"
   add_plugin "$root" demo
   add_skill "$root" demo thing "$(valid_skill_frontmatter)"
@@ -589,7 +595,7 @@ allowed-tools: Read, Grep'
   [[ "$output" == *"wrong"* ]]
 }
 
-@test "a marketplace source pointing nowhere is reported" {
+@test "the validator reports a marketplace source that points to no directory" {
   root="$(new_marketplace)"
   add_plugin "$root" demo
   add_skill "$root" demo thing "$(valid_skill_frontmatter)"
@@ -601,7 +607,7 @@ allowed-tools: Read, Grep'
   [[ "$output" == *"source"* ]]
 }
 
-@test "two marketplace entries with the same name are reported" {
+@test "the validator reports two marketplace entries with the same name" {
   root="$(new_marketplace)"
   add_plugin "$root" demo
   add_skill "$root" demo thing "$(valid_skill_frontmatter)"
@@ -615,16 +621,16 @@ allowed-tools: Read, Grep'
 
 # --- a wrong root ---------------------------------------------------------
 #
-# A mistyped path in CI must not look like a passing run.
+# A mistyped path in CI must not look like a pass.
 
-@test "a root with no plugins directory is reported" {
+@test "the validator reports a root with no plugins directory" {
   root="$(new_marketplace)"
   run "$VALIDATOR" "$root"
   [ "$status" -ne 0 ]
   [[ "$output" == *"plugins"* ]]
 }
 
-@test "a root whose plugins directory holds no skills and no agents is reported" {
+@test "the validator reports a root whose plugins directory holds no skills and no agents" {
   root="$(new_marketplace)"
   add_plugin "$root" demo
   run "$VALIDATOR" "$root"
@@ -634,7 +640,7 @@ allowed-tools: Read, Grep'
 
 # --- agent frontmatter, continued -----------------------------------------
 
-@test "an unknown model value is reported" {
+@test "the validator reports an unknown model value" {
   root="$(new_marketplace)"
   add_plugin "$root" demo
   add_agent "$root" demo doer \
@@ -647,7 +653,7 @@ model: gpt'
   [[ "$output" == *"unknown model 'gpt'"* ]]
 }
 
-@test "an agent with no description is reported" {
+@test "the validator reports an agent with no description" {
   root="$(new_marketplace)"
   add_plugin "$root" demo
   add_agent "$root" demo doer \
@@ -659,7 +665,7 @@ model: haiku'
   [[ "$output" == *"no description"* ]]
 }
 
-@test "an agent with no tools list is reported" {
+@test "the validator reports an agent with no tools list" {
   root="$(new_marketplace)"
   add_plugin "$root" demo
   add_agent "$root" demo doer \
@@ -671,7 +677,7 @@ model: haiku'
   [[ "$output" == *"no tools list"* ]]
 }
 
-@test "an agent with no name reads as missing, not as a wrong value" {
+@test "the validator reports an agent with no name as missing, not as a wrong value" {
   root="$(new_marketplace)"
   add_plugin "$root" demo
   add_agent "$root" demo doer \
@@ -686,10 +692,11 @@ model: haiku'
 
 # --- jumpable line numbers ------------------------------------------------
 #
-# The report format exists so an editor can jump to the violation. A field
-# whose line number is known must not be reported against line 1.
+# The report format exists so that an editor can jump to the violation.
+# The validator must not report a field with a known line number against
+# line 1.
 
-@test "a mismatched agent name is reported on its own line" {
+@test "the validator reports a mismatched agent name on its own line" {
   root="$(new_marketplace)"
   add_plugin "$root" demo
   add_agent "$root" demo doer \
@@ -701,7 +708,7 @@ model: haiku'
   [[ "$output" == *"doer.md:3: name 'not-doer'"* ]]
 }
 
-@test "an unknown model is reported on its own line" {
+@test "the validator reports an unknown model on its own line" {
   root="$(new_marketplace)"
   add_plugin "$root" demo
   add_agent "$root" demo doer \
@@ -724,7 +731,7 @@ model: gpt'
   [ "$output" = "plugins: clean." ]
 }
 
-@test "a failing tree ends with the violation count" {
+@test "a failed tree ends with the violation count" {
   root="$(new_marketplace)"
   add_plugin "$root" demo
   add_skill "$root" demo one 'argument-hint: "[a hint]"'

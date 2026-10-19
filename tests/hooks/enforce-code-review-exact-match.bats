@@ -1,16 +1,17 @@
 #!/usr/bin/env bats
-# Regression test for the exact-match bug fix in enforce-code-review.sh.
+# Regression tests for the exact-match fix in enforce-code-review.sh.
 #
-# The required-review checks must match skill/agent names exactly, not by
-# unanchored substring. Names are fully qualified with the plugin prefix, as
-# the transcript records them. A skill named "development:review-tdd-summary"
-# (a near-miss that merely *contains* "development:review-tdd") must NOT
-# satisfy the "development:review-tdd" requirement; likewise an agent named
-# "development:nst-reviewer-v2" must NOT satisfy "development:nst-reviewer",
-# and the bare, unprefixed "nst-reviewer" must NOT satisfy it either.
+# The required-review checks must match a skill name or an agent name
+# exactly, not by an unanchored substring. Each name is fully qualified with
+# the plugin prefix, as the transcript records it. A skill named
+# "development:review-tdd-summary" (a near miss that only *holds*
+# "development:review-tdd") must NOT satisfy the "development:review-tdd"
+# requirement. An agent named "development:nst-reviewer-v2" must NOT satisfy
+# "development:nst-reviewer". The bare "nst-reviewer" with no prefix must
+# NOT satisfy it either.
 #
-# These tests are expected to FAIL against the original substring-grep
-# implementation and PASS once exact-name matching is in place.
+# These tests FAIL against the original substring-grep implementation and
+# PASS with the exact-name match.
 
 load helpers
 
@@ -46,7 +47,7 @@ setup() {
   [[ "$reason" == *"development:nst-reviewer (agent)"* ]]
 }
 
-@test "a bare, unprefixed agent name does not satisfy the qualified nst-reviewer requirement" {
+@test "a bare agent name with no prefix does not satisfy the qualified nst-reviewer requirement" {
   transcript="$(write_transcript "$(printf '%s\n%s\n%s\n%s\n' \
     "$(last_prompt_marker)" \
     "$(tool_use_event Edit)" \

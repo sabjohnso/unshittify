@@ -1,24 +1,24 @@
-# Shared helpers for the plugins/ validator test suite.
+# Shared helpers for the test suite of the plugins/ validator.
 #
-# Every test builds a THROWAWAY marketplace tree rather than asserting
-# against the real plugins/ directory. Tests that assert against live
-# repository content fail whenever the content legitimately changes, which
-# teaches people to edit the test instead of the code; a fixture tree pins
-# the rule itself.
+# Every test builds a THROWAWAY marketplace tree. It does not assert against
+# the real plugins/ directory. A test that asserts against live repository
+# content fails each time the content changes for a good reason, and that
+# teaches people to edit the test and not the code. A fixture tree pins the
+# rule itself.
 
-# shellcheck disable=SC2034 # consumed by the .bats files that load this
+# shellcheck disable=SC2034 # The .bats files that load this file use it.
 VALIDATOR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/plugins/validate-plugins.sh"
 
-# fixture_dir - the directory every fixture tree is created under.
+# fixture_dir. The directory that holds every fixture tree.
 #
-# Named here rather than appended to an array by each helper, because
-# new_marketplace is called in a command substitution: an array it appended
-# to would go with the subshell, leaving teardown nothing to delete.
+# It is named here. Each helper does not append to an array, because
+# new_marketplace runs in a command substitution. An array that it appended
+# to would go with the subshell, and teardown would have nothing to delete.
 fixture_dir() {
   printf '%s' "${BATS_TEST_TMPDIR:-${BATS_TMPDIR:-/tmp}}"
 }
 
-# cleanup_fixtures - removes every tree these helpers created.
+# cleanup_fixtures. Removes every tree that these helpers created.
 cleanup_fixtures() {
   local dir
   dir="$(fixture_dir)"
@@ -28,7 +28,7 @@ cleanup_fixtures() {
 # new_marketplace
 #
 # Creates an empty marketplace root with a valid top-level manifest and
-# prints its path. Callers add plugins to it with add_plugin.
+# prints its path. A caller adds plugins to it with add_plugin.
 new_marketplace() {
   local root
   root="$(mktemp -d "$(fixture_dir)/marketplace.XXXXXX")"
@@ -40,9 +40,9 @@ new_marketplace() {
 
 # add_plugin <root> <name> [description]
 #
-# Adds a plugin directory with its own manifest AND the matching entry in the
-# marketplace manifest, so a tree built this way starts out consistent and a
-# test only has to introduce the one defect it is pinning.
+# Adds a plugin directory with its own manifest AND the matching entry in
+# the marketplace manifest. Thus a tree built this way starts consistent,
+# and a test only has to add the one defect that it pins.
 add_plugin() {
   local root="$1" name="$2" description="${3:-A fixture plugin.}"
   mkdir -p "${root}/plugins/${name}/.claude-plugin"
@@ -79,9 +79,9 @@ add_sibling() {
 
 # write_raw_skill <root> <plugin> <skill> <whole-file-content>
 #
-# For fixtures whose defect is in the file's framing - a missing closing
-# delimiter, CRLF endings, a byte-order mark - which add_skill's printf
-# template cannot express.
+# For a fixture whose defect is in the frame of the file: a missing closing
+# delimiter, CRLF line ends, or a byte-order mark. The printf template of
+# add_skill cannot express those.
 write_raw_skill() {
   local root="$1" plugin="$2" skill="$3" content="$4"
   mkdir -p "${root}/plugins/${plugin}/skills/${skill}"
@@ -95,8 +95,8 @@ write_raw_agent() {
   printf '%s' "$content" > "${root}/plugins/${plugin}/agents/${agent}.md"
 }
 
-# a well-formed skill frontmatter, for trees where the skill is not the
-# subject of the test
+# A well-formed skill frontmatter, for a tree where the skill is not the
+# subject of the test.
 valid_skill_frontmatter() {
   printf 'description: Does the fixture thing. Use when the user asks for a fixture.'
 }

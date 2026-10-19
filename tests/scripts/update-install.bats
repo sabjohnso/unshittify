@@ -1,14 +1,14 @@
 #!/usr/bin/env bats
-# Tests for scripts/update-install.sh, which republishes this repository's
-# plugins into the local Claude Code install.
+# Tests for scripts/update-install.sh, which publishes the plugins of this
+# repository again into the local Claude Code install.
 #
-# The script's whole reason to exist is that `claude plugin update` is keyed
-# on the version string alone: a content change at an unchanged version is
-# reported as "already at the latest version" and the stale snapshot stays.
-# So the decisions worth testing are which plugins the manifest names, which
-# ones an ordinary update would silently skip, and whether the snapshot
-# actually matches the tree afterwards. Every one of those is a pure function
-# over paths, and none of them runs the `claude` CLI.
+# The script exists because `claude plugin update` keys on the version
+# string alone. It reports a content change at an unchanged version as
+# "already at the latest version", and the stale snapshot stays. So the
+# decisions to test are these: which plugins the manifest names, which ones
+# an ordinary update skips with no error, and whether the snapshot matches
+# the tree afterwards. Each one is a pure function over paths, and none of
+# them runs the `claude` CLI.
 
 load helpers
 
@@ -21,9 +21,9 @@ teardown() {
   [ -n "${root:-}" ] && rm -rf "$root"
 }
 
-# --- the plugin list comes from the manifest, not from a hardcoded list ----
+# --- the plugin list comes from the manifest, not from a fixed list -------
 
-@test "marketplace_plugin_names lists every plugin the manifest declares" {
+@test "marketplace_plugin_names lists every plugin that the manifest declares" {
   make_marketplace "$root" fixture alpha beta gamma
   run bash -c 'source "$1"; marketplace_plugin_names "$2/.claude-plugin/marketplace.json"' \
     _ "$SCRIPT" "$root"
@@ -69,7 +69,7 @@ gamma" ]
   [ -z "$output" ]
 }
 
-# --- the no-op case this script exists for -------------------------------
+# --- the no-op case that this script exists for --------------------------
 
 @test "update_would_skip is true when the tree version matches the installed one" {
   make_marketplace "$root" fixture alpha
@@ -96,7 +96,7 @@ gamma" ]
   [ "$status" -ne 0 ]
 }
 
-# --- did the snapshot actually take? -------------------------------------
+# --- did the snapshot occur? ---------------------------------------------
 
 @test "snapshot_matches_tree succeeds when the cached copy equals the tree" {
   make_marketplace "$root" fixture alpha
@@ -122,7 +122,7 @@ gamma" ]
   [ "$status" -ne 0 ]
 }
 
-@test "snapshot_matches_tree ignores a file the install is known not to copy" {
+@test "snapshot_matches_tree ignores a file that the install does not copy" {
   make_marketplace "$root" fixture alpha
   make_cache "${root}/cache" fixture alpha "0.1.0"
   printf 'notes\n' > "${root}/plugins/alpha/NOTES.org"
@@ -131,13 +131,14 @@ gamma" ]
   [ "$status" -eq 0 ]
 }
 
-# --- the plan, without running the CLI -----------------------------------
+# --- the plan, with no run of the CLI ------------------------------------
 
-# The commands are asserted line by line, in full. A substring match passes a
-# dropped --yes (which makes the real CLI stop and prompt) and passes an
-# uninstall and install in the wrong order (which removes the plugin and puts
-# the same stale copy back), because both leave the searched-for text present.
-@test "dry run prints the marketplace update before any plugin update" {
+# The tests assert the commands line by line, in full. A substring match
+# passes a dropped --yes (which makes the real CLI stop and prompt), and it
+# passes an uninstall and an install in the wrong order (which removes the
+# plugin and puts the same stale copy back). Both leave the searched text
+# present.
+@test "a dry run prints the marketplace update before each plugin update" {
   make_marketplace "$root" fixture alpha beta
   make_installed "${root}/installed.json" fixture alpha=0.0.1 beta=0.0.1
   run "$SCRIPT" --dry-run --marketplace fixture --root "$root" \
@@ -148,7 +149,7 @@ gamma" ]
   [ "${lines[2]}" = "claude plugin update beta@fixture --yes" ]
 }
 
-@test "dry run reinstalls rather than updates a plugin whose version did not move" {
+@test "a dry run reinstalls a plugin whose version did not move, and does not update it" {
   make_marketplace "$root" fixture alpha
   make_installed "${root}/installed.json" fixture alpha=0.1.0
   run "$SCRIPT" --dry-run --marketplace fixture --root "$root" \
@@ -160,7 +161,7 @@ gamma" ]
   [[ "$output" != *"plugin update alpha@fixture"* ]]
 }
 
-@test "--force reinstalls a plugin an ordinary update would have refreshed" {
+@test "--force reinstalls a plugin that an ordinary update refreshes" {
   make_marketplace "$root" fixture alpha
   make_plugin "$root" alpha "0.9.0"
   make_installed "${root}/installed.json" fixture alpha=0.1.0
@@ -171,7 +172,7 @@ gamma" ]
   [ "${lines[2]}" = "claude plugin install alpha@fixture --yes" ]
 }
 
-@test "--help prints usage and succeeds without touching the install" {
+@test "--help prints the usage, succeeds, and does not touch the install" {
   run "$SCRIPT" --help
   [ "$status" -eq 0 ]
   [[ "$output" == *"Usage: update-install.sh"* ]]
@@ -179,10 +180,10 @@ gamma" ]
   [[ "$output" != *"claude plugin"* ]]
 }
 
-# The stub holds every external binary the script reaches for EXCEPT jq, so
-# the run fails on the guard rather than on a missing shell. printf and
-# command are builtins and need no entry.
-@test "a missing jq is reported rather than producing an empty plugin list" {
+# The stub holds every external binary that the script uses EXCEPT jq. So
+# the run fails on the guard and not on a missing shell. printf and command
+# are builtins and need no entry.
+@test "the script reports a missing jq and does not produce an empty plugin list" {
   make_marketplace "$root" fixture alpha
   local stub="${root}/stubbin" tool
   mkdir -p "$stub"
@@ -194,7 +195,7 @@ gamma" ]
   [[ "$output" == *"jq is required"* ]]
 }
 
-@test "tree_version fails on a plugin directory that is not there" {
+@test "tree_version fails on a plugin directory that does not exist" {
   make_marketplace "$root" fixture alpha
   run bash -c 'source "$1"; tree_version "$2" ghost' _ "$SCRIPT" "$root"
   [ "$status" -ne 0 ]
@@ -208,7 +209,7 @@ gamma" ]
   [ "$status" -ne 0 ]
 }
 
-@test "verify names a plugin whose manifest has no version rather than skipping it" {
+@test "verify names a plugin whose manifest has no version and does not skip it" {
   make_marketplace "$root" fixture alpha
   printf '{"name": "alpha", "description": "d"}\n' \
     > "${root}/plugins/alpha/.claude-plugin/plugin.json"
@@ -219,7 +220,7 @@ gamma" ]
   [[ "$output" == *"no version"* ]]
 }
 
-@test "a marketplace entry with no plugin directory is reported by verify" {
+@test "verify reports a marketplace entry with no plugin directory" {
   make_marketplace "$root" fixture alpha
   rm -rf "${root}/plugins/alpha"
   run "$SCRIPT" --verify-only --marketplace fixture --root "$root" \
@@ -228,7 +229,7 @@ gamma" ]
   [[ "$output" == *"alpha"* ]]
 }
 
-@test "a single-file component is compared, not only directories" {
+@test "the comparison covers a single-file component, not only directories" {
   make_marketplace "$root" fixture alpha
   make_cache "${root}/cache" fixture alpha "0.1.0"
   printf '{"a": 1}\n' > "${root}/plugins/alpha/.mcp.json"
@@ -238,7 +239,7 @@ gamma" ]
   [ "$status" -ne 0 ]
 }
 
-@test "dry run changes nothing on disk" {
+@test "a dry run changes nothing on disk" {
   make_marketplace "$root" fixture alpha
   make_installed "${root}/installed.json" fixture alpha=0.0.1
   before="$(find "$root" -type f | sort | xargs md5sum | md5sum)"
@@ -249,14 +250,14 @@ gamma" ]
   [ "$before" = "$after" ]
 }
 
-@test "a root with no marketplace manifest is refused" {
+@test "the script refuses a root with no marketplace manifest" {
   run "$SCRIPT" --dry-run --marketplace fixture --root "$root" \
       --installed "${root}/installed.json" --cache "${root}/cache"
   [ "$status" -ne 0 ]
   [[ "$output" == *"marketplace.json"* ]]
 }
 
-@test "an unknown option is refused rather than ignored" {
+@test "the script refuses an unknown option and does not ignore it" {
   make_marketplace "$root" fixture alpha
   run "$SCRIPT" --dry-run --frobnicate --root "$root"
   [ "$status" -ne 0 ]
@@ -285,31 +286,32 @@ gamma" ]
   [[ "$output" != *"stale"* ]]
 }
 
-# --- the law snapshot_matches_tree is supposed to obey ---------------------
+# --- the law that snapshot_matches_tree must obey --------------------------
 #
-# The script's central claim is that "published" is measured rather than
-# assumed: a snapshot matches the tree exactly when the copy is byte-identical
-# across every component the harness loads. The four examples above pin that
-# for one two-component shape and one canned edit, which is narrower than the
-# claim - eight of the ten components are never built, no directory holds more
-# than one file, and no component is present on one side and absent on the
-# other.
+# The central claim of the script is that "published" is measured, not
+# assumed. A snapshot matches the tree exactly when the copy is identical
+# byte for byte across every component that the harness loads. The four
+# examples above pin that for one shape with two components and one fixed
+# edit. That is narrower than the claim. Eight of the ten components are
+# never built, no directory holds more than one file, and no component is
+# present on one side and absent on the other.
 #
-# So the law is stated over generated trees instead: reflexivity, that an
-# identical copy of an arbitrary shape always matches; and sensitivity, that
-# any single change to that copy always breaks the match. A false positive
-# here would report a stale install as published, which is the one failure the
-# script exists to prevent.
+# So the law is stated over generated trees instead. Reflexivity: an
+# identical copy of an arbitrary shape always matches. Sensitivity: a single
+# change to that copy always breaks the match. A false positive here reports
+# a stale install as published, and that is the one failure that the script
+# exists to prevent.
 #
-# The generator follows the seeded idiom already used in
-# tests/hooks/enforce-code-review-internals.bats: a fixed seed advanced only
-# through prng_next, so a shape that breaks the law reappears on a rerun.
+# The generator follows the seeded idiom of
+# tests/hooks/enforce-code-review-internals.bats: a fixed seed that only
+# prng_next advances, so a shape that breaks the law occurs again on a
+# rerun.
 
 SNAPSHOT_SEED=20260830
 SNAPSHOT_TRIALS=12
 
-# Components the script compares. Kept in the same order as the script's own
-# list so a reader can check the two against each other.
+# The components that the script compares. They are in the same order as
+# the list in the script, so a reader can check the two against each other.
 COMPONENT_DIRS=(.claude-plugin skills commands agents hooks monitors bin)
 COMPONENT_FILES=(.mcp.json .lsp.json settings.json)
 
@@ -325,7 +327,7 @@ snap_prng_next() {
 # Builds an arbitrary plugin shape: a random subset of the component
 # directories, each with a random number of files at a random depth, plus a
 # random subset of the single-file components, plus stray paths that are not
-# components at all and must not affect the verdict.
+# components and must not change the verdict.
 generate_tree() {
   local dir="$1" component depth files i path
   mkdir -p "$dir"
@@ -353,8 +355,8 @@ generate_tree() {
     printf '{"k": %s}\n' "$SNAP_VALUE" > "${dir}/${component}"
   done
 
-  # Not components. The install does not copy these, so their presence in the
-  # tree must never read as a stale snapshot.
+  # Not components. The install does not copy these, so their presence in
+  # the tree must never read as a stale snapshot.
   snap_prng_next 3
   for ((i = 0; i < SNAP_VALUE; i++)); do
     printf 'stray\n' > "${dir}/NOTES${i}.org"
@@ -363,8 +365,8 @@ generate_tree() {
 
 # component_files_in <dir>
 #
-# Every file the comparison actually looks at, so a mutation can be aimed at
-# one rather than at a stray the script is right to ignore.
+# Every file that the comparison reads. Thus a mutation can target one of
+# them and not a stray file that the script correctly ignores.
 component_files_in() {
   local dir="$1" component
   for component in "${COMPONENT_DIRS[@]}"; do
@@ -376,7 +378,7 @@ component_files_in() {
   return 0
 }
 
-@test "law: a byte-identical snapshot of any generated tree matches" {
+@test "law: a snapshot that is identical byte for byte to a generated tree matches" {
   snap_prng_reset
   local trial
   for ((trial = 0; trial < SNAPSHOT_TRIALS; trial++)); do
@@ -395,7 +397,7 @@ component_files_in() {
   done
 }
 
-@test "law: any single change to the snapshot breaks the match" {
+@test "law: each single change to the snapshot breaks the match" {
   snap_prng_reset
   local trial
   for ((trial = 0; trial < SNAPSHOT_TRIALS; trial++)); do
@@ -407,8 +409,9 @@ component_files_in() {
     local copy="${snap}/fixture/alpha/0.1.0"
     local targets target
     mapfile -t targets < <(component_files_in "$copy")
-    # A shape with no component files at all cannot be mutated; the generator
-    # can produce one, and it is the reflexive case, already covered above.
+    # A shape with no component files cannot be mutated. The generator can
+    # produce one, and that is the reflexive case, which the test above
+    # covers.
     [ "${#targets[@]}" -gt 0 ] || continue
 
     snap_prng_next "${#targets[@]}"
@@ -431,17 +434,18 @@ component_files_in() {
 
 # --- a component the script has not heard of ------------------------------
 #
-# PLUGIN_COMPONENTS names the parts of a plugin the harness loads today. If
-# the harness starts loading a new kind, comparing only that list would report
-# every plugin as matching while never looking at the new directory - silent
-# under-verification, which is worse than a false alarm here because the whole
-# point of the check is to catch a copy that did not happen.
+# PLUGIN_COMPONENTS names the parts of a plugin that the harness loads
+# today. If the harness starts to load a new kind, a comparison of only that
+# list reports every plugin as a match and never reads the new directory.
+# That is silent under-verification, and it is worse than a false alarm
+# here, because the purpose of the check is to catch a copy that did not
+# occur.
 #
-# So whatever the install actually copied is compared too: an entry present in
-# the snapshot is compared against the tree whether or not the list knows the
-# name.
+# So the comparison also covers what the install copied. An entry in the
+# snapshot is compared against the tree whether the list knows the name or
+# not.
 
-@test "an unrecognised directory in the snapshot is still compared" {
+@test "the comparison covers an unknown directory in the snapshot" {
   make_marketplace "$root" fixture alpha
   make_cache "${root}/cache" fixture alpha "0.1.0"
   mkdir -p "${root}/plugins/alpha/output-styles" \
@@ -453,7 +457,7 @@ component_files_in() {
   [ "$status" -ne 0 ]
 }
 
-@test "an unrecognised directory the install did not copy is reported" {
+@test "the script reports an unknown directory that the install did not copy" {
   make_marketplace "$root" fixture alpha
   make_cache "${root}/cache" fixture alpha "0.1.0"
   mkdir -p "${root}/cache/fixture/alpha/0.1.0/output-styles"
@@ -463,7 +467,7 @@ component_files_in() {
   [ "$status" -ne 0 ]
 }
 
-@test "a working note beside a plugin is still not a component" {
+@test "a working note beside a plugin is not a component" {
   make_marketplace "$root" fixture alpha
   make_cache "${root}/cache" fixture alpha "0.1.0"
   printf 'notes\n' > "${root}/plugins/alpha/NOTES.org"

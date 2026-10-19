@@ -1,25 +1,26 @@
-# Shared helpers for the scripts/ test suite.
+# Shared helpers for the test suite of scripts/.
 #
-# Provides SCRIPTS_DIR plus fixture builders. The script under test talks to
-# the `claude` CLI and to ~/.claude/plugins, neither of which a test may
-# touch, so every fixture here is a throwaway tree and the script is always
-# driven with explicit paths.
+# This file gives SCRIPTS_DIR and the fixture builders. The script under
+# test talks to the `claude` CLI and to ~/.claude/plugins. A test must not
+# touch either one, so every fixture here is a throwaway tree, and a test
+# always drives the script with explicit paths.
 
-# shellcheck disable=SC2034 # consumed by the *.bats files that load this.
+# shellcheck disable=SC2034 # The *.bats files that load this file use it.
 SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../scripts" && pwd)"
 
 # fixture_root
 #
-# A throwaway directory removed by teardown. Printing the path rather than
-# assigning a global keeps a test free to hold more than one.
+# A throwaway directory that teardown removes. The function prints the path
+# and does not set a global. Thus a test can hold more than one.
 fixture_root() {
   mktemp -d "${BATS_TEST_TMPDIR:-${BATS_TMPDIR:-/tmp}}/scripts.XXXXXX"
 }
 
 # make_marketplace <root> <name> [plugin ...]
 #
-# Writes a marketplace manifest listing each plugin, and a plugin directory
-# with a manifest for each, so a fixture is one call rather than six.
+# Writes a marketplace manifest that lists each plugin, and a plugin
+# directory with a manifest for each one. Thus a fixture is one call and not
+# six.
 make_marketplace() {
   local root="$1" name="$2"; shift 2
   mkdir -p "${root}/.claude-plugin"
@@ -53,8 +54,8 @@ make_plugin() {
 
 # make_installed <path> <marketplace> [name=version ...]
 #
-# The installed_plugins.json shape the script reads: a version per entry,
-# keyed "<plugin>@<marketplace>".
+# The installed_plugins.json shape that the script reads: one version per
+# entry, with the key "<plugin>@<marketplace>".
 make_installed() {
   local path="$1" marketplace="$2"; shift 2
   {
@@ -72,7 +73,7 @@ make_installed() {
 
 # make_cache <cache-root> <marketplace> <plugin> <version> [body]
 #
-# The snapshot copy an install would have left behind.
+# The snapshot copy that an install leaves behind.
 make_cache() {
   local cache="$1" marketplace="$2" plugin="$3" version="$4" body="${5:-body}"
   local dir="${cache}/${marketplace}/${plugin}/${version}"

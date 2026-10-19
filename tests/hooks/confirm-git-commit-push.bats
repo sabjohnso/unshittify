@@ -1,13 +1,13 @@
 #!/usr/bin/env bats
-# Tests for confirm-git-commit-push.sh. The first group are characterization
-# tests pinning the exact behavior of the inline PreToolUse/Bash hook command
-# it replaced:
+# Tests for confirm-git-commit-push.sh. The first group holds the
+# characterization tests. They pin the exact behavior of the inline
+# PreToolUse/Bash hook command that the script replaced:
 #   jq -r '.tool_input.command // empty' | { read -r cmd; if printf '%s' "$cmd" \
 #     | grep -Eq 'git([^&|;]*)(commit|push)'; then echo <ask-JSON>; fi; }
-# The second group covers the prose-review gate: a git commit is denied until
-# the communication:prose-reviewer agent has been invoked this turn; when the
-# transcript cannot be judged (missing path/file, no turn boundary) the gate
-# degrades to the plain ask.
+# The second group covers the prose-review gate. The hook denies a git
+# commit until the communication:prose-reviewer agent has run this turn.
+# When the hook cannot judge the transcript (no path, no file, or no turn
+# boundary), the gate degrades to the plain ask.
 
 load helpers
 
@@ -32,7 +32,7 @@ permission_reason() {
   printf '%s' "$1" | jq -r '.hookSpecificOutput.permissionDecisionReason // empty'
 }
 
-@test "plain git commit asks for confirmation" {
+@test "a plain git commit asks for confirmation" {
   stdin="$(pretooluse_payload 'git commit -m test')"
   run_hook "$SCRIPT" "$stdin"
   [ "$status" -eq 0 ]
@@ -40,14 +40,14 @@ permission_reason() {
   [ "$(printf '%s' "$output" | jq -r '.hookSpecificOutput.hookEventName')" = "PreToolUse" ]
 }
 
-@test "plain git push asks for confirmation" {
+@test "a plain git push asks for confirmation" {
   stdin="$(pretooluse_payload 'git push origin main')"
   run_hook "$SCRIPT" "$stdin"
   [ "$status" -eq 0 ]
   [ "$(printf '%s' "$output" | jq -r '.hookSpecificOutput.permissionDecision')" = "ask" ]
 }
 
-@test "git commit after a && chain still asks (second git...commit segment matches)" {
+@test "a git commit after a && chain asks (the second git...commit segment matches)" {
   stdin="$(pretooluse_payload 'git status && git commit -m test')"
   run_hook "$SCRIPT" "$stdin"
   [ "$status" -eq 0 ]
@@ -75,7 +75,7 @@ permission_reason() {
   [ -z "$output" ]
 }
 
-@test "missing tool_input.command does not ask and does not error" {
+@test "a missing tool_input.command does not ask and gives no error" {
   stdin='{"tool_name":"Bash","tool_input":{}}'
   run_hook "$SCRIPT" "$stdin"
   [ "$status" -eq 0 ]
@@ -84,7 +84,7 @@ permission_reason() {
 
 # --- prose-review gate on git commit ---
 
-@test "git commit with no prose-reviewer invocation this turn is denied" {
+@test "the hook denies a git commit when the prose-reviewer did not run this turn" {
   transcript="$(write_transcript "$(printf '%s\n%s\n' \
     "$(user_prompt_event)" \
     "$(tool_use_event Bash)")")"
@@ -95,7 +95,7 @@ permission_reason() {
   [[ "$(permission_reason "$output")" == *"communication:prose-reviewer"* ]]
 }
 
-@test "git commit after a prose-reviewer invocation this turn asks for confirmation" {
+@test "a git commit after a prose-reviewer call this turn asks for confirmation" {
   transcript="$(write_transcript "$(printf '%s\n%s\n' \
     "$(user_prompt_event)" \
     "$(tool_use_event Task subagent_type=communication:prose-reviewer)")")"
@@ -105,7 +105,7 @@ permission_reason() {
   [ "$(permission_decision "$output")" = "ask" ]
 }
 
-@test "a prose review from a previous turn does not satisfy the commit gate" {
+@test "a prose review from an earlier turn does not satisfy the commit gate" {
   transcript="$(write_transcript "$(printf '%s\n%s\n' \
     "$(tool_use_event Task subagent_type=communication:prose-reviewer)" \
     "$(user_prompt_event)")")"
@@ -115,7 +115,7 @@ permission_reason() {
   [ "$(permission_decision "$output")" = "deny" ]
 }
 
-@test "the review-prose skill does not satisfy the commit gate (agent required)" {
+@test "the review-prose skill does not satisfy the commit gate (the agent is necessary)" {
   transcript="$(write_transcript "$(printf '%s\n%s\n' \
     "$(user_prompt_event)" \
     "$(tool_use_event Skill skill=communication:review-prose)")")"
@@ -145,14 +145,14 @@ permission_reason() {
   [ "$(permission_decision "$output")" = "ask" ]
 }
 
-@test "git commit with a nonexistent transcript file degrades to ask" {
+@test "a git commit with a transcript file that does not exist degrades to ask" {
   stdin="$(pretooluse_payload_with_transcript 'git commit -m test' /nonexistent/transcript.jsonl)"
   run_hook "$SCRIPT" "$stdin"
   [ "$status" -eq 0 ]
   [ "$(permission_decision "$output")" = "ask" ]
 }
 
-@test "git commit with a transcript lacking any turn boundary degrades to ask" {
+@test "a git commit with a transcript that has no turn boundary degrades to ask" {
   transcript="$(write_transcript "$(tool_use_event Bash)")"
   stdin="$(pretooluse_payload_with_transcript 'git commit -m test' "$transcript")"
   run_hook "$SCRIPT" "$stdin"
@@ -160,10 +160,11 @@ permission_reason() {
   [ "$(permission_decision "$output")" = "ask" ]
 }
 
-# --- subcommand-token matching: refs containing commit/push must not confuse
-# --- the gate. commit/push count only as standalone tokens after git.
+# --- subcommand-token matching: a ref that holds commit or push must not
+# --- confuse the gate. commit and push count only as separate tokens after
+# --- git.
 
-@test "git push to a branch containing 'commit' is a push, not a gated commit" {
+@test "a git push to a branch that holds 'commit' is a push, not a gated commit" {
   transcript="$(write_transcript "$(printf '%s\n%s\n' \
     "$(user_prompt_event)" \
     "$(tool_use_event Bash)")")"
@@ -173,7 +174,7 @@ permission_reason() {
   [ "$(permission_decision "$output")" = "ask" ]
 }
 
-@test "git push to a remote named commit-fixes is a push, not a gated commit" {
+@test "a git push to a remote named commit-fixes is a push, not a gated commit" {
   transcript="$(write_transcript "$(printf '%s\n%s\n' \
     "$(user_prompt_event)" \
     "$(tool_use_event Bash)")")"
@@ -183,7 +184,7 @@ permission_reason() {
   [ "$(permission_decision "$output")" = "ask" ]
 }
 
-@test "a commit whose message mentions push still hits the commit gate" {
+@test "a commit whose message mentions push reaches the commit gate" {
   transcript="$(write_transcript "$(printf '%s\n%s\n' \
     "$(user_prompt_event)" \
     "$(tool_use_event Bash)")")"
@@ -203,7 +204,7 @@ permission_reason() {
   [ "$(permission_decision "$output")" = "deny" ]
 }
 
-@test "git commit with global options before the subcommand is still gated" {
+@test "a git commit with global options before the subcommand is gated" {
   transcript="$(write_transcript "$(printf '%s\n%s\n' \
     "$(user_prompt_event)" \
     "$(tool_use_event Bash)")")"
@@ -213,7 +214,7 @@ permission_reason() {
   [ "$(permission_decision "$output")" = "deny" ]
 }
 
-@test "a push followed immediately by a redirection is a push, not ignored" {
+@test "a push with a redirection immediately after it is a push, not ignored" {
   transcript="$(write_transcript "$(printf '%s\n%s\n' \
     "$(user_prompt_event)" \
     "$(tool_use_event Bash)")")"
@@ -223,7 +224,7 @@ permission_reason() {
   [ "$(permission_decision "$output")" = "ask" ]
 }
 
-@test "a commit inside a subshell is still gated" {
+@test "a commit inside a subshell is gated" {
   transcript="$(write_transcript "$(printf '%s\n%s\n' \
     "$(user_prompt_event)" \
     "$(tool_use_event Bash)")")"
@@ -233,7 +234,7 @@ permission_reason() {
   [ "$(permission_decision "$output")" = "deny" ]
 }
 
-@test "a commit chained without spaces is still gated" {
+@test "a commit chained with no spaces is gated" {
   transcript="$(write_transcript "$(printf '%s\n%s\n' \
     "$(user_prompt_event)" \
     "$(tool_use_event Bash)")")"
@@ -253,7 +254,7 @@ permission_reason() {
   [ -z "$output" ]
 }
 
-@test "a path-prefixed git binary is still gated" {
+@test "a git binary with a path prefix is gated" {
   transcript="$(write_transcript "$(printf '%s\n%s\n' \
     "$(user_prompt_event)" \
     "$(tool_use_event Bash)")")"
@@ -263,11 +264,11 @@ permission_reason() {
   [ "$(permission_decision "$output")" = "deny" ]
 }
 
-# --- laws of the commit gate, pinned the way enforce-code-review's decision
-# --- function pins its own (monotonicity, duplicate-insensitivity, boundary
-# --- invariance).
+# --- laws of the commit gate, pinned as the decision function of
+# --- enforce-code-review pins its own (monotonicity, insensitivity to
+# --- duplicates, invariance of the boundary).
 
-@test "monotonicity: appending the reviewer invocation flips deny to ask" {
+@test "monotonicity: a reviewer call added at the end turns deny into ask" {
   base="$(printf '%s\n%s' "$(user_prompt_event)" "$(tool_use_event Bash)")"
   transcript="$(write_transcript "$base")"
   stdin="$(pretooluse_payload_with_transcript 'git commit -m test' "$transcript")"
@@ -281,7 +282,7 @@ permission_reason() {
   [ "$(permission_decision "$output")" = "ask" ]
 }
 
-@test "duplicate reviewer invocations decide the same as one" {
+@test "duplicate reviewer calls give the same decision as one" {
   transcript="$(write_transcript "$(printf '%s\n%s\n%s\n' \
     "$(user_prompt_event)" \
     "$(tool_use_event Task subagent_type=communication:prose-reviewer)" \
@@ -292,7 +293,7 @@ permission_reason() {
   [ "$(permission_decision "$output")" = "ask" ]
 }
 
-@test "a skill named exactly like the agent does not satisfy the gate" {
+@test "a skill with exactly the name of the agent does not satisfy the gate" {
   transcript="$(write_transcript "$(printf '%s\n%s\n' \
     "$(user_prompt_event)" \
     "$(tool_use_event Skill skill=communication:prose-reviewer)")")"
@@ -302,7 +303,7 @@ permission_reason() {
   [ "$(permission_decision "$output")" = "deny" ]
 }
 
-@test "a tool_result after the review does not flip ask back to deny" {
+@test "a tool_result after the review does not turn ask back into deny" {
   transcript="$(write_transcript "$(printf '%s\n%s\n%s\n' \
     "$(user_prompt_event)" \
     "$(tool_use_event Task subagent_type=communication:prose-reviewer)" \
@@ -313,7 +314,7 @@ permission_reason() {
   [ "$(permission_decision "$output")" = "ask" ]
 }
 
-@test "a meta injection after the review does not flip ask back to deny" {
+@test "a meta injection after the review does not turn ask back into deny" {
   transcript="$(write_transcript "$(printf '%s\n%s\n%s\n' \
     "$(user_prompt_event)" \
     "$(tool_use_event Task subagent_type=communication:prose-reviewer)" \
@@ -324,7 +325,7 @@ permission_reason() {
   [ "$(permission_decision "$output")" = "ask" ]
 }
 
-@test "a late last-prompt marker after the review does not flip ask back to deny" {
+@test "a late last-prompt marker after the review does not turn ask back into deny" {
   transcript="$(write_transcript "$(printf '%s\n%s\n%s\n' \
     "$(user_prompt_event)" \
     "$(tool_use_event Task subagent_type=communication:prose-reviewer)" \
@@ -335,26 +336,26 @@ permission_reason() {
   [ "$(permission_decision "$output")" = "ask" ]
 }
 
-# --- text the shell will not execute must not gate --------------------------
-# The hook reads the whole command string, so a shell comment or a heredoc
-# BODY that merely MENTIONS the gated words trips it. That is not
-# hypothetical: it blocked a transcript-searching command whose Python comment
-# read "first git commit afterwards", and then blocked the command that first
-# wrote these very tests.
+# --- text that the shell will not execute must not gate --------------------
+# The hook reads the whole command string. So a shell comment or a heredoc
+# BODY that only MENTIONS the gated words trips it. That is not
+# hypothetical. It blocked a transcript-search command whose Python comment
+# read "first git commit afterwards", and then it blocked the command that
+# first wrote these tests.
 #
-# The word "git" is built from GITW below rather than written next to its
-# subcommand, so that editing this file does not trip the hook. Of the four
-# tests that follow, three were red before the fix; the string-literal one
+# The word "git" comes from GITW below. It is not written beside its
+# subcommand. Thus an edit of this file does not trip the hook. Of the four
+# tests that follow, three were red before the fix. The string-literal test
 # passed already, because the quote before the word never satisfied the
-# pattern's preceding-character class, so it records existing behavior rather
-# than showing that the fix works. The three after them pin what the fix must
-# not relax: masking may only remove text the shell will not execute, so a
-# heredoc fed to a shell interpreter stays gated even though it is a heredoc
-# body.
+# preceding-character class of the pattern. So it records the earlier
+# behavior and does not show that the fix works. The three tests after them
+# pin what the fix must not relax. The mask can only remove text that the
+# shell will not execute, so a heredoc that feeds a shell interpreter stays
+# gated, although it is a heredoc body.
 
 GITW=git
 
-@test "a shell comment mentioning a commit does not gate" {
+@test "a shell comment that mentions a commit does not gate" {
   stdin="$(pretooluse_payload "ls -la  # remember to $GITW commit later")"
   run_hook "$SCRIPT" "$stdin"
   [ "$status" -eq 0 ]
@@ -377,7 +378,7 @@ GITW=git
   [ -z "$output" ]
 }
 
-@test "an unquoted heredoc body mentioning a push does not gate" {
+@test "an unquoted heredoc body that mentions a push does not gate" {
   body="$(printf 'cat > notes.txt <<EOF\ntodo: %s push origin main\nEOF\n' "$GITW")"
   stdin="$(pretooluse_payload "$body")"
   run_hook "$SCRIPT" "$stdin"
@@ -385,7 +386,7 @@ GITW=git
   [ -z "$output" ]
 }
 
-@test "REGRESSION: a real commit whose message is a heredoc is still gated" {
+@test "REGRESSION: a real commit whose message is a heredoc is gated" {
   body="$(printf '%s commit -m "$(cat <<%sEOF%s\nfix: the thing\nEOF\n)"\n' "$GITW" "'" "'")"
   stdin="$(pretooluse_payload "$body")"
   run_hook "$SCRIPT" "$stdin"
@@ -393,7 +394,7 @@ GITW=git
   [ -n "$(permission_decision "$output")" ]
 }
 
-@test "REGRESSION: a commit piped into a shell interpreter is still gated" {
+@test "REGRESSION: a commit piped into a shell interpreter is gated" {
   body="$(printf 'bash <<EOF\n%s commit -m sneaky\nEOF\n' "$GITW")"
   stdin="$(pretooluse_payload "$body")"
   run_hook "$SCRIPT" "$stdin"
@@ -401,20 +402,21 @@ GITW=git
   [ -n "$(permission_decision "$output")" ]
 }
 
-@test "REGRESSION: a real commit with a trailing comment is still gated" {
+@test "REGRESSION: a real commit with a comment at the end is gated" {
   stdin="$(pretooluse_payload "$GITW commit -m test  # finally")"
   run_hook "$SCRIPT" "$stdin"
   [ "$status" -eq 0 ]
   [ "$(permission_decision "$output")" = "ask" ]
 }
 
-# --- masking must fail CLOSED --------------------------------------------
-# A first attempt at the masking above deleted text whenever it looked like a
-# comment or a heredoc body, and that opened the gate on all eight commands
-# below: each runs a real git command, and each was reported as not gated.
-# The lesson is that ambiguity must resolve toward gating, never away from
-# it — a false positive costs a confirmation prompt, a false negative costs
-# the guarantee. Every case here is a genuine bypass found in review.
+# --- the mask must fail CLOSED -------------------------------------------
+# A first version of the mask above deleted text whenever the text looked
+# like a comment or a heredoc body. That opened the gate on all eight
+# commands below. Each one runs a real git command, and the hook reported
+# each one as not gated. The lesson: an ambiguity must resolve toward the
+# gate, never away from it. A false positive costs a confirmation prompt. A
+# false negative costs the guarantee. Every case here is a genuine bypass
+# found in a review.
 
 @test "BYPASS: a hash inside a quoted string does not hide a later commit" {
   stdin="$(pretooluse_payload "echo \"issue #42\" && $GITW commit -m x")"
@@ -464,15 +466,15 @@ GITW=git
   [ "$(permission_decision "$output")" = "ask" ]
 }
 
-# --- SIGPIPE: the matcher must not report "no match" merely because grep -q
-# --- exited before the producer finished writing. Under `set -o pipefail` a
-# --- producer killed by SIGPIPE (141) fails the whole pipeline, so a large
-# --- command silently escapes the gate.
+# --- SIGPIPE: the matcher must not report "no match" only because grep -q
+# --- exited before the producer finished. Under `set -o pipefail`, a
+# --- producer that SIGPIPE (141) killed fails the whole pipeline. So a large
+# --- command escapes the gate with no error.
 
-@test "BYPASS: a large command containing a commit is still gated" {
-  # The commit is on line 1 so the matcher finds it immediately; the padding
-  # keeps the producer writing well past that point. It is executable text,
-  # not a comment, so masking cannot shrink it away.
+@test "BYPASS: a large command that holds a commit is gated" {
+  # The commit is on line 1, so the matcher finds it at once. The padding
+  # keeps the producer busy well past that point. It is executable text, not
+  # a comment, so the mask cannot remove it.
   padding="$(yes 'echo yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy' | head -2000)"
   stdin="$(pretooluse_payload "$(printf '%s commit -m x\n%s\n' "$GITW" "$padding")")"
   run_hook "$SCRIPT" "$stdin"
@@ -480,10 +482,10 @@ GITW=git
   [ "$(permission_decision "$output")" = "ask" ]
 }
 
-# --- BYPASS classes found by the second review round. Each command below
-# --- runs a real git command, verified with an execution oracle, and each
-# --- was reported as not gated before the fix. The masker's fail-closed
-# --- claim is only true if every one of these gates.
+# --- BYPASS classes that the second review round found. Each command below
+# --- runs a real git command. An execution oracle confirmed that. Before the
+# --- fix, the hook reported each one as not gated. The fail-closed claim of
+# --- the masker is true only if every one of these gates.
 
 @test "BYPASS: a terminated here-string does not mask what follows" {
   stdin="$(pretooluse_payload "$(printf 'cat <<<"EOF"\n%s commit -m x\nEOF\n' "$GITW")")"
@@ -563,22 +565,23 @@ GITW=git
   [ "$(permission_decision "$output")" = "ask" ]
 }
 
-# --- idempotence: masking already-masked text must decide the same. A
-# --- terminator line carrying a trailing comment is not a terminator to
-# --- bash, so the heredoc is unterminated and nothing may be masked - and
-# --- re-masking the output must not turn it into a terminator.
+# --- idempotence: a second mask of masked text must give the same
+# --- decision. A terminator line with a comment at the end is not a
+# --- terminator to bash. So the heredoc is unterminated, and the hook must
+# --- mask nothing. A second mask of the output must not turn that line into
+# --- a terminator.
 
-@test "BYPASS: a commented terminator lookalike does not mask on re-application" {
+@test "BYPASS: a terminator lookalike with a comment does not mask on a second application" {
   stdin="$(pretooluse_payload "$(printf 'cat <<EOF\n%s commit -m x\nEOF # done\n' "$GITW")")"
   run_hook "$SCRIPT" "$stdin"
   [ "$(permission_decision "$output")" = "ask" ]
 }
 
-# --- Third review round. The quote scanner tracked quote state per line and
-# --- knew nothing of backslash escapes, so text bash keeps inside a string
-# --- was read as being outside one - fabricating comments and heredoc
-# --- introducers that swallow real commands. Each case below was confirmed
-# --- fail-open with an execution oracle.
+# --- Third review round. The quote scanner tracked the quote state per line
+# --- and knew nothing of backslash escapes. So it read text that bash keeps
+# --- inside a string as text outside a string. That fabricated comments and
+# --- heredoc introducers that hid real commands. An execution oracle
+# --- confirmed that each case below failed open.
 
 @test "BYPASS: an escaped quote inside a string does not hide a later commit" {
   stdin="$(pretooluse_payload "$(printf 'echo "a\\" #b" && %s commit -m x' "$GITW")")"
@@ -610,49 +613,50 @@ GITW=git
   [ "$(permission_decision "$output")" = "ask" ]
 }
 
-# --- Two heredocs sharing a delimiter is the commonest multi-heredoc shape.
-# --- Masking must handle the second one, or writing a file whose body merely
-# --- mentions a commit reaches the commit branch and is DENIED, not prompted.
+# --- Two heredocs with one delimiter is the most common multi-heredoc
+# --- shape. The mask must handle the second one. Otherwise a write of a file
+# --- whose body only mentions a commit reaches the commit branch and is
+# --- DENIED, not prompted.
 
-@test "two heredocs sharing a delimiter: the second body is masked too" {
+@test "two heredocs with one delimiter: the mask covers the second body too" {
   stdin="$(pretooluse_payload "$(printf 'cat <<EOF\nhello\nEOF\ncat > f <<EOF\n%s commit -m x\nEOF\n' "$GITW")")"
   run_hook "$SCRIPT" "$stdin"
   [ "$status" -eq 0 ]
   [ -z "$output" ]
 }
 
-# --- Fourth review round, and the matcher rather than the masker. Every
-# --- command below is fully intact - no comment, no heredoc, nothing that
-# --- masking touches at all - and the pattern still failed to see it,
-# --- because a quote character sat where it demanded whitespace, or a
-# --- separator inside a quoted path ended a segment that the shell never
-# --- ends. Each one runs a real gated command.
+# --- Fourth review round, and the matcher, not the masker. Every command
+# --- below is intact. It has no comment, no heredoc, and nothing that the
+# --- mask touches. The pattern still failed to see it, because a quote
+# --- character sat where the pattern demanded whitespace, or a separator
+# --- inside a quoted path ended a segment that the shell never ends. Each
+# --- one runs a real gated command.
 
-@test "BYPASS: a gated command inside bash -c is still gated" {
+@test "BYPASS: a gated command inside bash -c is gated" {
   stdin="$(pretooluse_payload "bash -c \"$GITW commit -m x\"")"
   run_hook "$SCRIPT" "$stdin"
   [ "$(permission_decision "$output")" = "ask" ]
 }
 
-@test "BYPASS: a gated command inside sh -c is still gated" {
+@test "BYPASS: a gated command inside sh -c is gated" {
   stdin="$(pretooluse_payload "sh -c '$GITW commit -m x'")"
   run_hook "$SCRIPT" "$stdin"
   [ "$(permission_decision "$output")" = "ask" ]
 }
 
-@test "BYPASS: a double-quoted subcommand is still gated" {
+@test "BYPASS: a double-quoted subcommand is gated" {
   stdin="$(pretooluse_payload "$GITW \"commit\" -m x")"
   run_hook "$SCRIPT" "$stdin"
   [ "$(permission_decision "$output")" = "ask" ]
 }
 
-@test "BYPASS: a single-quoted subcommand is still gated" {
+@test "BYPASS: a single-quoted subcommand is gated" {
   stdin="$(pretooluse_payload "$GITW 'commit' -m x")"
   run_hook "$SCRIPT" "$stdin"
   [ "$(permission_decision "$output")" = "ask" ]
 }
 
-@test "BYPASS: a quoted command name is still gated" {
+@test "BYPASS: a quoted command name is gated" {
   stdin="$(pretooluse_payload "\"$GITW\" commit -m x")"
   run_hook "$SCRIPT" "$stdin"
   [ "$(permission_decision "$output")" = "ask" ]
@@ -664,36 +668,36 @@ GITW=git
   [ "$(permission_decision "$output")" = "ask" ]
 }
 
-@test "BYPASS: a push inside a quoted interpreter argument is still gated" {
+@test "BYPASS: a push inside a quoted interpreter argument is gated" {
   stdin="$(pretooluse_payload "bash -c \"$GITW push --force\"")"
   run_hook "$SCRIPT" "$stdin"
   [ "$(permission_decision "$output")" = "ask" ]
 }
 
-# --- the two below split the COMMAND WORD itself with a quote. The shell
-# --- reads g"it" as git and runs it, and is_git_subcommand tokenizes it as
-# --- git too - but main's fast path tests the raw string for the substring
-# --- "git", which g"it" does not contain, so the matcher was never reached.
-# --- A prefilter that is not quote-aware must not be able to overrule a
-# --- matcher that is.
+# --- the two tests below split the COMMAND WORD itself with a quote. The
+# --- shell reads g"it" as git and runs it, and is_git_subcommand tokenizes
+# --- it as git too. But the fast path of main tests the raw string for the
+# --- substring "git", and g"it" does not hold it, so the matcher never ran.
+# --- A prefilter that does not know quotes must not overrule a matcher that
+# --- does.
 
-@test "BYPASS: a quote inside the command word is still gated" {
+@test "BYPASS: a quote inside the command word is gated" {
   stdin="$(pretooluse_payload "${GITW:0:1}\"${GITW:1}\" commit -m x")"
   run_hook "$SCRIPT" "$stdin"
   [ "$(permission_decision "$output")" = "ask" ]
 }
 
-@test "BYPASS: a single quote inside the command word is still gated" {
+@test "BYPASS: a single quote inside the command word is gated" {
   stdin="$(pretooluse_payload "${GITW:0:1}'${GITW:1}' push origin main")"
   run_hook "$SCRIPT" "$stdin"
   [ "$(permission_decision "$output")" = "ask" ]
 }
 
 # --- the subcommand is the FIRST non-option word after the command word and
-# --- its global options. Anywhere else the same word is data: a manual page,
-# --- a search pattern, a ref name. All three below were DENIED outright
-# --- before this rule, instructing the model to prose-review a message that
-# --- does not exist.
+# --- its global options. At every other position, the same word is data: a
+# --- manual page, a search pattern, a ref name. Before this rule, the hook
+# --- DENIED all three commands below and told the model to review a message
+# --- that does not exist.
 
 @test "help for the commit subcommand is not itself a commit" {
   stdin="$(pretooluse_payload "$GITW help commit")"
@@ -709,7 +713,7 @@ GITW=git
   [ -z "$output" ]
 }
 
-@test "rev-parse verifying a ref named commit is not a commit" {
+@test "a rev-parse check of a ref named commit is not a commit" {
   stdin="$(pretooluse_payload "$GITW rev-parse --verify commit")"
   run_hook "$SCRIPT" "$stdin"
   [ "$status" -eq 0 ]
@@ -723,33 +727,34 @@ GITW=git
   [ -z "$output" ]
 }
 
-# --- a payload the hook cannot parse must not open the gate. To a PreToolUse
-# --- hook every exit status but 2 is a non-blocking error, so a jq assignment
-# --- failing under `set -e` lets the tool call through with no gate at all.
+# --- a payload that the hook cannot parse must not open the gate. To a
+# --- PreToolUse hook, every exit status but 2 is a non-blocking error. So a
+# --- jq assignment that fails under `set -e` lets the tool call through
+# --- with no gate at all.
 
-@test "malformed stdin asks rather than failing open" {
+@test "malformed stdin asks and does not fail open" {
   run_hook "$SCRIPT" 'not json'
   [ "$status" -eq 0 ]
   [ "$(permission_decision "$output")" = "ask" ]
 }
 
-@test "stdin that is valid JSON but not an object asks rather than failing open" {
+@test "stdin that is valid JSON but not an object asks and does not fail open" {
   run_hook "$SCRIPT" '[1,2,3]'
   [ "$status" -eq 0 ]
   [ "$(permission_decision "$output")" = "ask" ]
 }
 
-@test "empty stdin asks rather than failing open" {
+@test "empty stdin asks and does not fail open" {
   run_hook "$SCRIPT" ''
   [ "$status" -eq 0 ]
   [ "$(permission_decision "$output")" = "ask" ]
 }
 
-# --- the splitting pass reaches inside a quoted string, and must reach only
+# --- the splitting pass reaches inside a quoted string. It must reach only
 # --- where the quoted string is a command line. A search pattern or an echo
-# --- argument that MENTIONS the watched words is the very case the masker
-# --- above exists to let through; the interpreter list is what separates a
-# --- mention from an interpreter's argument.
+# --- argument that MENTIONS the watched words is the exact case that the
+# --- masker above lets through. The interpreter list separates a mention
+# --- from the argument of an interpreter.
 
 @test "a quoted mention in a search pattern is not gated" {
   stdin="$(pretooluse_payload "grep -rn \"$GITW commit\" hooks/")"
@@ -765,43 +770,44 @@ GITW=git
   [ -z "$output" ]
 }
 
-@test "BYPASS: a quoted command line handed to a remote shell is still gated" {
+@test "BYPASS: a quoted command line given to a remote shell is gated" {
   stdin="$(pretooluse_payload "ssh host \"$GITW push --force\"")"
   run_hook "$SCRIPT" "$stdin"
   [ "$(permission_decision "$output")" = "ask" ]
 }
 
-# BYPASS: shapes that survived the tokenizer rewrite. Both put the watched
-# word where the scanner could not read it: ANSI-C quoting ($'...') hides it
-# behind a "$" the scanner treated as an ordinary word character, and an
-# inline alias definition (-c alias.ci=commit) names the subcommand in the
-# value of a global option the scanner skipped without reading.
+# BYPASS: shapes that survived the rewrite of the tokenizer. Both put the
+# watched word where the scanner could not read it. ANSI-C quoting ($'...')
+# hides it behind a "$" that the scanner treated as an ordinary word
+# character. An inline alias definition (-c alias.ci=commit) names the
+# subcommand in the value of a global option that the scanner skipped and
+# did not read.
 
-@test "BYPASS: ANSI-C quoting around the subcommand is still gated" {
+@test "BYPASS: ANSI-C quoting around the subcommand is gated" {
   stdin="$(pretooluse_payload "$GITW \$'commit' -m x")"
   run_hook "$SCRIPT" "$stdin"
   [ "$(permission_decision "$output")" = "ask" ]
 }
 
-@test "BYPASS: ANSI-C quoting around the command word is still gated" {
+@test "BYPASS: ANSI-C quoting around the command word is gated" {
   stdin="$(pretooluse_payload "\$'$GITW' commit -m x")"
   run_hook "$SCRIPT" "$stdin"
   [ "$(permission_decision "$output")" = "ask" ]
 }
 
-@test "BYPASS: ANSI-C quoting around a push subcommand is still gated" {
+@test "BYPASS: ANSI-C quoting around a push subcommand is gated" {
   stdin="$(pretooluse_payload "$GITW \$'push' origin main")"
   run_hook "$SCRIPT" "$stdin"
   [ "$(permission_decision "$output")" = "ask" ]
 }
 
-@test "BYPASS: an inline alias defining commit is gated" {
+@test "BYPASS: an inline alias that defines commit is gated" {
   stdin="$(pretooluse_payload "$GITW -c alias.ci=commit ci -m x")"
   run_hook "$SCRIPT" "$stdin"
   [ "$(permission_decision "$output")" = "ask" ]
 }
 
-@test "BYPASS: an inline alias defining push is gated" {
+@test "BYPASS: an inline alias that defines push is gated" {
   stdin="$(pretooluse_payload "$GITW -c alias.pp=push pp")"
   run_hook "$SCRIPT" "$stdin"
   [ "$(permission_decision "$output")" = "ask" ]
@@ -813,13 +819,13 @@ GITW=git
   [ "$(permission_decision "$output")" = "ask" ]
 }
 
-@test "an inline alias unrelated to a gated subcommand is not gated" {
+@test "an inline alias with no relation to a gated subcommand is not gated" {
   stdin="$(pretooluse_payload "$GITW -c alias.st=status st")"
   run_hook "$SCRIPT" "$stdin"
   [ -z "$output" ]
 }
 
-@test "a dollar sign that is not ANSI-C quoting is still an ordinary character" {
+@test "a dollar sign that is not ANSI-C quoting is an ordinary character" {
   stdin="$(pretooluse_payload "$GITW log --grep \$'commit'")"
   run_hook "$SCRIPT" "$stdin"
   [ -z "$output" ]
