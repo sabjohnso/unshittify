@@ -60,7 +60,7 @@ existing classes.
 
 ## Inheritance
 
-A subclass is a `class` whose superclass expression is an other class. Use
+A subclass is a `class` whose superclass expression is another class. Use
 `super` to call the overridden method. Use `inherit` or `inherit-field` to
 use a superclass member directly:
 

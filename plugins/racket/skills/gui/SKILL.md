@@ -170,7 +170,7 @@ callbacks (`send control command …`) or their methods directly. Draw to a
 - **Never block the handler thread.** Slow work in a callback freezes the
   whole UI. Run it in a thread, and update the widgets through
   `queue-callback` ([concurrency](../concurrency/SKILL.md)).
-- **Touch the widgets only from the handler thread.** From an other thread,
+- **Touch the widgets only from the handler thread.** From another thread,
   wrap each UI update in `queue-callback`. A `send` to a control from a
   worker thread is a race.
 - **Lay out with containers, not with coordinates.** Use nested panels plus

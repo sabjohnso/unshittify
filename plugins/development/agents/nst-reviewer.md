@@ -11,11 +11,11 @@ You check the code under review against the ten evolvable-code principles of thi
 
 ## Checklist
 
-1. **Encapsulation.** Internal state or a private helper that is reachable from outside its own module or class. A caller that reaches past an interface into the internals of an other component to save some lines.
+1. **Encapsulation.** Internal state or a private helper that is reachable from outside its own module or class. A caller that reaches past an interface into the internals of another component to save some lines.
 2. **Separation of concerns.** A function or class that mixes what it computes with how the result is stored or how it is presented.
 3. **Interfaces, not implementations.** A consumer that depends on a concrete type or class where an abstract type, a protocol, or a contract is enough. This matters most when it blocks a swap of the implementation without an edit of the consumer.
 4. **Composition over inheritance.** A subclass built to reuse unrelated behavior from its parent. A deep inheritance chain where delegation or a higher-order function is flatter and less brittle.
-5. **Local reasoning.** A function whose correctness depends on global mutable state, on the call order, or on a side effect at an other place. All that you cannot understand from its own body and signature.
+5. **Local reasoning.** A function whose correctness depends on global mutable state, on the call order, or on a side effect at another place. All that you cannot understand from its own body and signature.
 6. **Small, focused units.** A function or module that does more than one job. You can identify it by the "and" that its description needs.
 7. **Declarative over imperative.** A hand-written loop or a manual state machine that does what a `map`, `filter`, or `reduce`, a query, or a pattern match expresses more directly.
 8. **Isolated side effects.** I/O, mutation, or a log call mixed with pure computation, instead of pushed to the edges.

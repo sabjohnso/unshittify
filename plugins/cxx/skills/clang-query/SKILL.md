@@ -58,7 +58,7 @@ This skill runs `clang-query` and nothing else. The configuration or the run of 
 1. Find the compilation database. Look for `compile_commands.json` in the working directory or in an obvious build directory (`build/`, `out/`). If there is none, ask the caller for one, or for the compiler flags to pass after `--`, per "Prerequisite" above.
 2. Draft the narrowest matcher that can catch the requested pattern. Add `isExpansionInMainFile()`, unless the caller also wants the matches from the included headers.
 3. Run it in batch mode against one representative file first: `clang-query -p <build-dir> -c "set output diag" -c 'match <matcher>' <file>`.
-4. Read the result and adjust the matcher. Zero matches usually means that the flags or the matcher are wrong, not that the pattern is absent. Check the flags first, then widen the matcher. Too many matches means that the matcher needs an other narrowing predicate.
+4. Read the result and adjust the matcher. Zero matches usually means that the flags or the matcher are wrong, not that the pattern is absent. Check the flags first, then widen the matcher. Too many matches means that the matcher needs another narrowing predicate.
 5. Repeat steps 2 to 4 until the matches are exactly the intended set. Then run the matcher again across every file in the scope.
 6. Report the final matcher expression, the match locations as `file:line:col`, and the exact command line. Thus the search can run again without a reconstruction.
 

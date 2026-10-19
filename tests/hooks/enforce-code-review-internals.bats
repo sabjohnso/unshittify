@@ -170,8 +170,8 @@ EOF')")")"
 
 # --- laws of code_was_edited ------------------------------------------------
 #
-# The earlier suite pins monotonicity, invariance under order, and
-# insensitivity to duplicates for missing_reviews. code_was_edited is now a
+# The earlier suite pins monotonicity, order invariance, and
+# duplicate insensitivity for missing_reviews. code_was_edited is now a
 # three-way disjunction over the same event list, and it must obey the same
 # laws. It decides whether the gate applies at all. A broken law here
 # disables every review requirement with no error. It does not only
@@ -189,7 +189,7 @@ EOF')")")"
   done
 }
 
-@test "invariance under order: the function finds an edit at every position in the list" {
+@test "order invariance: the function finds an edit at every position in the list" {
   local edit read_ev
   edit="$(shaped_event Bash command="sed -i 's/a/b/' src/parser.c")"
   read_ev="$(shaped_event Read)"
@@ -199,7 +199,7 @@ EOF')")")"
   [ "$status" -eq 0 ]
 }
 
-@test "insensitivity to duplicates: a repeated event gives the same decision" {
+@test "duplicate insensitivity: a repeated event gives the same decision" {
   local edit
   edit="$(shaped_event Bash command="sed -i 's/a/b/' src/parser.c")"
   run code_was_edited "$edit"

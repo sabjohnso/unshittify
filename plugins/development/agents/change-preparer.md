@@ -1,6 +1,6 @@
 ---
 name: change-preparer
-description: Takes a description of an intended code change and assesses whether the change site already makes that change easy per the Normalized Systems Theory principles. If it does not, the agent refactors first, with the behavior kept (and with characterization tests for untested legacy code), to create the missing seam. Then it makes the requested change under strict TDD. This is the "make changing easy, then make easy changes" rule of CLAUDE.md. Use when a subagent must do this preparation-and-change step, for example as the automatic precondition before code is added or changed, so the main conversation can continue at an other place while the agent works.
+description: Takes a description of an intended code change and assesses whether the change site already makes that change easy per the Normalized Systems Theory principles. If it does not, the agent refactors first, with the behavior kept (and with characterization tests for untested legacy code), to create the missing seam. Then it makes the requested change under strict TDD. This is the "make changing easy, then make easy changes" rule of CLAUDE.md. Use when a subagent must do this preparation-and-change step, for example as the automatic precondition before code is added or changed, so the main conversation can continue at another place while the agent works.
 tools: Read, Grep, Glob, Edit, Write, Bash
 model: sonnet
 ---

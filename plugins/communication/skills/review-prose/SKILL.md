@@ -11,7 +11,7 @@ Goal: make the prose obey Simplified Technical English (ASD-STE100), find the wr
 ## What counts as "prose" here
 
 - A drafted chat response with an explanation, an analysis, or a narrative. Not a one-line status update, a code diff, or a short confirmation.
-- A document, a README, an article, or an other file that is about to be written or is already written.
+- A document, a README, an article, or another file that is about to be written or is already written.
 - Text that the user pastes in directly for a critique.
 
 Skip trivial or short text. A review of a one-sentence answer for "buzzwords" is a waste of effort.
@@ -72,7 +72,7 @@ Every piece of prose must obey the rules of Simplified Technical English, the co
 16. **A vague or wrong referent.** A noun phrase or a pronoun whose antecedent the reader must guess ("this toolset" where nothing is named a toolset, "the interesting space" for an input distribution).
 17. **A sentence that parses the wrong way at first.** Garden paths and misattached modifiers. In "...avoid pseudo-intellectual framing rules out...", the reader first takes "framing rules" as a noun phrase. A "not X" at the end attaches to the nearest noun and not to the intended one. If a sentence needs a second read, restructure it.
 18. **Stale counts and cross-references.** A stated count, a section name, or a pointer that does not match its target ("one of the nine checks" above a longer list, "the table above" when the table is in a different file, "Both scripts" for three). Check each one against its target. Prefer words that cannot drift ("the numbered checks above").
-19. **Inconsistent terminology.** One concept with different names in one document or across two paired documents ("takes a predicate" in one place, "wants a predicate" in an other, "parse an AST" and "build an AST"). Pick one term and use it throughout.
+19. **Inconsistent terminology.** One concept with different names in one document or across two paired documents ("takes a predicate" in one place, "wants a predicate" in another, "parse an AST" and "build an AST"). Pick one term and use it throughout.
 20. **Ungrammatical sentences.** A comma splice ("`#:when`/`#:unless` nest, they don't just filter"), a verb that disagrees with its compound subject, a misplaced adverb ("returns silently empty"), or a broken parallel ("computation the user waits on and needlessly wastes": the user waits, the code wastes). Fix the grammar and keep the claim.
 21. **Sentence fragments that block understanding.** A fragment whose missing subject or verb leaves the claim unclear ("Same failure as before. Different cause." Which failure, and whose cause?). A short fragment is acceptable in a reference table, a heading, or an instruction where the elided words are obvious. Flag a fragment only when the reader must guess what was left out.
 

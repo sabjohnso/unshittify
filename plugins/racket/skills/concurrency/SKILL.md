@@ -46,7 +46,7 @@ with `exn:break?`, so it can release its resources:
 Prefer messages to shared mutable state. There are three mechanisms:
 
 - **Synchronous channels** (`make-channel`) are a *rendezvous*. `channel-put`
-  waits until an other thread calls `channel-get`, and the reverse. There is
+  waits until another thread calls `channel-get`, and the reverse. There is
   no buffer. The hand-off itself synchronizes the two threads.
 
   ```racket

@@ -105,7 +105,7 @@ a fence, `@` and `}` are literal, and an escape is written `|@`.
   repeated `defproc`s (Scribble warns on a duplicate definition point).
   `deftogether` is for distinct but paired bindings that share one prose
   body.
-- **Doc dependencies:** a link into an other manual (also through for-label)
+- **Doc dependencies:** a link into another manual (also through for-label)
   requires its doc package (for example `"racket-doc"`) in `build-deps`.
   Otherwise `raco setup --check-pkg-deps` fails.
 - The `.scrbl` filename becomes the name of the output directory, and it

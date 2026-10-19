@@ -47,7 +47,7 @@ argument that the dispatch uses. It must be the same across the methods.
 ## Implement the interface
 
 Implement it in a struct with `#:methods gen:NAME` (see
-[structs](../structs/SKILL.md)). To call **an other method of the same
+[structs](../structs/SKILL.md)). To call **another method of the same
 interface** from inside a method body, you must capture it with
 `define/generic`. A bare reference does **not** dispatch, and it fails with
 "method not implemented":
@@ -145,7 +145,7 @@ the dispatch must stay out of the call sites.
 - **Use `#:fallbacks` for a method that can be derived.** Define the minimal
   primitive methods per type, and let the fallbacks compute the rest from
   them. Then fewer method bodies per struct must stay in step.
-- **`provide` the `gen:NAME` binding, so an other module can implement it.**
+- **`provide` the `gen:NAME` binding, so another module can implement it.**
   Export `gen:shape` (and the predicate and the methods). Then a downstream
   struct can add `#:methods gen:shape` (see [modules](../modules/SKILL.md)).
 - **Put a `generic-instance/c` contract at the boundary, not the struct

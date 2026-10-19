@@ -105,7 +105,7 @@ specialized loop with no allocation. A bare value falls back to the generic
 | `(in-sequences s …)` / `(in-parallel s …)`                    | a concatenation / a zip                       |
 | `(in-port read p)` `(in-lines p)`                             | the data of a port                            |
 
-`in-naturals` paired with an other sequence is the idiomatic index counter.
+`in-naturals` paired with another sequence is the idiomatic index counter.
 
 ## The racket/sequence operations
 

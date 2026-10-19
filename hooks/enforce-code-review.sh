@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
-# Stop hook. It blocks the end of the turn when code was written or edited
-# this turn (Edit, Write, or NotebookEdit tool calls after the last message
-# from the user) and not all of the required reviews ran after that same
-# point. The REQUIRED_REVIEWS table below is the set of required reviews. To
-# require a new review, add a line there. No other code change is necessary.
+# Stop hook. It blocks the end of the turn when a file was written or edited
+# this turn and not all of the required reviews ran after the last message
+# from the user. An edit is an Edit, Write, or NotebookEdit tool call, a Bash
+# command that matches BASH_WRITE_PATTERNS, or a delegation to an agent that
+# READ_ONLY_AGENTS does not list. The REQUIRED_REVIEWS table below is the set
+# of required reviews. To require a new review, add a line there. No other
+# code change is necessary.
 set -euo pipefail
 
 # Fully qualified skill-name|agent-name pairs. Either one satisfies the
@@ -139,8 +141,10 @@ BASH_WRITE_EXEMPTIONS=(
 # delegation to an agent that is not yet in this list.
 #
 # THIS LIST IS A JUDGEMENT ABOUT THE BODY OF EACH AGENT, NOT A GUARANTEE FROM
-# ITS `tools:` LINE. The difference is practical: every entry below holds
-# Bash. BASH_WRITE_PATTERNS above exists because Bash writes files, and the
+# ITS `tools:` LINE. The difference is practical. Every entry below that
+# this repository defines holds Bash, except communication:prose-reviewer,
+# which holds Edit. The three harness agents are not defined here.
+# BASH_WRITE_PATTERNS above exists because Bash writes files, and the
 # Bash calls of a subagent go to the transcript of the subagent, which no
 # SubagentStop hook reads. So the exemption rests on a read of the
 # instructions of each agent, with the finding that the agent is told to

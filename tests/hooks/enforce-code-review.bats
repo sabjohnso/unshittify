@@ -144,8 +144,8 @@ all_reviews_via_agents() {
   [[ "$reason" == *"review-efficiency"* ]]
 }
 
-# The two tests below are examples. They do not pin a law. Insensitivity
-# to duplicates and invariance under order are properties over every turn,
+# The two tests below are examples. They do not pin a law. Duplicate
+# insensitivity and order invariance are properties over every turn,
 # and a single fixed turn cannot show that a property holds. These two tests
 # were the whole evidence for two of the three laws that CLAUDE.md says are
 # pinned, and one of them permuted only the case where nothing was missing.

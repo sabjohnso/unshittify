@@ -58,7 +58,7 @@ Pick the simplest step that expresses the constraint:
   covers the tail.
 - **`->i`**: dependent. A later contract can refer to an earlier argument by
   name. `[amt (a) (<=/c (account-balance a))]` reads "`amt` depends on `a`".
-  Use it when a bound, a length, or a result is computed from an other
+  Use it when a bound, a length, or a result is computed from another
   argument.
 - **`case->`**: one binding with several distinct arities, each with its own
   arrow.
@@ -139,7 +139,7 @@ range contract forbids. The bug is inside the module.
   adds a cost per call and checks a recursion again, with no extra safety.
 - **Climb the ladder only as far as necessary.** Use `->`. Move to `->*` for
   optional or keyword arguments. Use `->i` only when one part really depends
-  on an other. `->i` is the slowest and the least readable. Do not use it by
+  on another. `->i` is the slowest and the least readable. Do not use it by
   default.
 - **Use `any` for the range when the result is unconstrained or has several
   values.** Keep `any/c` for "exactly one value, of any type". A mix of the

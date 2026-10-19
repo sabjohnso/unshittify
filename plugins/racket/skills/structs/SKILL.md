@@ -97,7 +97,7 @@ mutable state. An immutable value is safe to share and to hash.
 
 ## Inheritance
 
-A struct can extend an other struct. The subtype satisfies the supertype
+A struct can extend another struct. The subtype satisfies the supertype
 predicate, and it inherits the accessors of the supertype.
 
 ```racket
@@ -109,7 +109,7 @@ predicate, and it inherits the accessors of the supertype.
 (posn3-z q)    ; 3
 ```
 
-Prefer composition (a field that holds an other struct) to a deep
+Prefer composition (a field that holds another struct) to a deep
 hierarchy. One level of extension for a real "is a" relation is acceptable.
 
 ## Functional update
@@ -171,7 +171,7 @@ Implement a generic interface inline. The common ones:
 
 `(struct->vector v)` gives `#(struct:posn 1 2)` for inspection. Full field
 access through `struct-info` requires a transparent struct (or the right
-inspector). That is an other reason that an opaque struct hides its data. To
+inspector). That is another reason that an opaque struct hides its data. To
 put a contract on the fields of a struct at a module boundary, use the
 `struct` clause of `contract-out` (see [contracts](../contracts/SKILL.md)).
 

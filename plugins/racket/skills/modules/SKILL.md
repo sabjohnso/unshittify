@@ -8,7 +8,7 @@ allowed-tools: Bash(racket:*), Bash(raco:*), Read, Grep, Glob
 A file is a module. The `#lang` line picks its language, and everything at
 the module level is private until a `provide` exports it. A module imports
 with `require` and exports with `provide`. A submodule nests related code
-(tests, a script entry point, helpers of an other phase) inside one file. For
+(tests, a script entry point, helpers of another phase) inside one file. For
 the full require and provide grammar and the submodule forms, read
 `reference.md` in this skill directory.
 
@@ -24,7 +24,7 @@ arrive:
          (except-in racket/list first)
          (prefix-in str: racket/string)     ; str:string-trim
          (rename-in racket/math [pi PI])
-         (submod "subs.rkt" extra)          ; a submodule of an other file
+         (submod "subs.rkt" extra)          ; a submodule of another file
          (for-syntax racket/base))          ; phase 1 (see ../macros/SKILL.md)
 ```
 
@@ -60,7 +60,7 @@ with an intent. `all-defined-out` leaks every later definition.
 
 ## Submodules: three kinds
 
-A submodule is a module nested in an other module. The form that you use
+A submodule is a module nested in another module. The form that you use
 decides whether the submodule can see the bindings of the enclosing module.
 
 ### `module+`: accumulates, and sees the enclosing module
@@ -79,7 +79,7 @@ module, also the ones that are not exported. The tools know two names:
 ```
 
 - **`main`** runs only when the file runs directly (`racket file.rkt` or
-  DrRacket). It does **not** run when an other module `require`s the file.
+  DrRacket). It does **not** run when another module `require`s the file.
   It is the standard place for the top-level actions of a script.
 - **`test`** runs under `raco test file.rkt`. It sees the enclosing module,
   so it can test private helpers with no export.
@@ -111,7 +111,7 @@ the place of `#f`, it is isolated like `module`.
 
 ## Reach a submodule from outside
 
-Address a submodule with `submod`. From an other file:
+Address a submodule with `submod`. From another file:
 
 ```racket
 (require (submod "subs.rkt" extra))                 ; static
