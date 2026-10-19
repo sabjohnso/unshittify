@@ -224,21 +224,42 @@ all_reviews_via_agents() {
   [ -z "$output" ]
 }
 
-# --- the prose reviewer is a possible file change --------------------------
+# --- the two Stop hooks must agree on one transcript ------------------------
 #
-# communication:prose-reviewer holds Edit and is told to apply its rewrite to
-# a file it is given. No hook mandates it any more, so it earns no exemption:
-# delegating to it is a possible file change like any other unlisted agent.
+# Nothing else in either suite runs both hooks against the same input, which
+# is why a deadlock between them shipped: enforce-prose-review.sh MANDATES
+# delegating a substantial reply to communication:prose-reviewer, and that
+# delegation was itself an unrecognised subagent here, so the turn that
+# satisfied one hook was blocked by the other with no move left that
+# satisfies both.
 
-@test "delegating to communication:prose-reviewer counts as a possible file change" {
+# substantial_prose <word-count>
+#
+# A plain-prose assistant message of the requested length, long enough to
+# clear enforce-prose-review.sh's MIN_WORDS threshold.
+substantial_prose() {
+  local count="$1" i out=""
+  for ((i = 0; i < count; i++)); do
+    out+="word${i} "
+  done
+  printf '%s' "$out"
+}
+
+@test "a turn whose only delegation is the mandated prose review satisfies both Stop hooks" {
   transcript="$(write_transcript "$(printf '%s\n%s\n%s\n' \
-    "$(typed_prompt_event 'review the README')" \
+    "$(typed_prompt_event 'explain how the turn boundary is computed')" \
     "$(tool_use_event Read)" \
     "$(tool_use_event Agent subagent_type=communication:prose-reviewer)")")"
-  stdin="$(stdin_payload transcript_path="$transcript")"
+  stdin="$(stdin_payload transcript_path="$transcript" \
+                         last_assistant_message="$(substantial_prose 120)")"
+
+  run_hook "${HOOKS_DIR}/enforce-prose-review.sh" "$stdin"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ] || { echo "prose hook blocked: $output"; return 1; }
+
   run_hook "$SCRIPT" "$stdin"
   [ "$status" -eq 0 ]
-  [ "$(decision_field "$output")" = "block" ]
+  [ -z "$output" ] || { echo "code hook blocked a turn that changed no file: $output"; return 1; }
 }
 
 # --- unreadable stdin ------------------------------------------------------

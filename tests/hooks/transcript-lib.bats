@@ -169,6 +169,50 @@ setup() {
   [[ "$output" != *'"name":"Edit"'* ]]
 }
 
+# --- agent_invoked_since_line -----------------------------------------------
+
+@test "agent_invoked_since_line succeeds on an exact subagent_type match" {
+  transcript="$(write_transcript "$(printf '%s\n%s\n' \
+    "$(user_prompt_event)" \
+    "$(tool_use_event Task subagent_type=communication:prose-reviewer)")")"
+  run agent_invoked_since_line "$transcript" 1 communication:prose-reviewer
+  [ "$status" -eq 0 ]
+}
+
+@test "agent_invoked_since_line fails on a near-miss name" {
+  transcript="$(write_transcript "$(printf '%s\n%s\n' \
+    "$(user_prompt_event)" \
+    "$(tool_use_event Task subagent_type=communication:prose-reviewer-preview)")")"
+  run agent_invoked_since_line "$transcript" 1 communication:prose-reviewer
+  [ "$status" -ne 0 ]
+}
+
+@test "agent_invoked_since_line fails when only a skill by the same name ran" {
+  transcript="$(write_transcript "$(printf '%s\n%s\n' \
+    "$(user_prompt_event)" \
+    "$(tool_use_event Skill skill=communication:prose-reviewer)")")"
+  run agent_invoked_since_line "$transcript" 1 communication:prose-reviewer
+  [ "$status" -ne 0 ]
+}
+
+@test "agent_invoked_since_line is duplicate-insensitive" {
+  transcript="$(write_transcript "$(printf '%s\n%s\n%s\n' \
+    "$(user_prompt_event)" \
+    "$(tool_use_event Task subagent_type=communication:prose-reviewer)" \
+    "$(tool_use_event Task subagent_type=communication:prose-reviewer)")")"
+  run agent_invoked_since_line "$transcript" 1 communication:prose-reviewer
+  [ "$status" -eq 0 ]
+}
+
+@test "agent_invoked_since_line ignores invocations before the start line" {
+  transcript="$(write_transcript "$(printf '%s\n%s\n%s\n' \
+    "$(tool_use_event Task subagent_type=communication:prose-reviewer)" \
+    "$(user_prompt_event)" \
+    "$(tool_use_event Edit)")")"
+  run agent_invoked_since_line "$transcript" 2 communication:prose-reviewer
+  [ "$status" -ne 0 ]
+}
+
 # --- transcript_judgeable ---------------------------------------------------
 
 @test "transcript_judgeable fails on an empty path" {
@@ -215,8 +259,8 @@ setup() {
     "$(tool_use_event Agent subagent_type=communication:prose-reviewer)" \
     "$(task_notification_event)")")"
   start_line="$(find_turn_start_line "$transcript")"
-  names="$(tool_use_events_since_line "$transcript" "$start_line" | jq -r '.subagent_type // empty')"
-  [ "$names" = "communication:prose-reviewer" ]
+  run agent_invoked_since_line "$transcript" "$start_line" communication:prose-reviewer
+  [ "$status" -eq 0 ]
 }
 
 @test "a slash-command marker is not a boundary" {

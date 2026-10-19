@@ -34,7 +34,7 @@
     {
       "name": "communication",
       "source": "./plugins/communication",
-      "description": "Write and review prose in Simplified Technical English (ASD-STE100) and format markdown tables: the simplified-technical-english skill holds the condensed STE rules, the review-prose skill and the prose-reviewer agent check prose against this project's house style (the checklist and its curated examples, supplemented by BadProseExamples.org at the repository root when that file is present), and the markdown-tables skill aligns table columns."
+      "description": "Write and review prose in Simplified Technical English (ASD-STE100) and format markdown tables: the simplified-technical-english skill holds the condensed STE rules, the review-prose skill and the prose-reviewer agent check prose against STE and this project's house style (the checklist and its curated examples, supplemented by BadProseExamples.org at the repository root when that file is present), and the markdown-tables skill aligns table columns."
     },
     {
       "name": "development",
