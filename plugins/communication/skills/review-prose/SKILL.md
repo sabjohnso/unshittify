@@ -1,20 +1,20 @@
 ---
-description: Review a piece of prose — a drafted chat response, a document, or a file — against Simplified Technical English (ASD-STE100) and the writing problems catalogued below, and fix what's found. Use before sending a substantial piece of written prose (an explanation, a report, an article, a doc file) to the user, or when the user asks to review, critique, or proofread prose.
+description: Review a piece of prose (a drafted chat response, a document, or a file) against Simplified Technical English (ASD-STE100) and the writing problems in the checklist below, and fix each problem found. Use before you send a substantial piece of prose (an explanation, a report, an article, a document) to the user, or when the user asks for a review, a critique, or a proofread of prose.
 argument-hint: "[file path or pasted prose]"
 allowed-tools: Read, Grep, Glob, Edit
 ---
 
 # Review prose for house-style problems
 
-Goal: make the prose obey Simplified Technical English (ASD-STE100), catch the writing failures this project has flagged before, and fix them — not just list them.
+Goal: make the prose obey Simplified Technical English (ASD-STE100), find the writing failures that this project flagged before, and fix them. Do not only list them.
 
 ## What counts as "prose" here
 
-- A drafted chat response carrying explanation, analysis, or narrative — not a one-line status update, a code diff, or a terse confirmation.
-- A document, README, article, or other file about to be written or already written.
-- Text the user pastes in directly for critique.
+- A drafted chat response with an explanation, an analysis, or a narrative. Not a one-line status update, a code diff, or a short confirmation.
+- A document, a README, an article, or an other file that is about to be written or is already written.
+- Text that the user pastes in directly for a critique.
 
-Skip trivial or already-terse text; reviewing a one-sentence answer for "buzzwords" is a waste of effort.
+Skip trivial or short text. A review of a one-sentence answer for "buzzwords" is a waste of effort.
 
 ## Simplified Technical English (STE) checks
 
@@ -54,27 +54,27 @@ Every piece of prose must obey the rules of Simplified Technical English, the co
 
 ## House-style checklist
 
-1. **Buzzwords / pseudo-intellectual corporate jargon** — phrases that sound impressive but say less than a plain sentence would.
-2. **"Surface" misused for "API"/"interface"** — say the concrete word.
-3. **Personification or cute metaphor standing in for a precise claim** — e.g. a tool described as "polite" or two components that "disagree," where the reader still has to guess what actually happened in the code.
-4. **Headline-style bolded topic sentences** — a bullet's lead phrase built for punch ("needs a checklist, not heroics") rather than a plain statement of fact; reads like a slide deck, not engineering prose.
-5. **Certainty or superlatives asserted without a measurement** — "the cheapest fix available," "the worst case," stated with no comparison or count behind it.
-6. **Nominalization / denominalization** — abstract nouns papering over a concrete mechanism ("silent acceptance" instead of "the parser accepts malformed input and returns a value instead of erroring").
-7. **Undefined abbreviations** — any shorthand, code, or acronym used without being spelled out at first use.
-8. **Unverified claims or hallucination** — a number, status, or fact stated without having been checked this session.
-9. **Informal register** — anything that reads as glib or dashed-off where the content calls for formal, explicit prose.
-10. **Throat-clearing transitions** — filler openers that signal a shift in topic without adding content ("That said," "It's worth noting that," "At the end of the day"). Cut them; the sentence should stand on its own.
-11. **Redundant restatement** — a clause that repeats information an earlier word already implies (e.g., "a new dependency, which the repository did not previously have" — "new" already says this). State the fact once.
-12. **Padded verb emphasis** — an auxiliary added for emphasis without adding meaning ("does introduce" instead of "introduces," "did in fact confirm" instead of "confirmed"). Use the plain verb.
-13. **Invented words** — a coinage where an established word exists ("shutdownable," "de-locates," "freehand" used as a verb, "side code"). Replace it with the established term ("easy to shut down cleanly," "strips source locations," "written without the template," "side-effecting code").
-14. **A term borrowed from a domain where it means something else** — "hygiene" applied to package dependencies when it already names a macro property; CSS's "box model" applied to a widget-container layout. Choose a word with no competing technical meaning in context.
-15. **Passive voice that hides the actor** — "only after the report is shown" leaves unstated who shows it. In instructions, name the actor: "only after you have shown the report."
-16. **Vague or wrong referent** — a noun phrase or pronoun whose antecedent the reader must guess ("this toolset" where nothing is named a toolset; "the interesting space" for an input distribution).
-17. **A sentence that momentarily parses the wrong way** — garden paths and misattached modifiers: in "…avoid pseudo-intellectual framing rules out…," the reader first takes "framing rules" as a noun phrase; a trailing "not X" attaches to the nearest noun instead of the intended one. If a sentence must be reread, restructure it.
-18. **Stale counts and cross-references** — a stated count, section name, or pointer that does not match its target ("one of the nine checks" above a longer list; "the table above" when the table lives in another file; "Both scripts" describing three). Verify each against its target, and prefer wording that cannot drift ("the numbered checks above").
-19. **Inconsistent terminology** — the same concept named differently within one document or across paired documents ("takes a predicate" in one place, "wants a predicate" in another; "parse an AST" vs "build an AST"). Pick one term and use it throughout.
-20. **Ungrammatical sentences** — a comma splice ("`#:when`/`#:unless` nest, they don't just filter"), a verb that disagrees with its compound subject, a misplaced adverb ("returns silently empty"), or a broken parallel ("computation the user waits on and needlessly wastes" — the user waits, the code wastes). Fix the grammar while keeping the claim unchanged.
-21. **Sentence fragments that impede understanding** — a fragment whose missing subject or verb leaves the claim unclear ("Same failure as before. Different cause." — which failure, and whose cause?). Terse fragments are fine in reference tables, headings, and instructions where the elided words are obvious; flag a fragment only when the reader must guess what was left out.
+1. **Buzzwords and pseudo-intellectual corporate jargon.** Phrases that sound impressive but say less than a plain sentence.
+2. **"Surface" in the place of "API" or "interface".** Write the concrete word.
+3. **Personification or a cute metaphor in the place of a precise claim.** For example, a tool is "polite", or two components "disagree". The reader still has to guess what occurred in the code.
+4. **Bold topic sentences in the style of a headline.** The lead phrase of a bullet is built for effect ("needs a checklist, not heroics") and not as a plain statement of fact. It reads as a slide deck, not as engineering prose.
+5. **Certainty or a superlative with no measurement.** "The cheapest fix available", "the worst case", with no comparison and no count behind it.
+6. **Nominalization and denominalization.** An abstract noun that hides a concrete mechanism ("silent acceptance" instead of "the parser accepts malformed input and returns a value instead of an error").
+7. **Undefined abbreviations.** A short form, a code, or an acronym with no spelled-out first use.
+8. **Unverified claims or hallucination.** A number, a status, or a fact that was not checked this session.
+9. **Informal register.** Text that reads as glib or hasty where the content calls for formal, explicit prose.
+10. **Throat-clearing transitions.** A filler opener that signals a new topic and adds no content ("That said", "It's worth noting that", "At the end of the day"). Cut it. The sentence must stand on its own.
+11. **Redundant restatement.** A clause that repeats what an earlier word already says. For example, "a new dependency, which the repository did not have before". "New" already says this. State the fact once.
+12. **Padded verb emphasis.** An auxiliary added for emphasis that adds no meaning ("does introduce" instead of "introduces", "did in fact confirm" instead of "confirmed"). Use the plain verb.
+13. **Invented words.** A coinage where an established word exists ("shutdownable", "de-locates", "freehand" as a verb, "side code"). Replace it with the established term ("easy to shut down cleanly", "strips source locations", "written without the template", "side-effecting code").
+14. **A term from a domain where it means something else.** "Hygiene" for package dependencies, when it already names a macro property. The "box model" of CSS for a widget-container layout. Choose a word with no competing technical meaning in the context.
+15. **Passive voice that hides the actor.** "Only after the report is shown" does not say who shows it. In an instruction, name the actor: "only after you have shown the report."
+16. **A vague or wrong referent.** A noun phrase or a pronoun whose antecedent the reader must guess ("this toolset" where nothing is named a toolset, "the interesting space" for an input distribution).
+17. **A sentence that parses the wrong way at first.** Garden paths and misattached modifiers. In "...avoid pseudo-intellectual framing rules out...", the reader first takes "framing rules" as a noun phrase. A "not X" at the end attaches to the nearest noun and not to the intended one. If a sentence needs a second read, restructure it.
+18. **Stale counts and cross-references.** A stated count, a section name, or a pointer that does not match its target ("one of the nine checks" above a longer list, "the table above" when the table is in a different file, "Both scripts" for three). Check each one against its target. Prefer words that cannot drift ("the numbered checks above").
+19. **Inconsistent terminology.** One concept with different names in one document or across two paired documents ("takes a predicate" in one place, "wants a predicate" in an other, "parse an AST" and "build an AST"). Pick one term and use it throughout.
+20. **Ungrammatical sentences.** A comma splice ("`#:when`/`#:unless` nest, they don't just filter"), a verb that disagrees with its compound subject, a misplaced adverb ("returns silently empty"), or a broken parallel ("computation the user waits on and needlessly wastes": the user waits, the code wastes). Fix the grammar and keep the claim.
+21. **Sentence fragments that block understanding.** A fragment whose missing subject or verb leaves the claim unclear ("Same failure as before. Different cause." Which failure, and whose cause?). A short fragment is acceptable in a reference table, a heading, or an instruction where the elided words are obvious. Flag a fragment only when the reader must guess what was left out.
 
 ## Examples from past reviews
 
@@ -213,11 +213,11 @@ own skill and agent files:
 
 ## Steps
 
-1. Obtain the text: if the argument is a file path, read it; if it's pasted or drafted text, use it directly. In the same pass, read `BadProseExamples.org` at the repository root if it exists; continue without it if it does not.
-2. Apply the STE checks above to every sentence. Count the words in each sentence. Find each "-ing" verb, each helping verb, each passive sentence, each "should" or "may", and each word in the substitution table. Quote each offending sentence and name the STE check it fails.
-3. Check the text against the house-style checklist, the examples catalogue, and anything `BadProseExamples.org` supplied, quoting each offending phrase and naming which check it fails.
-4. Revise the text to fix every confirmed problem. Preserve the original meaning, facts, and numbers — this is a register and precision pass, not a rewrite of content. The corrected text must pass the STE checks: read it once more and count the words of each sentence again.
+1. Get the text. If the argument is a file path, read the file. If the argument is pasted or drafted text, use it directly. In the same pass, read `BadProseExamples.org` at the root of the repository if it exists. If it does not exist, continue without it.
+2. Apply the STE checks above to every sentence. Count the words in each sentence. Find each "-ing" verb, each helping verb, each passive sentence, each "should" or "may", and each word in the substitution table. Quote each offending sentence and name the STE check that it fails.
+3. Check the text against the house-style checklist, the examples catalogue, and the content of `BadProseExamples.org`. Quote each offending phrase and name the check that it fails.
+4. Revise the text to fix every confirmed problem. Keep the original meaning, facts, and numbers. This is a pass for register and precision, not a rewrite of the content. The corrected text must pass the STE checks. Read it once more and count the words of each sentence again.
 5. Apply the fix and report:
-   - If the source was a drafted chat response about to be sent to the user, do not print the problem list from steps 2 and 3 or the flagged draft — the corrected text simply becomes the response, with no review commentary around it.
-   - If the source was a file or text the user explicitly asked to critique, edit the file in place (or return the corrected text) along with the problem lists from steps 2 and 3, so the user can see what was wrong and why.
-6. If nothing was wrong, say so rather than inventing a rewrite to justify the review.
+   - If the source was a drafted chat response for the user, do not print the problem lists from steps 2 and 3 and do not print the flagged draft. The corrected text becomes the response, with no review commentary around it.
+   - If the source was a file, or text that the user explicitly asked you to critique, edit the file in place (or return the corrected text) with the problem lists from steps 2 and 3. Thus the user can see what was wrong and why.
+6. If nothing was wrong, say so. Do not invent a rewrite to justify the review.

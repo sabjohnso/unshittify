@@ -1,32 +1,32 @@
 ---
-description: Draft a new Claude Code skill — frontmatter, body, and directory placement — for a plugin in this repository. Use when the user asks to write, create, or add a new skill, or to revise an existing SKILL.md.
+description: Draft a new Claude Code skill (the frontmatter, the body, and the directory) for a plugin in this repository. Use when the user asks you to write, create, or add a new skill, or to revise an existing SKILL.md.
 argument-hint: "[plugin name] [skill name and purpose]"
 allowed-tools: Read, Write, Glob, Grep, Bash(mkdir -p:*), Bash(tests/plugins/validate-plugins.sh:*)
 ---
 
 # Write a new skill
 
-Goal: produce a `SKILL.md` that fits this repository's house style and place it at `plugins/<plugin>/skills/<skill-name>/SKILL.md`.
+Goal: produce a `SKILL.md` that fits the house style of this repository, and put it at `plugins/<plugin>/skills/<skill-name>/SKILL.md`.
 
 ## Anatomy
 
-- The skill's name is **not** written in frontmatter — it is the directory name (`skills/<skill-name>/`). Choose a short, kebab-case name that doubles as the slash-command name (e.g. `skills/commit-message/` → `/git:commit-message`).
+- The name of the skill is **not** in the frontmatter. It is the directory name (`skills/<skill-name>/`). Choose a short kebab-case name that also serves as the slash-command name (for example `skills/commit-message/` gives `/git:commit-message`).
 - Frontmatter fields, in this order:
-  - `description` (required) — third person, states what the skill does and when to use it, ending with concrete trigger phrasing ("Use when the user asks to..."). This is the only field always loaded into context, so it must be specific enough to trigger in the right situations and nowhere else.
-  - `argument-hint` (optional) — a short bracketed hint shown next to the slash command, e.g. `"[module hint]"`.
-  - `disable-model-invocation` (optional, bool) — set `true` for skills that perform a consequential action, or one that modifies a settings file, that should only run when the user explicitly types the slash command, never inferred from conversation. Omit it for skills that are safe to auto-trigger from the description alone, including consequential actions already gated by an explicit-instruction requirement enforced elsewhere. `plugins/git/skills/commit-message/SKILL.md` is a worked example: it omits the field deliberately, because committing is already restricted to explicit user requests by standing instruction, and `hooks/confirm-git-commit-push.sh` confirms before the underlying `git commit` runs. Gating that skill itself behind the literal slash command would therefore only make it easier to bypass with a freehand message.
-  - `allowed-tools` (optional) — scope tool access as tightly as the task allows. Prefer argument-scoped Bash patterns (`Bash(git status:*)`) over a bare `Bash`, and list only the tools actually needed.
-- **Quote any frontmatter value containing a space followed by `#`.** YAML ends an unquoted scalar at that point, so a description mentioning a Racket `#:keyword` reaches the harness cut in half — usually losing the `Use when...` clause that makes the skill triggerable at all, while the file on disk still reads correctly. Four Racket descriptions shipped this way before anything noticed. `tests/plugins/validate-plugins.sh` now rejects it.
-- Body: start with a one-line `Goal:` statement, then any reference material (tables, decision maps) the skill needs, then a numbered steps section (`## Steps` or `## 1. ...`, `## 2. ...`).
-- Body prose follows Simplified Technical English (ASD-STE100): the imperative for steps, the active voice, one instruction per sentence, no sentence over 20 words in a step or 25 words in description, no "-ing" verb forms, and "must" for a requirement. The condensed rules are in `plugins/communication/skills/simplified-technical-english/SKILL.md`.
-- Keep everything in the single `SKILL.md` file. Skills in this repo do not use `references/`, `scripts/`, or `assets/` subdirectories — only add one if the content genuinely cannot fit inline (e.g. a large lookup table, or a script that must run deterministically), and say why.
+  - `description` (required). Third person. It states what the skill does and when to use it, and it ends with a concrete trigger phrase ("Use when the user asks to..."). This is the only field that is always loaded into the context. So it must be specific enough to trigger in the right situations and nowhere else.
+  - `argument-hint` (optional). A short hint in brackets, shown beside the slash command, for example `"[module hint]"`.
+  - `disable-model-invocation` (optional, bool). Set `true` for a skill that does a consequential action, or that changes a settings file, and that must run only when the user types the slash command. Omit it for a skill that is safe to trigger from the description alone. That covers a consequential action that an explicit-instruction requirement already gates somewhere else. `plugins/git/skills/commit-message/SKILL.md` is a worked example. It omits the field on purpose. A standing instruction already restricts a commit to an explicit user request, and `hooks/confirm-git-commit-push.sh` confirms before the `git commit` runs. A gate on that skill behind the literal slash command only makes a bypass with a freehand message easier.
+  - `allowed-tools` (optional). Scope the tool access as tightly as the task permits. Prefer an argument-scoped Bash pattern (`Bash(git status:*)`) over a bare `Bash`. List only the tools that the steps use.
+- **Quote each frontmatter value that holds a space and then a `#`.** YAML ends an unquoted scalar at that point. So a description that mentions a Racket `#:keyword` reaches the harness cut in half. It usually loses the `Use when...` clause that makes the skill triggerable at all, while the file on disk reads correctly. Four Racket descriptions shipped this way before anybody saw it. `tests/plugins/validate-plugins.sh` now rejects it.
+- Body: start with a one-line `Goal:` statement, then the reference material (tables, decision maps) that the skill needs, then a section of numbered steps (`## Steps`, or `## 1. ...`, `## 2. ...`).
+- The body prose follows Simplified Technical English (ASD-STE100): the imperative for steps, the active voice, one instruction per sentence, no sentence over 20 words in a step or 25 words in description, no "-ing" verb forms, and "must" for a requirement. The condensed rules are in `plugins/communication/skills/simplified-technical-english/SKILL.md`.
+- Keep everything in the single `SKILL.md` file. A skill in this repository does not use a `references/`, `scripts/`, or `assets/` subdirectory. Add one only when the content cannot fit inline (for example a large lookup table, or a script that must run deterministically), and say why.
 
 ## Steps
 
-1. Confirm which plugin the skill belongs to and its directory: `plugins/<plugin>/skills/<skill-name>/`. If the plugin doesn't exist yet, stop and ask — do not create a new plugin as a side effect.
-2. Work out 2-4 concrete example invocations of the skill, if not already clear from the request — they determine the description's trigger phrasing and the body's steps.
-3. Draft the frontmatter: description, argument-hint if the skill takes user input, disable-model-invocation only if the action is consequential or modifies a settings file and nothing else already restricts it, allowed-tools scoped to what the steps actually call.
-4. Draft the body: `Goal:` line, any reference/mapping section, then numbered steps written in imperative form ("Run X", "Confirm Y"), not second person ("You should...").
-5. Create the file with `mkdir -p plugins/<plugin>/skills/<skill-name>` then write `SKILL.md`.
-6. Run `tests/plugins/validate-plugins.sh`. It is the only check over `plugins/` — there is no compiler and no runtime here — and it prints one `path:line: message` per violation. Fix everything it reports before going on.
-7. Report the path created and, briefly, what phrase should trigger it (or that it requires the explicit slash command, if `disable-model-invocation` is set).
+1. Confirm the plugin of the skill and its directory: `plugins/<plugin>/skills/<skill-name>/`. If the plugin does not exist yet, stop and ask. Do not create a new plugin as a side effect.
+2. Work out two to four concrete example calls of the skill, if the request does not make them clear. They decide the trigger phrase of the description and the steps of the body.
+3. Draft the frontmatter: the description, an argument-hint if the skill takes user input, disable-model-invocation only if the action is consequential or changes a settings file and nothing else restricts it, and allowed-tools scoped to what the steps call.
+4. Draft the body: the `Goal:` line, a reference or map section if necessary, then the numbered steps in the imperative ("Run X", "Confirm Y"), not in the second person ("You should...").
+5. Create the directory with `mkdir -p plugins/<plugin>/skills/<skill-name>`. Then write `SKILL.md`.
+6. Run `tests/plugins/validate-plugins.sh`. It is the only check of `plugins/`. There is no compiler and no runtime here. It prints one `path:line: message` per violation. Fix everything that it reports before you continue.
+7. Report the path that you created and the phrase that triggers it. If `disable-model-invocation` is set, report that the skill requires the explicit slash command.

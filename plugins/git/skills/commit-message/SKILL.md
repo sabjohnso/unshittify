@@ -1,12 +1,12 @@
 ---
-description: Draft and apply a git commit message in this repo's format — emoji, [module] summary, Problem/Solution bullets, and a closing haiku. This is the required path for every commit in this repository — invoke it whenever the user asks to commit staged or working-tree changes, even when the request is phrased conversationally (e.g. "commit this") rather than as the literal slash command. Skip it only if the user explicitly says not to use the template or asks for a freehand message.
+description: Draft and apply a git commit message in the format of this repository (an emoji, a [module] summary, Problem and Solution bullets, and a closing haiku). This is the required path for every commit in this repository. Call it whenever the user asks you to commit staged or working-tree changes, also when the request is conversational (for example "commit this") and not the literal slash command. Skip it only if the user explicitly says not to use the template or asks for a freehand message.
 argument-hint: "[module hint]"
 allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git add:*), Bash(git commit:*), Agent(communication:prose-reviewer)
 ---
 
-# Write a commit message in this repo's format
+# Write a commit message in the format of this repository
 
-Goal: produce a commit message that follows the template below, then create the commit. Only run this skill in direct response to an explicit request to commit — never invoke it merely because an unrelated task just finished. Within that constraint, treat this skill as the default: any explicit commit request in this repository should go through it rather than written without the template, unless the user has explicitly said to skip the template.
+Goal: produce a commit message that follows the template below, then create the commit. Run this skill only as a direct response to an explicit request to commit. Never call it only because an unrelated task just finished. Inside that limit, treat this skill as the default. Every explicit commit request in this repository must go through it, and not through a message without the template, unless the user has explicitly said to skip the template.
 
 ## Template
 
@@ -24,25 +24,25 @@ Solution:
 <haiku>
 ```
 
-- `<emoji>` — one emoji that fits the nature of the change (bug fix, new feature, refactor, docs, chore, security, performance, etc.). Don't reuse the same emoji for unrelated commit types just for consistency; pick one that actually fits.
-- `[<module>]` — the area of the codebase most affected. This does not need to be a literal module/package name — a feature area, plugin name, or subsystem is fine. If `$ARGUMENTS` supplies a hint, use it unless the diff clearly indicates a different module.
-- `<the-new-state-of-the-code>` — a short phrase describing what is now true, not what action was taken (e.g. "Add settings-doctor subagent", not "Added settings-doctor subagent" or "Adding...").
-- **Problem** — one or more bullets naming the concrete problem the change addresses. Skip this section only if there truly was no problem being solved (rare — most changes have one).
-- **Solution** — one or more bullets naming what the change actually does to address the problem. Keep bullets parallel in structure with the Problem bullets where possible.
-- `<haiku>` — a 5-7-5 syllable haiku that captures the spirit of the commit. Not a restatement of the Problem/Solution bullets in verse — aim for something evocative rather than literal.
+- `<emoji>`. One emoji that fits the kind of the change (a bug fix, a new feature, a refactor, docs, a chore, security, performance, and so on). Do not use the same emoji for unrelated commit types only for consistency. Pick one that fits.
+- `[<module>]`. The area of the codebase that the change affects most. It does not need to be a literal module or package name. A feature area, a plugin name, or a subsystem is acceptable. If `$ARGUMENTS` gives a hint, use it, unless the diff clearly shows a different module.
+- `<the-new-state-of-the-code>`. A short phrase that describes what is now true, not the action that was taken (for example "Add settings-doctor subagent", not "Added settings-doctor subagent" or "Adding...").
+- **Problem**. One or more bullets that name the concrete problem that the change solves. Skip this section only if there was no problem at all. That is rare. Most changes have one.
+- **Solution**. One or more bullets that name what the change does to solve the problem. Keep the bullets parallel in structure to the Problem bullets where possible.
+- `<haiku>`. A haiku of 5, 7, and 5 syllables that catches the spirit of the commit. It is not a restatement of the Problem and Solution bullets in verse. Aim for something evocative and not literal.
 
 ## Steps
 
-1. Gather context in parallel: `git status`, `git diff` (staged and unstaged), and `git log --oneline -10` for recent style precedent in this repo.
-2. If nothing is staged, stage the specific files relevant to the request — never `git add -A` or `git add .` — and show what was staged.
-3. Draft the message following the template above.
-4. Write the subject and the bullets in Simplified Technical English (ASD-STE100). The haiku is the one exception. Delegate the draft to the `communication:prose-reviewer` agent and apply any confirmed fixes before committing. The template's structure (emoji, `[module]` subject, Problem/Solution bullets, haiku) is required, not a style violation — the review covers the prose inside it: the subject phrasing, the bullets, and the haiku's wording.
-5. Create the commit with the message passed via a heredoc, so multi-line formatting survives:
+1. Gather the context in parallel: `git status`, `git diff` (staged and unstaged), and `git log --oneline -10` for the recent style in this repository.
+2. If nothing is staged, stage the specific files that the request covers. Never run `git add -A` or `git add .`. Show what you staged.
+3. Draft the message with the template above.
+4. Write the subject and the bullets in Simplified Technical English (ASD-STE100). The haiku is the one exception. Delegate the draft to the `communication:prose-reviewer` agent and apply the confirmed fixes before the commit. The structure of the template (the emoji, the `[module]` subject, the Problem and Solution bullets, the haiku) is required. It is not a style violation. The review covers the prose inside it: the phrase of the subject, the bullets, and the words of the haiku.
+5. Create the commit with the message in a heredoc, so the multi-line format survives:
    ```
    git commit -m "$(cat <<'EOF'
    <drafted message>
    EOF
    )"
    ```
-6. Do not add any attribution trailer (no `Co-Authored-By`, no tool signature) unless the user explicitly asks for one.
-7. Confirm the commit succeeded (`git status` or the commit command's own output) and report the short hash and subject line back to the user.
+6. Do not add an attribution trailer (no `Co-Authored-By`, no tool signature), unless the user explicitly asks for one.
+7. Confirm that the commit succeeded (`git status`, or the output of the commit command). Report the short hash and the subject line to the user.

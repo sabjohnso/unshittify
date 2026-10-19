@@ -1,35 +1,35 @@
 ---
-description: Inspect the current project's local Claude Code settings (.claude/settings.local.json) for JSON errors, unknown keys, conflicting or redundant permission rules, stale plugin/marketplace references, unsafe hook commands, insecure file permissions, git exposure, and overly broad rules. Reports only; never edits the file. Use when the user asks to check, audit, debug, or troubleshoot this project's local settings; for the user-level ~/.claude/settings.json, use global:check-settings instead.
+description: Inspect the local Claude Code settings of the current project (.claude/settings.local.json) for JSON errors, unknown keys, permission rules that conflict or repeat, stale plugin or marketplace references, unsafe hook commands, insecure file permissions, git exposure, and rules that are too broad. Reports only. Never edits the file. Use when the user asks you to check, audit, debug, or troubleshoot the local settings of this project. For the user-level ~/.claude/settings.json, use global:check-settings instead.
 allowed-tools: Read, Grep, Glob, Bash(claude plugin list:*), Bash(git check-ignore:*), Bash(stat:*)
 ---
 
-# Check local Claude Code settings
+# Check the local Claude Code settings
 
-Goal: diagnose problems in this project's `.claude/settings.local.json` and report them. Never edit the file — the user decides what to fix.
+Goal: find the problems in the `.claude/settings.local.json` of this project and report them. Never edit the file. The user decides what to fix.
 
 ## Scope
 
-Primary target: `.claude/settings.local.json` in the current project. For context, also read, when present:
-- `.claude/settings.json` (shared project settings)
-- `~/.claude/settings.json` (the user's global settings)
+Primary target: `.claude/settings.local.json` in the current project. For context, also read these files when they are present:
+- `.claude/settings.json` (the shared project settings)
+- `~/.claude/settings.json` (the global settings of the user)
 
-Precedence, most to least authoritative: enterprise managed settings, CLI flags, `.claude/settings.local.json`, `.claude/settings.json`, `~/.claude/settings.json`. Use this only to judge whether a local rule is redundant or contradicts a higher-precedence scope — never claim a rule is wrong solely because a higher-precedence scope disagrees; local settings exist specifically to override.
+The precedence, from the most authoritative to the least: enterprise managed settings, CLI flags, `.claude/settings.local.json`, `.claude/settings.json`, `~/.claude/settings.json`. Use the precedence only to judge whether a local rule repeats or contradicts a scope with a higher precedence. Never claim that a rule is wrong only because a scope with a higher precedence disagrees. Local settings exist to override.
 
 ## Checks
 
-1. **Parse errors** — read the file and confirm it is syntactically valid JSON (trailing commas, unescaped backslashes inside `Bash(...)` patterns, mismatched braces).
-2. **Unknown top-level keys** — flag any key that is not one of the known settings keys: `permissions`, `model`, `hooks`, `enabledPlugins`, `enabledMcpjsonServers`, `enableAllProjectMcpServers`, `mcpServers`, `extraKnownMarketplaces`, `askUserQuestionTimeout`, `voice`, `voiceEnabled`, `skipWorkflowUsageWarning`, `theme`, `editorMode`, `switchModelsOnFlag`, `remoteControlAtStartup`, `agentPushNotifEnabled`, `statusLine`, `outputStyle`, `env`. This list may be incomplete — flag anything unfamiliar as "verify this is a real key," not as a confirmed error.
-3. **Permission rule conflicts** — within `permissions.allow` / `permissions.deny`, flag: the identical rule listed twice; the identical rule present in both `allow` and `deny`; a rule already implied by a broader rule in the same array (e.g. `Bash(git status:*)` next to a bare `Bash`).
-4. **Cross-scope redundancy** — a rule in `settings.local.json` that duplicates a rule already granted in `.claude/settings.json` or `~/.claude/settings.json` is redundant; note it.
-5. **Overly broad rules** — bare tool names with no argument scoping in `allow` (e.g. `Bash`, `Edit`, `Read` with no pattern) or wildcard patterns (`Bash(*)`) that defeat least privilege; call these out as worth a second look, not as bugs.
-6. **Stale plugin references** — if `enabledPlugins` appears, cross-check each key against `claude plugin list --json` and flag entries for plugins that are no longer installed.
-7. **Git exposure** — run `git check-ignore .claude/settings.local.json` from the project root. If it is NOT ignored, flag this prominently: local settings are meant to stay personal and untracked, and an unignored file risks being committed.
-8. **Stale marketplace references** — if `extraKnownMarketplaces` appears, check that each entry's `source.path` (for `"source": "directory"` entries) still exists on disk. Flag any that don't.
-9. **Hook exposure** — for each entry under `hooks`, quote the command verbatim in the report. These commands run automatically and unattended for every matching tool call in this project; call out anything that looks like it embeds a credential, token, or overly permissive shell logic (e.g. missing quoting around `$(...)` substitutions). A project-local hook runs unattended exactly as a global one does, so the narrower scope buys no safety here.
-10. **File permissions** — run `stat -c '%a %U:%G' .claude/settings.local.json` (or `stat -f '%Lp %Su:%Sg'` on macOS). Flag the file if it is group- or world-writable: this is the highest-precedence scope short of enterprise managed settings and CLI flags, so anyone else who can write it can define auto-executing hooks that override every other scope.
+1. **Parse errors.** Read the file and confirm that it is valid JSON (no comma at the end of a list, no unescaped backslash inside a `Bash(...)` pattern, no mismatched brace).
+2. **Unknown top-level keys.** Flag each key that is not one of the known settings keys: `permissions`, `model`, `hooks`, `enabledPlugins`, `enabledMcpjsonServers`, `enableAllProjectMcpServers`, `mcpServers`, `extraKnownMarketplaces`, `askUserQuestionTimeout`, `voice`, `voiceEnabled`, `skipWorkflowUsageWarning`, `theme`, `editorMode`, `switchModelsOnFlag`, `remoteControlAtStartup`, `agentPushNotifEnabled`, `statusLine`, `outputStyle`, `env`. This list can be incomplete. Flag an unknown key as "make sure that this is a real key", not as a confirmed error.
+3. **Permission rule conflicts.** Inside `permissions.allow` and `permissions.deny`, flag: the identical rule listed twice; the identical rule in both `allow` and `deny`; a rule that a broader rule in the same array already covers (for example `Bash(git status:*)` beside a bare `Bash`).
+4. **Cross-scope repetition.** A rule in `settings.local.json` that repeats a rule already granted in `.claude/settings.json` or `~/.claude/settings.json` is redundant. Note it.
+5. **Rules that are too broad.** Flag a bare tool name with no argument scope in `allow` (for example `Bash`, `Edit`, or `Read` with no pattern), or a wildcard pattern (`Bash(*)`) that defeats the least privilege. Call these out as rules that deserve a second look, not as defects.
+6. **Stale plugin references.** If `enabledPlugins` is present, compare each key against `claude plugin list --json`. Flag each entry for a plugin that is no longer installed.
+7. **Git exposure.** Run `git check-ignore .claude/settings.local.json` from the project root. If git does NOT ignore the file, flag this prominently. Local settings must stay personal and untracked, and a file that git does not ignore can be committed.
+8. **Stale marketplace references.** If `extraKnownMarketplaces` is present, check that the `source.path` of each entry (for the `"source": "directory"` entries) exists on disk. Flag each one that does not.
+9. **Hook exposure.** For each entry under `hooks`, quote the command exactly in the report. These commands run automatically and unattended for every matching tool call in this project. Call out each command that seems to embed a credential, a token, or shell logic that permits too much (for example no quotes around a `$(...)` substitution). A project-local hook runs unattended exactly as a global hook does, so the narrower scope gives no safety here.
+10. **File permissions.** Run `stat -c '%a %U:%G' .claude/settings.local.json` (or `stat -f '%Lp %Su:%Sg'` on macOS). Flag the file if the group or the world can write it. This is the scope with the highest precedence below the enterprise managed settings and the CLI flags. So each other person who can write it can define hooks that run automatically and override every other scope.
 
 ## Steps
 
-1. Read `.claude/settings.local.json` in the current project. If present, also read `.claude/settings.json` and `~/.claude/settings.json` for cross-scope context.
-2. Walk each check above against the file's contents, running `claude plugin list --json`, `git check-ignore`, and `stat` only when a check needs them.
-3. Report findings grouped by file, each with the offending key, what's wrong, and why it matters. If nothing is wrong, say so plainly — do not invent issues to fill the report.
+1. Read `.claude/settings.local.json` in the current project. If they are present, also read `.claude/settings.json` and `~/.claude/settings.json` for cross-scope context.
+2. Apply each check above to the content of the file. Run `claude plugin list --json`, `git check-ignore`, and `stat` only when a check needs them.
+3. Report the findings in groups per file. Give the offending key, what is wrong, and why it matters. If nothing is wrong, say so plainly. Do not invent issues to fill the report.

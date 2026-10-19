@@ -1,62 +1,64 @@
 ---
-description: Compile and run C++ code with the Clang/GCC sanitizers — AddressSanitizer (ASan), UndefinedBehaviorSanitizer (UBSan), ThreadSanitizer (TSan), MemorySanitizer (MSan), and LeakSanitizer (LSan) — including which sanitizers can be combined, the flags each needs, runtime options, CMake integration, and how to read a sanitizer's crash report. Use when the user asks to build with sanitizers, diagnose a memory error, data race, or undefined-behavior bug, or interpret ASan/UBSan/TSan output.
+description: Compile and run C++ code with the Clang and GCC sanitizers (AddressSanitizer (ASan), UndefinedBehaviorSanitizer (UBSan), ThreadSanitizer (TSan), MemorySanitizer (MSan), and LeakSanitizer (LSan)). Covers which sanitizers can combine, the flags that each one needs, the runtime options, the CMake integration, and how to read the crash report of a sanitizer. Use when the user asks you to build with sanitizers, to diagnose a memory error, a data race, or an undefined-behavior bug, or to interpret ASan, UBSan, or TSan output.
 ---
 
-# Compiling and running with sanitizers
+# Compile and run with sanitizers
 
-Goal: pick the sanitizer that catches the bug at hand, build and run with the flags it needs, and read its report down to the frame where the bug actually lives. This is a reference consulted at each of those points, not a procedure run start to finish, so it states no numbered steps.
+Goal: pick the sanitizer that catches the bug at hand, build and run with the flags that it needs, and read its report down to the frame where the bug is. This is a reference to read at each of those points, not a procedure to run from start to end, so it has no numbered steps.
 
-Sanitizers are compiler-inserted runtime checks: the compiler instruments
-every memory access, arithmetic operation, or thread synchronization point
-and aborts with a detailed report the moment a check fails, instead of
-letting the bug corrupt memory silently or produce a data race that only
-shows up under load. They trade runtime overhead (roughly 2x for ASan, 5x
-or more for MSan/TSan) for precise, first-failure diagnostics — always
-prefer a sanitizer over guessing from a crash's symptoms.
+A sanitizer is a set of runtime checks that the compiler inserts. The
+compiler instruments every memory access, arithmetic operation, or thread
+synchronization point. It aborts with a detailed report the moment that a
+check fails. The bug does not corrupt the memory with no message, and a data
+race does not show up only under load. The sanitizers trade runtime overhead
+(about 2x for ASan, 5x or more for MSan and TSan) for precise diagnostics at
+the first failure. Always prefer a sanitizer over a guess from the symptoms
+of a crash.
 
 ## Which sanitizer for which bug
 
 | Sanitizer                          | Flag                                    | Catches                                                                                                                                         |
 |------------------------------------|-----------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------|
-| AddressSanitizer (ASan)            | `-fsanitize=address`                    | heap/stack/global buffer overflow, use-after-free, use-after-return, double-free                                                                |
+| AddressSanitizer (ASan)            | `-fsanitize=address`                    | heap, stack, or global buffer overflow, use after free, use after return, double free                                                          |
 | UndefinedBehaviorSanitizer (UBSan) | `-fsanitize=undefined`                  | signed integer overflow, null-pointer dereference, misaligned access, invalid enum values, out-of-bounds array index (with `-fsanitize=bounds`) |
 | ThreadSanitizer (TSan)             | `-fsanitize=thread`                     | data races, lock-order inversions                                                                                                               |
 | MemorySanitizer (MSan)             | `-fsanitize=memory`                     | reads of uninitialized memory (Clang only)                                                                                                      |
 | LeakSanitizer (LSan)               | `-fsanitize=leak`, or bundled into ASan | memory leaks                                                                                                                                    |
 
-## Compiling
+## The compile
 
-Build with debug info and low optimization so reports show real source
-locations and variable names, and keep a frame pointer so stack traces are
-accurate:
+Build with debug information and low optimization, so the reports show real
+source locations and variable names. Keep a frame pointer, so the stack
+traces are accurate:
 
 ```sh
 clang++ -g -O1 -fno-omit-frame-pointer -fsanitize=address,undefined -o app app.cpp
 ```
 
-`-fsanitize=address` links in LeakSanitizer automatically on Linux, so a
-plain ASan build already reports leaks at process exit; add
+`-fsanitize=address` links LeakSanitizer in automatically on Linux. So a
+plain ASan build already reports the leaks at process exit. Add
 `-fsanitize=leak` on its own only when you want leak detection without the
-rest of ASan's checks.
+rest of the ASan checks.
 
 ## Which sanitizers combine
 
-- **ASan + UBSan** combine freely — this is the default pairing for day-to-day
-  bug-hunting and costs one build.
-- **TSan** cannot be combined with ASan or MSan; each instruments memory
-  differently and the runtimes conflict. Build a separate TSan binary.
-- **MSan** cannot be combined with ASan or TSan, and requires that
-  *every* linked library — including the C++ standard library — be built
-  with MSan instrumentation, or it reports false positives on uninstrumented
-  code. It is the most expensive sanitizer to adopt for this reason.
+- **ASan + UBSan** combine freely. This is the default pair for the daily
+  bug hunt, and it costs one build.
+- **TSan** cannot combine with ASan or MSan. Each one instruments the memory
+  differently, and the runtimes conflict. Build a separate TSan binary.
+- **MSan** cannot combine with ASan or TSan. It requires that *every* linked
+  library, with the C++ standard library, is built with MSan
+  instrumentation. Otherwise it reports false positives on the code with no
+  instrumentation. For this reason, it is the most expensive sanitizer to
+  adopt.
 - Build one sanitized binary per sanitizer family (`asan+ubsan`, `tsan`,
-  `msan`) rather than trying to fit them into a single executable.
+  `msan`). Do not try to fit them into a single executable.
 
-## Running and runtime options
+## The run and the runtime options
 
-Each sanitizer reads its own environment variable
-(`ASAN_OPTIONS`, `UBSAN_OPTIONS`, `TSAN_OPTIONS`, `MSAN_OPTIONS`), a
-colon-separated list of `key=value` pairs:
+Each sanitizer reads its own environment variable (`ASAN_OPTIONS`,
+`UBSAN_OPTIONS`, `TSAN_OPTIONS`, `MSAN_OPTIONS`). The value is a list of
+`key=value` pairs with colons between them:
 
 ```sh
 ASAN_OPTIONS=halt_on_error=0:detect_leaks=1 ./app
@@ -64,19 +66,19 @@ UBSAN_OPTIONS=print_stacktrace=1 ./app
 TSAN_OPTIONS=halt_on_error=1 ./app
 ```
 
-Common options worth setting:
+Common options that are worth a set:
 
-- `halt_on_error=0` — keep running after the first error to collect every
-  distinct failure in one run, instead of stopping at the first.
-- `print_stacktrace=1` (UBSan) — print a stack trace, not just the source
+- `halt_on_error=0`. Continue after the first error, to collect every
+  distinct failure in one run. Do not stop at the first one.
+- `print_stacktrace=1` (UBSan). Print a stack trace, not only the source
   location of the failure.
-- `suppressions=path/to/file` — silence known, unfixable reports (e.g. in a
-  third-party library) by pattern.
+- `suppressions=path/to/file`. Silence known reports that you cannot fix
+  (for example in a third-party library) by pattern.
 
-## Reading a report
+## How to read a report
 
-An ASan report names the error class, the access that triggered it, and
-both the faulting stack trace and the allocation/free stack trace:
+An ASan report names the error class, the access that triggered it, the
+faulting stack trace, and the stack trace of the allocation or the free:
 
 ```
 ERROR: AddressSanitizer: heap-use-after-free on address 0x...
@@ -90,18 +92,19 @@ previously allocated by thread T0 here:
     #1 0x... in main app.cpp:8
 ```
 
-Read bottom-up within each stack: the deepest frame that is in your own code
-(e.g. `app.cpp:12`) is where the bug actually lives; frames inside the
-sanitizer runtime or `operator new`/`delete` are noise. If a report shows a
-raw address instead of a symbol name, the binary is missing debug info or a
-symbolizer (`llvm-symbolizer` for Clang, on `PATH` or pointed to via
-`ASAN_SYMBOLIZER_PATH`) is not installed.
+Read each stack from the bottom up. The deepest frame in your own code (for
+example `app.cpp:12`) is where the bug is. The frames inside the sanitizer
+runtime or `operator new` and `delete` are noise. If a report shows a raw
+address instead of a symbol name, the binary has no debug information, or no
+symbolizer is installed (`llvm-symbolizer` for Clang, on `PATH` or named by
+`ASAN_SYMBOLIZER_PATH`).
 
-## CMake integration
+## The CMake integration
 
-Add the flags as both compile and link options — sanitizer runtimes must be
-linked in, not just compiled in — scoped to a dedicated build type or target
-rather than the whole project's default flags:
+Add the flags as both compile options and link options. The sanitizer
+runtimes must be linked in, not only compiled in. Limit the scope to a
+dedicated build type or target, not to the default flags of the whole
+project:
 
 ```cmake
 option(ENABLE_ASAN "Build with AddressSanitizer + UBSan" OFF)
@@ -112,23 +115,23 @@ endif()
 ```
 
 Configure a separate build directory per sanitizer (`build-asan`,
-`build-tsan`) so switching sanitizers is a directory switch, not a
-reconfigure.
+`build-tsan`). Then a switch of the sanitizer is a switch of the directory,
+not a new configure.
 
 ## Rules that prevent rework
 
-- **Always build with `-g -O1` (or `-Og`), never `-O0` or `-O3`.** `-O0`
-  is slow enough to make ASan/TSan overhead compound painfully on large
-  test suites; `-O3`'s inlining and reordering can make stack traces point
-  at the wrong line. `-O1`/`-Og` keeps traces accurate while still running
-  fast enough to use in a normal test loop.
-- **Never combine TSan or MSan with ASan.** The runtimes conflict; build a
-  separate binary per sanitizer family instead of trying to save a build.
-- **Set `halt_on_error=0` when hunting for every bug in a test suite,
-  `halt_on_error=1` (the default) when bisecting one specific failure.**
-  The former finds more in one run; the latter keeps a stack trace pinned
-  to a single root cause.
-- **Adopt MSan only when every dependency, including libc++/libstdc++, is
-  MSan-instrumented.** A partial MSan build reports false positives on
-  every uninstrumented call, which looks identical to a real bug until
-  investigated.
+- **Always build with `-g -O1` (or `-Og`), never with `-O0` or `-O3`.**
+  `-O0` is so slow that the ASan or TSan overhead becomes painful on a large
+  test suite. The inline expansion and the reorder of `-O3` can make a stack
+  trace point at the wrong line. `-O1` or `-Og` keeps the traces accurate and
+  runs fast enough for a normal test loop.
+- **Never combine TSan or MSan with ASan.** The runtimes conflict. Build a
+  separate binary per sanitizer family. Do not try to save a build.
+- **Set `halt_on_error=0` when you hunt for every bug in a test suite. Set
+  `halt_on_error=1` (the default) when you bisect one specific failure.** The
+  first finds more in one run. The second keeps a stack trace pinned to a
+  single root cause.
+- **Adopt MSan only when every dependency, with libc++ or libstdc++, is
+  MSan-instrumented.** A partial MSan build reports false positives on every
+  call with no instrumentation, and those look identical to a real bug until
+  you investigate.

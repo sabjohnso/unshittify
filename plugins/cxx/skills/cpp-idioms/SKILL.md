@@ -1,24 +1,24 @@
 ---
-description: Reference for C++-specific coding idioms to apply when writing or editing C++ — where to place an exception-to-Result guard (the tested library boundary, not app or main() code), when to split an oversized function into one function per job, when to prefer a range algorithm over an explicit loop versus when an explicit loop is still the right tool, and C++-specific TDD mechanics (a compile error is valid red evidence; a passing assertion is only evidence if it actually tests the claimed property). Use when writing new C++ code or editing existing C++ code, especially around a fallible boundary, an executable's main()/driver entry point, or a loop.
+description: Reference for the C++-specific coding idioms that apply when you write or edit C++. Where to put an exception-to-Result guard (the tested library boundary, not the application or main() code). When to split an oversized function into one function per job. When to prefer a range algorithm over an explicit loop, and when an explicit loop is the right tool. The C++-specific TDD mechanics (a compile error is valid red evidence, and a passed assertion is evidence only if it tests the claimed property). Use when you write new C++ code or edit existing C++ code, especially around a fallible boundary, the main() or driver entry point of an executable, or a loop.
 ---
 
 # C++ editing idioms
 
-Goal: apply the right C++ idiom at the change site — where the exception guard belongs, when a function has outgrown one job, whether a loop should become an algorithm, and what counts as red evidence in C++. This is a reference consulted while editing, not a procedure run start to finish, so it states no numbered steps; the procedure it feeds is the one in `/development:make-changing-easy`.
+Goal: apply the right C++ idiom at the change site. Where does the exception guard go? When has a function outgrown one job? Must a loop become an algorithm? What counts as red evidence in C++? This is a reference to read while you edit, not a procedure to run from start to end, so it has no numbered steps. The procedure that it feeds is the one in `/development:make-changing-easy`.
 
-These idioms generalize a real refactor of an executable's `main()`: broadening an exception guard that only handled one error type, splitting a nine-job function into one function per job, and replacing two explicit loops with range algorithms where that fit and leaving one as a loop where it didn't.
+These idioms generalize a real refactor of the `main()` of an executable. The refactor widened an exception guard that handled only one error type, split a function with nine jobs into one function per job, replaced two explicit loops with range algorithms where that fit, and left one loop as a loop where it did not fit.
 
-## Guard fallible boundaries in library code, not app code
+## Guard a fallible boundary in library code, not in application code
 
-If a function throws a narrow, expected exception type (a project-specific error type carrying a source location) but can also throw a plain `std::exception` for an internal invariant violation, wrap it in a checked variant that:
+A function can throw a narrow, expected exception type (a project-specific error type with a source location), but it can also throw a plain `std::exception` for an internal invariant violation. Wrap such a function in a checked variant that:
 
-1. Catches the narrow, expected exception type first, preserving its structured information (source span, error code) rather than discarding it into a plain string.
-2. Falls back to a broader `catch (const std::exception &)`, wrapping its `what()` into the same error type the caller already expects.
-3. Never lets an exception escape the boundary — the checked variant always returns a `Result`/`Expected`-style value.
+1. Catches the narrow, expected exception type first. Keep its structured information (the source span, the error code). Do not discard it into a plain string.
+2. Falls back to a broader `catch (const std::exception &)`, and wraps its `what()` into the same error type that the caller already expects.
+3. Never lets an exception escape the boundary. The checked variant always returns a `Result` or `Expected` style value.
 
-Order the catch clauses from most specific to most general; a generic clause placed first would shadow the specific one silently.
+Order the catch clauses from the most specific to the most general. A generic clause before a specific clause shadows the specific one with no error.
 
-Put this checked variant in the library boundary the tests can already reach (`src/`, `include/`), not inline inside `main()` or other executable-only code. An executable target usually isn't linked into the test binary, so a guard written there — inline `try`/`catch` plus a `dynamic_cast` to recover the specific error type — cannot be exercised directly by any test; the same guard placed one layer down, as a named function in the tested library, can be.
+Put this checked variant in the library boundary that the tests can already reach (`src/`, `include/`). Do not put it inline inside `main()` or other code that only the executable holds. An executable target is usually not linked into the test binary. So no test can exercise a guard that is written there (an inline `try` and `catch` plus a `dynamic_cast` to recover the specific error type). The same guard one layer down, as a named function in the tested library, is testable.
 
 ```cpp
 // include/mylib/driver.hpp
@@ -36,32 +36,32 @@ Result<std::string> emit_ir_checked(const CheckedModule &m) {
 }
 ```
 
-## Split a function once it does more than one job
+## Split a function when it does more than one job
 
-A driver function — `main()`, a request handler, a top-level dispatcher — should reduce to classifying its input and dispatching to a per-case function, not also validating, doing I/O, and running each case's pipeline inline. Signs a function has outgrown single responsibility:
+A driver function (`main()`, a request handler, a top-level dispatcher) must reduce to two tasks: it classifies its input, and it dispatches to a function per case. It must not also validate, do I/O, and run the pipeline of each case inline. Signs that a function has outgrown a single responsibility:
 
-- It mixes argument/input classification with validation, with I/O, with two or more independent pipelines.
-- The same short block (e.g. "render a diagnostic and return an error code") appears three or more times.
+- It mixes the classification of the argument or the input with validation, with I/O, and with two or more independent pipelines.
+- The same short block (for example "render a diagnostic and return an error code") occurs three or more times.
 
-Extract one function per job, and factor any block repeated three or more times into a single shared helper. This is the same Normalized Systems Theory "small, focused units" principle `/development:make-changing-easy` already assesses generally — apply it specifically to `main()`/driver functions, which tend to accumulate jobs one `if` branch at a time until no one notices they are doing nine jobs under one name.
+Extract one function per job. Factor each block that occurs three or more times into a single shared helper. This is the same "small, focused units" principle of Normalized Systems Theory that `/development:make-changing-easy` assesses in general. Apply it specifically to `main()` and driver functions. They tend to collect jobs one `if` branch at a time, until nobody sees that they do nine jobs under one name.
 
 ## Loop, or algorithm?
 
 | Loop shape                                                                                                                              | Choice                                                                                                                                                                                                                                                                  |
 |-----------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| A single predicate applied to every element, no early exit, no side effect (classify, filter, detect)                                   | A range algorithm: `std::ranges::any_of`/`all_of`/`none_of` to detect, `std::ranges::copy_if` or a `views::filter` to select.                                                                                                                                           |
-| Fail-fast validation: check each element, return immediately with a side effect (print a diagnostic, set an error) on the first failure | Keep the explicit loop. The standard library has no generic "transform with early abort" algorithm; forcing one in (`std::ranges::for_each` with a mutable early-exit flag, `std::transform` plus a separate check) obscures the early return instead of clarifying it. |
+| A single predicate applied to every element, with no early exit and no side effect (classify, filter, detect)                           | A range algorithm: `std::ranges::any_of`, `all_of`, or `none_of` to detect, `std::ranges::copy_if` or a `views::filter` to select.                                                                                                                                      |
+| Fail-fast validation: check each element, and return at once with a side effect (print a diagnostic, set an error) on the first failure | Keep the explicit loop. The standard library has no generic "transform with early abort" algorithm. A forced one (`std::ranges::for_each` with a mutable early-exit flag, or `std::transform` plus a separate check) hides the early return and does not make it clearer. |
 
-Converting the first shape and leaving the second alone is the correct outcome of applying "declarative code where possible" — that principle argues for the algorithm precisely because it fits, not as a blanket rule against `for` loops.
+The conversion of the first shape and no conversion of the second shape is the correct result of the "declarative code where possible" principle. That principle argues for the algorithm exactly because it fits. It is not a blanket rule against `for` loops.
 
 ## TDD mechanics specific to C++
 
-- **A compile error is valid red evidence for a symbol that doesn't exist yet.** Writing a test against a function or type before it exists and confirming the build fails with an undeclared-identifier or undefined-reference error satisfies the red step exactly as well as a failing runtime assertion would; it does not need to compile first.
-- **A passing assertion is only evidence for what it actually checks.** If a test's name promises a specific guarantee (e.g., "preserves the original error location"), its assertion must check that specific value, not a substring of a rendered message that would also pass under a weaker or wrong implementation. Verify a new or strengthened assertion actually catches the regression it targets by temporarily reintroducing that regression, confirming the test fails, then restoring the fix and confirming it passes again — the same discipline this project already applies to property tests, applied here to a single assertion.
-- **A general law already covered by a property test doesn't need re-proving by a new example test.** When adding an edge-case regression test for a boundary guard, check whether the underlying invariant (e.g., "this stage never crashes on valid input") is already a property test elsewhere; if so, the new example test's job is coverage of the specific new wrapping behavior, not re-establishing the general law.
+- **A compile error is valid red evidence for a symbol that does not exist yet.** Write a test against a function or type before it exists, and confirm that the build fails with an undeclared-identifier or undefined-reference error. That satisfies the red step as well as a failed runtime assertion does. The test does not need to compile first.
+- **A passed assertion is evidence only for what it checks.** If the name of a test promises a specific guarantee (for example "preserves the original error location"), its assertion must check that specific value. It must not check a substring of a rendered message that also passes under a weaker or wrong implementation. Make sure that a new or stronger assertion catches the regression that it targets. Put that regression back for a moment, confirm that the test fails, then restore the fix and confirm that the test passes again. This project already applies that discipline to property tests. Apply it here to a single assertion.
+- **A general law that a property test already covers does not need a new proof by a new example test.** When you add an edge-case regression test for a boundary guard, check whether the invariant (for example "this stage never crashes on valid input") is already a property test at an other place. If it is, the job of the new example test is the coverage of the specific new wrap behavior. It is not a new proof of the general law.
 
 ## Rules that prevent rework
 
-- **Never place a narrow-exception-then-generic-exception guard in `main()` or other executable-only code.** If nothing under the test tree links against it, nothing can prove it works; move it one layer down into the tested library first.
-- **Never leave a fail-fast validation loop as an algorithm call that only approximates "early abort."** An explicit loop that returns immediately on the first failure is already the clearest expression of that behavior.
-- **Never accept a passing test for a specific claim ("preserves location," "is idempotent," "is thread-safe") without checking that its assertion, not just its name, tests that specific claim.**
+- **Never put a guard with a narrow exception and then a generic exception in `main()` or other code that only the executable holds.** If nothing under the test tree links against it, nothing can show that it works. Move it one layer down into the tested library first.
+- **Never leave a fail-fast validation loop as an algorithm call that only approximates an "early abort".** An explicit loop that returns at once on the first failure is already the clearest expression of that behavior.
+- **Never accept a passed test for a specific claim ("preserves the location", "is idempotent", "is thread-safe") before you check that its assertion, and not only its name, tests that specific claim.**
