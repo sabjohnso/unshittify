@@ -1,17 +1,18 @@
 ---
-description: Drive a repeating redraw loop on a racket/gui canvas% — the timer% tick that advances a model and then requests a repaint, frame-rate-independent motion from a dt clock, flicker-free rendering (double buffering, refresh vs refresh-now, suspend-flush/resume-flush, offscreen bitmaps), input that feeds the model, and splitting the pure update from the render so it can be tested without a window. Use when building a game loop or an animation, making motion smooth or frame-rate independent, or diagnosing canvas flicker; for one-off painting see ../drawing/SKILL.md, and for the surrounding window, widgets and dialogs see ../gui/SKILL.md.
+description: Drive a repeated redraw loop on a racket/gui canvas%. Covers the timer% tick that advances a model and then requests a repaint, motion that is independent of the frame rate through a dt clock, a render with no flicker (double buffers, refresh and refresh-now, suspend-flush and resume-flush, offscreen bitmaps), input that feeds the model, and the split of the pure update from the render, so a test needs no window. Use when you build a game loop or an animation, when you make motion smooth or independent of the frame rate, or when you diagnose canvas flicker. For a single paint, see ../drawing/SKILL.md. For the window, the widgets, and the dialogs around the canvas, see ../gui/SKILL.md.
 allowed-tools: Read, Grep, Glob
 ---
 
-# Canvas Animation with racket/gui
+# Canvas animation with racket/gui
 
-Animation on a `canvas%` is a loop: a **timer** advances the model state,
-then asks the canvas to repaint, and the **paint-callback** renders the
-current state. Data flows one way — *update the model, then draw it* — never
-the reverse. This builds on [gui](../gui/SKILL.md) (the canvas, eventspace,
-and input) and [drawing](../drawing/SKILL.md) (the `dc<%>` you paint with).
+An animation on a `canvas%` is a loop. A **timer** advances the model state
+and then asks the canvas to repaint. The **paint-callback** renders the
+current state. The data flows one way: *update the model, then draw it*.
+Never the reverse. This skill builds on [gui](../gui/SKILL.md) (the canvas,
+the eventspace, and the input) and on [drawing](../drawing/SKILL.md) (the
+`dc<%>` that you paint with).
 
-For the animation-relevant `canvas%` and `timer%` members, the timing
+For the `canvas%` and `timer%` members that an animation uses, the timing
 primitives, and the offscreen double-buffer pattern, read `reference.md` in
 this skill directory.
 
@@ -28,21 +29,21 @@ this skill directory.
                          (send dc draw-rectangle (unbox state) 40 20 20))]))
 
 (define t (new timer%
-               [interval 16]                ; ~60 fps
+               [interval 16]                ; about 60 frames per second
                [notify-callback (lambda ()  ; update, then request a repaint
                                   (set-box! state (+ (unbox state) 2.0))
                                   (send canvas refresh))]))
-(send frame show #t)                        ; a shown frame keeps the app alive
+(send frame show #t)                        ; a shown frame keeps the application alive
 ```
 
-The `timer%` fires on the eventspace handler thread, so update and paint are
-serialized — no locking needed for the model.
+The `timer%` fires on the handler thread of the eventspace. So the update and
+the paint run in sequence, and the model needs no lock.
 
-## Frame timing — make motion frame-rate independent
+## Frame timing: make the motion independent of the frame rate
 
 A fixed step per tick (`+ 2.0`) moves faster or slower as the real frame rate
-drifts. For smooth, consistent speed, scale motion by the **elapsed time**
-since the last frame (`dt`), using a monotonic clock:
+drifts. For a smooth, constant speed, scale the motion by the **elapsed
+time** since the last frame (`dt`), with a monotonic clock:
 
 ```racket
 (define last (box (current-inexact-monotonic-milliseconds)))
@@ -51,39 +52,39 @@ since the last frame (`dt`), using a monotonic clock:
 
 (define (tick)
   (define now (current-inexact-monotonic-milliseconds))
-  (define dt (/ (- now (unbox last)) 1000.0)); seconds since last frame
+  (define dt (/ (- now (unbox last)) 1000.0)); seconds since the last frame
   (set-box! last now)
   (set-box! pos (+ (unbox pos) (* speed dt)))
   (send canvas refresh))
 ```
 
-The `timer%` interval is a *request*, not a guarantee; `dt` corrects for the
-jitter and for dropped frames.
+The `timer%` interval is a *request*, not a guarantee. `dt` corrects the
+jitter and the dropped frames.
 
-## Flicker-free rendering
+## A render with no flicker
 
-`canvas%` is **double-buffered** by default: drawing inside the
-`paint-callback` is composited offscreen and shown atomically, so partially
-drawn frames never appear on screen. The rules that keep it smooth:
+`canvas%` is **double-buffered** by default. The draw calls inside the
+`paint-callback` go to an offscreen buffer, and the canvas shows the result
+in one step. So a partly drawn frame never appears on the screen. The rules
+that keep it smooth:
 
-- **Draw only in the `paint-callback`.** Reading `get-dc` and drawing from a
-  timer bypasses the buffering and flickers. Update state in the timer; draw
-  in the callback; call `refresh` to connect them.
-- **`refresh` vs `refresh-now`.** `refresh` queues a repaint that the system
-  coalesces with others — use it in the loop. `refresh-now` paints
-  *synchronously* before returning; reserve it for a one-off forced redraw,
-  not the animation tick.
-- **Redraw the whole frame from state.** Begin the callback with
-  `(send dc clear)` (or use `[style '(no-autoclear)]` and clear yourself),
-  then draw everything from the model. Animation is "recompute the picture,"
-  not "erase the old sprite."
-- **Batch bursts with `suspend-flush`/`resume-flush`.** When you must issue
-  many draws outside the normal callback, wrap them so only one flush
-  happens.
+- **Draw only in the `paint-callback`.** A draw from a timer through `get-dc`
+  bypasses the buffer and flickers. Update the state in the timer. Draw in
+  the callback. Call `refresh` to connect them.
+- **`refresh` and `refresh-now`.** `refresh` queues a repaint, and the system
+  merges it with other repaints. Use it in the loop. `refresh-now` paints
+  *synchronously* before it returns. Keep it for a single forced redraw, not
+  for the animation tick.
+- **Redraw the whole frame from the state.** Start the callback with
+  `(send dc clear)` (or use `[style '(no-autoclear)]` and clear yourself).
+  Then draw everything from the model. An animation recomputes the picture.
+  It does not erase the old sprite.
+- **Batch a burst of draws with `suspend-flush` and `resume-flush`.** When
+  you must issue many draws outside the normal callback, wrap them, so only
+  one flush occurs.
 
 For an expensive scene, render once to an **offscreen bitmap** and copy
-("blit") it to the canvas,
-redrawing the bitmap only when the scene changes:
+("blit") it to the canvas. Redraw the bitmap only when the scene changes:
 
 ```racket
 (define buf (make-bitmap 400 300))
@@ -93,11 +94,11 @@ redrawing the bitmap only when the scene changes:
      [paint-callback (lambda (cv dc) (send dc draw-bitmap buf 0 0))])
 ```
 
-## Input-driven animation
+## Animation from input
 
-Read input into the model, never draw from an input handler. Subclass
-`canvas%` and override `on-char`/`on-event` (see [gui](../gui/SKILL.md)) to
-set state that the next paint reflects:
+Read the input into the model. Never draw from an input handler. Subclass
+`canvas%` and override `on-char` or `on-event` (see [gui](../gui/SKILL.md))
+to set the state that the next paint shows:
 
 ```racket
 (define game-canvas%
@@ -107,49 +108,50 @@ set state that the next paint reflects:
       (case (send e get-key-code)
         [(left)  (set-box! vx -1)]
         [(right) (set-box! vx 1)]
-        [else (void)]))))    ; the timer integrates vx into position each frame
+        [else (void)]))))    ; the timer integrates vx into the position each frame
 ```
 
-## Keeping the loop responsive
+## Keep the loop responsive
 
-Update and paint run on the handler thread, so a slow frame freezes input.
-Keep per-frame work small; push heavy computation (path-finding, asset
-loading) to a worker thread and feed results back with `queue-callback`
-(see [concurrency](../concurrency/SKILL.md)). A `timer%` interval shorter than
-a frame's work just queues callbacks faster than they drain — measure with
-[profiling](../profiling/SKILL.md).
+The update and the paint run on the handler thread, so a slow frame freezes
+the input. Keep the work per frame small. Push heavy computation (path
+search, asset loads) to a worker thread, and feed the results back with
+`queue-callback` (see [concurrency](../concurrency/SKILL.md)). A `timer%`
+interval that is shorter than the work of a frame only queues callbacks
+faster than they drain. Measure with [profiling](../profiling/SKILL.md).
 
-## Testing animation
+## Test an animation
 
-Split the **pure update** from **rendering** so the logic is testable without
-a window:
+Split the **pure update** from the **render**, so a test of the logic needs
+no window:
 
 ```racket
 (define (step st dt) (struct-copy world st [x (+ (world-x st) (* (world-vx st) dt))]))
-;; test the model with rackunit — no GUI needed:
+;; test the model with rackunit. No GUI is necessary:
 (check-equal? (world-x (step (world 0 100) 0.5)) 50.0)
 ```
 
 Render the model to an offscreen `bitmap-dc%` ([drawing](../drawing/SKILL.md))
-to snapshot a frame in a test. Remember a shown `frame%` keeps the eventspace
-— and the process — alive; close the frame or `(exit)` to stop a standalone
-run.
+to take a snapshot of a frame in a test. A shown `frame%` keeps the
+eventspace, and the process, alive. Close the frame or call `(exit)` to stop
+a standalone run.
 
 ## Rules that prevent rework
 
-- **One-way flow: timer updates the model, paint renders it.** Don't mutate
-  state in the paint-callback or draw from the timer; keep update and render
-  separate and the animation stays predictable and testable.
-- **Scale motion by `dt`, not by frame count.** Use
-  `current-inexact-monotonic-milliseconds` so speed is constant regardless of
-  the actual frame rate, and dropped frames don't change the trajectory.
-- **`refresh` in the loop; draw in the paint-callback.** That path is
-  double-buffered and flicker-free; `get-dc` drawing and `refresh-now` per
-  tick are not — reserve them for special cases.
-- **Clear and redraw from state each frame.** Recompute the whole picture
-  rather than patching the previous one; cache to an offscreen bitmap only
+- **One-way flow: the timer updates the model, and the paint renders it.** Do
+  not change the state in the paint-callback, and do not draw from the
+  timer. Keep the update and the render separate. Then the animation stays
+  predictable and testable.
+- **Scale the motion by `dt`, not by the frame count.** Use
+  `current-inexact-monotonic-milliseconds`. Then the speed is constant at
+  every frame rate, and dropped frames do not change the trajectory.
+- **`refresh` in the loop, and draw in the paint-callback.** That path is
+  double-buffered and has no flicker. A draw through `get-dc` and a
+  `refresh-now` per tick are not. Keep them for special cases.
+- **Clear and redraw from the state each frame.** Recompute the whole
+  picture. Do not patch the previous one. Cache to an offscreen bitmap only
   when a scene is expensive and changes rarely.
-- **Stop the timer and keep frames cheap.** `(send timer stop)` on teardown,
-  and move heavy work off the handler thread
-  ([concurrency](../concurrency/SKILL.md)) so input and rendering stay
+- **Stop the timer, and keep the frames cheap.** Call `(send timer stop)` at
+  teardown. Move heavy work off the handler thread
+  ([concurrency](../concurrency/SKILL.md)), so the input and the render stay
   smooth.

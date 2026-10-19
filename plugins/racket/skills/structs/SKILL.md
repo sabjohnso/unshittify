@@ -1,57 +1,59 @@
 ---
-description: "Define and use Racket structs — the struct form and its options (#:transparent, #:mutable, #:prefab, #:guard, #:auto, #:constructor-name), inheritance and subtype predicates, struct-copy functional update, and generic interfaces via #:methods (gen:custom-write, gen:equal+hash, prop:procedure). Use when defining a struct, choosing transparent/opaque/prefab, controlling construction, customizing printing or equality, or deciding struct vs list/hash."
+description: "Define and use Racket structs. Covers the struct form and its options (#:transparent, #:mutable, #:prefab, #:guard, #:auto, #:constructor-name), inheritance and subtype predicates, functional update with struct-copy, and generic interfaces through #:methods (gen:custom-write, gen:equal+hash, prop:procedure). Use when you define a struct, when you choose between transparent, opaque, and prefab, when you control the construction, when you customize the print or the equality, or when you decide between a struct and a list or a hash."
 allowed-tools: Read, Grep, Glob
 ---
 
-# Racket Structs
+# Racket structs
 
 `struct` defines a new compound data type. One declaration generates a
-constructor, a type predicate, and an accessor per field (plus setters when
-mutable). It is built into `racket/base` — no require needed.
+constructor, a type predicate, and an accessor per field (plus a setter per
+field when the struct is mutable). It is part of `racket/base`. No require
+is necessary.
 
 For the exact `struct` grammar, every keyword option, and the generated
 bindings, read `reference.md` in this skill directory.
 
 ```racket
 (struct posn (x y) #:transparent)
-(posn 3 4)        ; constructor
-(posn? v)         ; predicate
-(posn-x p)        ; accessor per field
+(posn 3 4)        ; the constructor
+(posn? v)         ; the predicate
+(posn-x p)        ; an accessor per field
 ```
 
-## Opacity — pick deliberately
+## Opacity: pick it on purpose
 
-This is the first decision, because it governs equality, printing, and
-serialization:
+This is the first decision, because it governs the equality, the print, and
+the serialization:
 
-| Mode             | `equal?`              | Prints as            | Use for                               |
-|------------------|-----------------------|----------------------|---------------------------------------|
-| opaque (default) | identity (`eq?`)      | `#<posn>`            | encapsulated state, hidden invariants |
-| `#:transparent`  | structural (by field) | `#(struct:posn 3 4)` | value types, test data, most cases    |
-| `#:prefab`       | structural            | `#s(posn 3 4)`       | data that must `read`/serialize       |
+| Mode             | `equal?`                | Prints as            | Use for                                  |
+|------------------|-------------------------|----------------------|------------------------------------------|
+| opaque (default) | identity (`eq?`)        | `#<posn>`            | encapsulated state, hidden invariants    |
+| `#:transparent`  | structural (by field)   | `#(struct:posn 3 4)` | value types, test data, most cases       |
+| `#:prefab`       | structural              | `#s(posn 3 4)`       | data that must `read` or serialize       |
 
-The "Prints as" column is `write`/`display` output. `print` — what the REPL
-and `~v` use — shows a transparent struct as `(posn 3 4)` and a prefab one as
-`'#s(posn 3 4)`.
+The "Prints as" column is the `write` and `display` output. `print`, which
+the REPL and `~v` use, shows a transparent struct as `(posn 3 4)` and a
+prefab struct as `'#s(posn 3 4)`.
 
 ```racket
-(equal? (posn 1 2) (posn 1 2))   ; #f when opaque, #t when transparent/prefab
+(equal? (posn 1 2) (posn 1 2))   ; #f when opaque, #t when transparent or prefab
 ```
 
-- **Default to `#:transparent`** for plain value types. Opaque structs
-  compare by identity, so two equal-looking values are `equal?`-distinct —
-  a frequent surprise in tests and hash keys.
-- **`#:prefab`** structs need no declaration to be reconstructed: `#s(posn
-  1 2)` reads back to an equal value, so they cross `read`/`write` and
-  `racket/serialize` boundaries. The cost is zero encapsulation — anyone can
-  forge one. Use them for wire/disk data, not for invariants.
-- **Opaque** is right when the struct guards an invariant and outside code
-  should not see or fabricate its fields.
+- **Default to `#:transparent`** for a plain value type. An opaque struct
+  compares by identity. So two values that look equal are `equal?`-distinct.
+  That is a frequent surprise in tests and in hash keys.
+- **A `#:prefab`** struct needs no declaration for a reconstruction. `#s(posn
+  1 2)` reads back to an equal value. So prefab structs cross `read`,
+  `write`, and `racket/serialize` boundaries. The cost is zero
+  encapsulation. Everybody can forge one. Use them for wire or disk data,
+  not for invariants.
+- **Opaque** is right when the struct guards an invariant, and outside code
+  must not see or fabricate its fields.
 
 ## Mutability
 
-Fields are immutable unless you opt in. `#:mutable` makes every field
-mutable and generates `set-name-field!`; mark individual fields with
+A field is immutable unless you opt in. `#:mutable` makes every field
+mutable, and it generates `set-name-field!`. Mark an individual field with
 `#:mutable` in the field spec for finer control.
 
 ```racket
@@ -62,14 +64,14 @@ mutable and generates `set-name-field!`; mark individual fields with
 (struct cell ([v #:mutable] tag))   ; only v is mutable
 ```
 
-Prefer immutable structs plus `struct-copy` (below) unless you need shared
-mutable state — immutable values are safe to share and hash.
+Prefer immutable structs plus `struct-copy` (below), unless you need shared
+mutable state. An immutable value is safe to share and to hash.
 
-## Controlling construction
+## Control the construction
 
-- **`#:guard`** runs before the instance exists; it receives the field
-  values plus the struct name and returns the (possibly coerced) field
-  values, or raises. Use it to validate or normalize:
+- **`#:guard`** runs before the instance exists. It gets the field values
+  plus the struct name, and it returns the field values (possibly coerced),
+  or it raises. Use it to validate or normalize:
 
   ```racket
   (struct temp (celsius)
@@ -79,54 +81,54 @@ mutable state — immutable values are safe to share and hash.
               c))
   ```
 
-  A subtype's guard runs after the supertype's, receiving the already-guarded
-  super fields.
+  The guard of a subtype runs after the guard of the supertype. It gets the
+  super fields that the super guard already checked.
 
-- **`#:auto` / `#:auto-value`** give fields filled in automatically (not
-  constructor arguments) — auto fields must come last:
+- **`#:auto` and `#:auto-value`** give fields that Racket fills
+  automatically (not constructor arguments). An auto field must come last:
 
   ```racket
   (struct node (val [next #:auto]) #:auto-value 'none #:mutable)
   (node 10)   ; => next is 'none
   ```
 
-- **`#:constructor-name` / `#:extra-constructor-name`** rename or add a
-  constructor (e.g. keep `make-posn` alongside `posn`).
+- **`#:constructor-name` and `#:extra-constructor-name`** rename or add a
+  constructor (for example, keep `make-posn` beside `posn`).
 
 ## Inheritance
 
-A struct may extend another; the subtype satisfies the supertype predicate
-and inherits its accessors.
+A struct can extend an other struct. The subtype satisfies the supertype
+predicate, and it inherits the accessors of the supertype.
 
 ```racket
 (struct posn (x y) #:transparent)
 (struct posn3 posn (z) #:transparent)
 (define q (posn3 1 2 3))
-(posn? q)      ; #t — subtype is a posn
-(posn-x q)     ; 1  — inherited accessor
+(posn? q)      ; #t. The subtype is a posn
+(posn-x q)     ; 1. An inherited accessor
 (posn3-z q)    ; 3
 ```
 
-Prefer composition (a field holding another struct) over deep hierarchies;
-single-level extension for genuine "is-a" is fine.
+Prefer composition (a field that holds an other struct) to a deep
+hierarchy. One level of extension for a real "is a" relation is acceptable.
 
 ## Functional update
 
-`struct-copy` builds a new instance from an existing one, overriding named
-fields — the immutable-friendly way to "change" a field:
+`struct-copy` builds a new instance from an existing one, with the named
+fields overridden. It is the immutable way to "change" a field:
 
 ```racket
-(struct-copy posn p [y 99])   ; new posn with p's x, y = 99
+(struct-copy posn p [y 99])   ; a new posn with the x of p, and y = 99
 ```
 
-## Customizing behavior with #:methods
+## Customize the behavior with #:methods
 
-Implement a generic interface inline. Common ones:
+Implement a generic interface inline. The common ones:
 
-- **`gen:custom-write`** — control printing. `make-constructor-style-printer`
-  (from `racket/struct`) is the standard helper. Note it prints differently
-  by mode: `#<point: 3 4>` under `write`/`display`, `(point 3 4)` under
-  `print`.
+- **`gen:custom-write`** controls the print. `make-constructor-style-printer`
+  (from `racket/struct`) is the standard helper. Note that it prints
+  differently by mode: `#<point: 3 4>` under `write` and `display`, `(point
+  3 4)` under `print`.
 
   ```racket
   (require racket/struct)
@@ -138,13 +140,13 @@ Implement a generic interface inline. Common ones:
         (lambda (self) (list (point-x self) (point-y self)))))])
   ```
 
-- **`gen:equal+hash`** — give an opaque struct value equality. It needs all
-  three procedures: `equal-proc`, `hash-proc`, `hash2-proc` (omit one and the
-  struct definition fails with "required method is not implemented").
-  `gen:equal-mode+hash` is the newer two-method alternative — `equal-mode-proc`
-  and `hash-mode-proc`, each taking one extra `mode` argument that is `#t`
-  under `equal?` and `#f` under `equal-always?`, so one struct can distinguish
-  the two equalities:
+- **`gen:equal+hash`** gives an opaque struct value equality. It needs all
+  three procedures: `equal-proc`, `hash-proc`, and `hash2-proc`. If one is
+  absent, the struct definition fails with "required method is not
+  implemented". `gen:equal-mode+hash` is the newer alternative with two
+  methods, `equal-mode-proc` and `hash-mode-proc`. Each one takes one extra
+  `mode` argument, which is `#t` under `equal?` and `#f` under
+  `equal-always?`. So one struct can tell the two equalities apart:
 
   ```racket
   (struct box2 (v)
@@ -153,10 +155,10 @@ Implement a generic interface inline. Common ones:
      (define (hash-mode-proc a recur mode)    (recur (box2-v a)))])
   ```
 
-  Either is only needed when you want custom equality; `#:transparent`
-  already gives structural `equal?`.
+  Either one is necessary only when you want a custom equality.
+  `#:transparent` already gives structural `equal?`.
 
-- **`#:property prop:procedure`** — make instances applicable like
+- **`#:property prop:procedure`** makes the instances applicable like
   functions:
 
   ```racket
@@ -167,27 +169,29 @@ Implement a generic interface inline. Common ones:
 
 ## Reflection and contracts
 
-`(struct->vector v)` yields `#(struct:posn 1 2)` for inspection; full field
-access via `struct-info` requires a transparent struct (or the right
-inspector) — another reason opaque hides data. To contract a struct's fields
-at a module boundary, use the `struct` clause of `contract-out` (see
-[contracts](../contracts/SKILL.md)).
+`(struct->vector v)` gives `#(struct:posn 1 2)` for inspection. Full field
+access through `struct-info` requires a transparent struct (or the right
+inspector). That is an other reason that an opaque struct hides its data. To
+put a contract on the fields of a struct at a module boundary, use the
+`struct` clause of `contract-out` (see [contracts](../contracts/SKILL.md)).
 
 ## Rules that prevent rework
 
-- **Choose opacity before fields.** Opaque `equal?` is identity; if you will
-  compare instances, put them in hash keys, or assert on them in tests, use
-  `#:transparent`. Reach for opaque only to protect an invariant.
-- **`#:prefab` is for data that must serialize, not for invariants.** Anyone
-  can write `#s(tag …)`, so a prefab struct guarantees nothing about its
-  contents — never use one to enforce a constraint.
-- **`#:guard` runs before the struct exists.** It sees field values and the
-  type name, not an instance; return the (coerced) values or raise. It is
-  where you validate arguments at construction time.
-- **Auto fields come last and aren't constructor arguments.** Order them
-  after all explicit fields; supply `#:auto-value` or they default to `#f`.
-- **Prefer immutable + `struct-copy` to `#:mutable`.** Immutable structs are
-  safe to share and hash; add mutability only for genuinely shared state.
-- **Use a struct when fields have fixed meaning.** A struct documents intent
-  and checks arity at construction; reach for a list/hash only for
-  homogeneous or open-ended data.
+- **Choose the opacity before the fields.** Opaque `equal?` is identity. If
+  you will compare instances, put them in hash keys, or assert on them in
+  tests, use `#:transparent`. Use opaque only to protect an invariant.
+- **`#:prefab` is for data that must serialize, not for invariants.**
+  Everybody can write `#s(tag …)`. So a prefab struct guarantees nothing
+  about its contents. Never use one to enforce a constraint.
+- **`#:guard` runs before the struct exists.** It sees the field values and
+  the type name, not an instance. Return the (coerced) values, or raise. It
+  is the place to validate the arguments at construction time.
+- **An auto field comes last, and it is not a constructor argument.** Order
+  the auto fields after all the explicit fields. Give an `#:auto-value`, or
+  they default to `#f`.
+- **Prefer immutable plus `struct-copy` to `#:mutable`.** An immutable
+  struct is safe to share and to hash. Add mutability only for state that is
+  really shared.
+- **Use a struct when the fields have a fixed meaning.** A struct documents
+  the intent, and it checks the arity at construction. Use a list or a hash
+  only for homogeneous or open-ended data.

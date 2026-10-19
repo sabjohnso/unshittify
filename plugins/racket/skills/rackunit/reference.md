@@ -1,7 +1,7 @@
-# rackunit Reference — exact signatures
+# rackunit Reference: exact signatures
 
-Companion to SKILL.md. Source: docs.racket-lang.org/rackunit/ and the
-rackunit-spec package. Checked against Racket v9.1 [cs].
+This file accompanies `SKILL.md`. The sources are docs.racket-lang.org/rackunit/ and the
+rackunit-spec package. The signatures were checked against Racket v9.1 [cs].
 
 ## Checks (require rackunit)
 
@@ -25,9 +25,9 @@ rackunit-spec package. Checked against Racket v9.1 [cs].
 (fail [message])                          ; always fails
 ```
 
-`check-exn`'s first argument is a predicate (`exn:fail?`,
-`exn:fail:contract?`, a custom `(-> any boolean)`) or a regexp matched
-against the exception message; the second is a `(-> any)` thunk.
+The first argument of `check-exn` is a predicate (`exn:fail?`,
+`exn:fail:contract?`, a custom `(-> any boolean)`) or a regexp. The regexp
+matches the exception message. The second argument is a `(-> any)` thunk.
 
 ## Test grouping
 
@@ -61,15 +61,15 @@ against the exception message; the second is a `(-> any)` thunk.
 (fold-test-results proc seed test ...) ; custom aggregation
 (foldts-test-suite ....)               ; low-level traversal
 
-;; rackunit/gui : (test/gui test ...)  — a graphical runner
-;; raco test file.rkt : runs the `test` submodule + top-level checks
+;; rackunit/gui : (test/gui test ...)  is a graphical runner
+;; raco test file.rkt : runs the `test` submodule and the top-level checks
 ```
 
 ## Custom checks and failure info
 
 ```racket
 (with-check-info ([name-expr value-expr] ...) body ...)
-   ; attach fields (shown on failure) to checks evaluated in body.
+   ; Attach fields to the checks in the body. The fields show on failure.
 (check-info? v)  (make-check-info name value)
 (check-info-name ci)  (check-info-value ci)
 (make-check-name s) (make-check-location l) (make-check-message s) ...
@@ -80,11 +80,11 @@ against the exception message; the second is a `(-> any)` thunk.
 (define-binary-check (name actual expected) compare-expr)
 (define-binary-check (name pred actual expected))
 
-;; exception raised by a failed check (caught by the enclosing test):
+;; A failed check raises this exception. The enclosing test catches it:
 (struct exn:test:check (...))   exn:test:check?   exn:test:check-stack
 ```
 
-## rackunit/spec (package: rackunit-spec — not in rackunit-lib)
+## rackunit/spec (package: rackunit-spec, not in rackunit-lib)
 
 ```racket
 ;; raco pkg install rackunit-spec
@@ -95,8 +95,8 @@ against the exception message; the second is a `(-> any)` thunk.
 (it       description-string body ...+)    ; => (test-case nested-name body ...)
 ```
 
-`describe`/`context` push their string onto a compile-time description stack;
-`it` pops the full path and emits a `test-case` whose name is the
-descriptions joined with two-space indentation per level. Bodies use ordinary
-rackunit checks. There are no setup/teardown hooks — use local bindings in
-`it` or a `test-suite` `#:before`/`#:after` for fixtures.
+`describe` and `context` push their string onto a compile-time description stack.
+`it` pops the full path and emits a `test-case`. The name of the `test-case`
+joins the descriptions with two spaces of indentation per level. Bodies use ordinary
+rackunit checks. There are no setup or teardown hooks. For fixtures, use local bindings in
+`it`, or use `#:before` and `#:after` of a `test-suite`.

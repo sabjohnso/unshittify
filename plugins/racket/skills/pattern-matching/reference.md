@@ -1,22 +1,22 @@
-# Pattern-Matching Reference — exact grammars
+# Pattern-Matching Reference: exact grammars
 
-Companion to SKILL.md. Source: docs.racket-lang.org/reference/match.html.
-Checked against Racket v9.1 [cs].
+This file accompanies SKILL.md. Source: docs.racket-lang.org/reference/match.html.
+This file was checked against Racket v9.1 [cs].
 
 ## Match forms
 
 ```racket
 (match val-expr clause ...)
    clause = [pat body ...+]
-          | [pat (=> fail-id) body ...+]      ; fail-id : (-> any) resumes next clause
-          | [pat #:when cond-expr body ...+]  ; clause fires only if cond is true,
-                                              ;   else resumes at the next clause
+          | [pat (=> fail-id) body ...+]      ; fail-id : (-> any). A call to fail-id resumes at the next clause
+          | [pat #:when cond-expr body ...+]  ; the clause runs only if cond is true.
+                                              ;   If not, matching resumes at the next clause
 
-(match* (val-expr ...+) clause* ...)          ; match several values together
+(match* (val-expr ...+) clause* ...)          ; match several values at the same time
    clause* = [(pat ...+) body ...+]
            | [(pat ...+) (=> fail-id) body ...+]
 
-(match-define pat expr)                        ; bind pat's vars in the enclosing scope
+(match-define pat expr)                        ; bind the variables of pat in the enclosing scope
 (match-define-values (pat ...) expr)
 
 (match-let     ([pat expr] ...) body ...+)     ; parallel
@@ -25,63 +25,63 @@ Checked against Racket v9.1 [cs].
 (match-let-values ([(pat ...) expr] ...) body ...+)
 
 (match-lambda   [pat body ...+] ...)           ; (lambda (x) (match x ...))
-(match-lambda*  [(pat ...) body ...+] ...)     ; matches the argument LIST
-(match-lambda** [(pat ...+) body ...+] ...)    ; matches multiple args (like match*)
+(match-lambda*  [(pat ...) body ...+] ...)     ; match the list of arguments
+(match-lambda** [(pat ...+) body ...+] ...)    ; match several arguments (like match*)
 ```
 
 ## Pattern grammar
 
 ```racket
 pat =
-    _                       ; wildcard, no binding
-  | id                      ; binds id (a literal id matches & binds)
-  | literal                 ; #t #f number string bytes char keyword; matches by equal?
-  | (quote datum)           ; matches the quoted datum
-  | (list lvp ...)          ; list with ellipsis-aware elements
-  | (list-rest lvp ... pat) ; a.k.a. (list* ...): fixed prefix + tail pat
-  | (list-no-order pat ...) ; elements in any order
+    _                       ; wildcard. It binds nothing
+  | id                      ; bind id (an identifier matches any value and binds it)
+  | literal                 ; #t #f number string bytes char keyword. It matches with equal?
+  | (quote datum)           ; match the quoted datum
+  | (list lvp ...)          ; a list. Its elements can use ellipses
+  | (list-rest lvp ... pat) ; also written (list* ...). A fixed prefix and a tail pat
+  | (list-no-order pat ...) ; the elements match in any order
   | (list-no-order pat ... lvp)
-  | (vector lvp ...)        ; vector by position (ellipsis ok)
+  | (vector lvp ...)        ; match a vector by position (an ellipsis can be used)
   | (hash-table (key-pat val-pat) ... maybe-rest)   ; rest = _ , ... , or (... ...)
   | (cons pat pat)
   | (mcons pat pat) (box pat) (hash* ...) 
-  | (struct-id pat ...)            ; positional fields (struct-id used directly)
-  | (struct struct-id (pat ...))   ; explicit form
-  | (struct* struct-id ([field pat] ...))  ; fields by name, any subset
-  | (regexp rx-expr)               ; string matched by rx-expr (via regexp-match, not anchored)
+  | (struct-id pat ...)            ; fields by position (use struct-id directly)
+  | (struct struct-id (pat ...))   ; the explicit form
+  | (struct* struct-id ([field pat] ...))  ; fields by name. Any subset of fields can be used
+  | (regexp rx-expr)               ; match a string with rx-expr (uses regexp-match, not anchored)
   | (regexp rx-expr pat)           ; match the (regexp-match ...) result list
   | (pregexp rx-expr) (pregexp rx-expr pat)
-  | (and pat ...)                  ; all; binds union (left-to-right)
-  | (or pat ...)                   ; any; every arm must bind the SAME vars
+  | (and pat ...)                  ; all pats must match. It binds the union of their variables (from left to right)
+  | (or pat ...)                   ; one pat must match. Every arm must bind the SAME variables
   | (not pat ...)                  ; none of the pats match
-  | (? expr pat ...)               ; expr applied as predicate, then pats
-  | (app expr pat ...)             ; apply expr to value, match result(s)
-  | (== val-expr [eq-expr])        ; equal? (or eq-expr) to val-expr's value
-  | (quasiquote qq)                ; `... with ,pat / ,@pat unquoting to patterns
-  | (var id)                       ; explicit bind (rarely needed)
-  | (struct-id ...) / derived patterns from define-match-expander
+  | (? expr pat ...)               ; apply expr as a predicate, then match pats
+  | (app expr pat ...)             ; apply expr to the value, then match the results
+  | (== val-expr [eq-expr])        ; match a value that is equal? (or eq-expr) to the value of val-expr
+  | (quasiquote qq)                ; `... where ,pat and ,@pat unquote to patterns
+  | (var id)                       ; bind explicitly (this is rarely necessary)
+  | (struct-id ...) / patterns that define-match-expander defines
 
 lvp =                              ; list-value pattern (an element position)
-    pat ooo                        ; pat followed by an ellipsis -> repeats
+    pat ooo                        ; pat followed by an ellipsis. The pat repeats
   | pat
 
 ooo (ellipsis) =
-    ...        ; zero or more   (a.k.a.  ___)
-  | ..k        ; k or more, e.g. ..2   (a.k.a.  __k)
+    ...        ; zero or more   (also written ___)
+  | ..k        ; k or more, for example ..2   (also written __k)
 ```
 
-A variable bound under one ellipsis is a list in the body; under N nested
-ellipses it is a list nested N deep. Repeating a pattern variable name
-within a pattern forces those positions to be `equal?`.
+In the body, a variable that one ellipsis binds is a list. A variable that N
+nested ellipses bind is a list nested N levels deep. If a pattern variable name
+occurs more than once in a pattern, those positions must match values that are `equal?`.
 
 ## Quasiquote patterns
 
 ```racket
 `datum              ; literal structure
-`,pat               ; unquote -> match pat at this position
-`,@pat              ; unquote-splicing -> pat matches a sub-list
-`(a b ,x)           ; list whose first two elems are 'a 'b, third bound to x
-`(,elem ...)        ; each element bound; elem is a list in the body
+`,pat               ; unquote: match pat at this position
+`,@pat              ; unquote-splicing: pat matches a sub-list
+`(a b ,x)           ; a list. Its first two elements are 'a and 'b. The third element is bound to x
+`(,elem ...)        ; each element is bound. In the body, elem is a list
 ```
 
 ## define-match-expander
@@ -89,25 +89,25 @@ within a pattern forces those positions to be `equal?`.
 ```racket
 (define-match-expander id match-transformer-expr)
 (define-match-expander id match-transformer-expr macro-transformer-expr)
-   ; match-transformer-expr : a phase-1 (-> syntax? syntax?) producing a pattern
-   ; macro-transformer-expr : optional, lets id also be used as an expression
-   ; requires (for-syntax racket/base) for lambda/syntax at phase 1.
+   ; match-transformer-expr : a phase-1 (-> syntax? syntax?) that produces a pattern
+   ; macro-transformer-expr : optional. It lets you also use id as an expression
+   ; (for-syntax racket/base) is necessary for lambda and syntax at phase 1.
 
-(match-expander? v)          ; PHASE 1 ONLY — see below
+(match-expander? v)          ; PHASE 1 ONLY. See below
 ```
 
 `racket/match` provides `match-expander?` (with `legacy-match-expander?`,
 `match-...-nesting`, `prop:match-expander`, `prop:legacy-match-expander`,
-and `syntax-local-match-introduce`) *for-syntax*: a plain
-`(require racket/match)` binds them at phase 1, inside a transformer body,
-and leaves them **unbound at phase 0** — calling `(match-expander? v)` in
+and `syntax-local-match-introduce`) *for-syntax*. A plain
+`(require racket/match)` binds them at phase 1, inside a transformer body.
+It leaves them **unbound at phase 0**. A call to `(match-expander? v)` in
 ordinary code is an unbound-identifier error. `(require (for-syntax
-racket/match))` does *not* reach them either; that lifts `racket/match`'s
-phase-0 exports, not its phase-1 ones.
+racket/match))` does *not* reach them either. That form lifts the phase-0
+exports of `racket/match`, not its phase-1 exports.
 
 ## Failure continuation
 
-In `[pat (=> fail-id) body ...]`, `fail-id` is bound to a thunk. Calling
-`(fail-id)` abandons the current clause — even after its pattern matched and
-its body started — and continues matching at the next clause. Use it for
-side conditions that need values computed in the body.
+In `[pat (=> fail-id) body ...]`, `fail-id` is bound to a thunk. A call to
+`(fail-id)` abandons the current clause and continues matching at the next
+clause. This is also true after the pattern matched and the body started. Use
+this call for side conditions that need values that the body computes.

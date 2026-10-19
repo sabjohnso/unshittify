@@ -1,23 +1,24 @@
 ---
-description: Profile and time Racket code — time/time-apply for quick cpu/real/gc numbers, the statistical profiler (profile, profile-thunk, raco profile) to find hot spots, contract-profile for contract overhead, and current-memory-use for allocation. Use when code is slow and you need evidence of where time goes before optimizing, reading a profiler report, or measuring contract/GC cost.
+description: Profile and time Racket code. Covers time and time-apply for quick cpu, real, and gc numbers, the statistical profiler (profile, profile-thunk, raco profile) to find the hot spots, contract-profile for the contract overhead, and current-memory-use for the allocation. Use when code is slow and you need evidence of where the time goes before you optimize, when you read a profiler report, or when you measure the contract or GC cost.
 allowed-tools: Bash(racket:*), Bash(raco:*), Read, Grep, Glob
 ---
 
-# Profiling Racket
+# Profile Racket
 
-Measure before optimizing. A guess about the hot spot is usually wrong; a
-profile tells you where time actually goes, so you change the one place that
-matters and leave the rest simple. Work from cheap to detailed: `time` for a
-single number, the statistical `profile` for a breakdown, `contract-profile`
-when contracts are suspect.
+Measure before you optimize. A guess about the hot spot is usually wrong. A
+profile tells you where the time goes, so you change the one place that
+matters and leave the rest simple. Work from the cheap tool to the detailed
+tool: `time` for a single number, the statistical `profile` for a
+breakdown, and `contract-profile` when you suspect the contracts.
 
-For the profiler's exact signatures, the renderer options, and the timing
-and memory primitives, read `reference.md` in this skill directory.
+For the exact signatures of the profiler, the renderer options, and the
+timing and memory primitives, read `reference.md` in this skill directory.
 
 ## Quick timing
 
-`time` prints cpu / real / gc milliseconds for one expression and returns its
-value; `time-apply` returns the result plus the three numbers as values:
+`time` prints the cpu, real, and gc milliseconds for one expression and
+returns its value. `time-apply` returns the result plus the three numbers as
+values:
 
 ```racket
 (time (work))                         ; cpu time: 76 real time: 80 gc time: 8
@@ -25,15 +26,16 @@ value; `time-apply` returns the result plus the three numbers as values:
   (printf "cpu=~a gc=~a\n" cpu gc))
 ```
 
-Read the **gc** column: a large gc share means the answer is *allocation*,
-not computation — reduce consing before micro-optimizing the arithmetic. Run
-`time` two or three times; the first includes JIT/expansion warmup.
+Read the **gc** column. A large gc share means that the answer is
+*allocation*, not computation. Reduce the consing before you micro-optimize
+the arithmetic. Run `time` two or three times. The first run includes the
+JIT and expansion warmup.
 
 ## The statistical profiler
 
-`profile` samples the stack on a timer, so it shows where time concentrates
-without instrumenting every call. Wrap an expression with the macro, or a
-thunk with `profile-thunk`:
+`profile` samples the stack on a timer. So it shows where the time
+concentrates, with no instrumentation of every call. Wrap an expression with
+the macro, or a thunk with `profile-thunk`:
 
 ```racket
 (require profile)
@@ -42,17 +44,17 @@ thunk with `profile-thunk`:
 (profile-thunk (lambda () (work)) #:order 'total)
 ```
 
-Key options:
+The key options:
 
-- **`#:delay`** — seconds between samples (default `0.05`); lower it for
-  short runs to collect more samples.
-- **`#:repeat`** — run the body N times for more samples and to amortize
+- **`#:delay`**: the seconds between samples (the default is `0.05`). Lower
+  it for a short run, to collect more samples.
+- **`#:repeat`**: run the body N times, for more samples and to amortize the
   warmup.
-- **`#:order`** — `'topological` (default, groups by call structure),
+- **`#:order`**: `'topological` (the default, in groups by call structure),
   `'self`, or `'total`.
-- **`#:use-errortrace?`** — line-precise attribution (see below).
+- **`#:use-errortrace?`**: attribution per line (see below).
 
-### Reading the report
+### How to read the report
 
 ```
 Total cpu time observed: 76ms (out of 80ms)
@@ -61,18 +63,19 @@ Number of samples taken: 38 (once every 2ms)
 [1]  42(55.6%)  42(55.6%)  slow-fib /tmp/work.rkt:4:0
 ```
 
-- **Total** = time in this function *and everything it called*. **Self** =
-  time in this function's own code. Optimize the node with the largest
-  **Self** percentage — that is where the CPU actually sat.
-- **Samples taken** tells you how much to trust the percentages. Two samples prove nothing; aim for
-  dozens to hundreds. Too few → raise `#:repeat`, lower `#:delay`, or profile
-  a bigger workload.
-- The caller/callee lines around each entry show who called it and where its
-  total time went — follow them to find which path feeds a hot function.
+- **Total** is the time in this function *and in all that it called*.
+  **Self** is the time in the own code of this function. Optimize the node
+  with the largest **Self** percentage. That is where the CPU sat.
+- **Samples taken** tells you how much to trust the percentages. Two samples
+  show nothing. Aim for dozens to hundreds. If there are too few, raise
+  `#:repeat`, lower `#:delay`, or profile a larger workload.
+- The caller and callee lines around each entry show who called it and
+  where its total time went. Follow them to find the path that feeds a hot
+  function.
 
 ## raco profile
 
-Profile a whole module from the command line — no edits to the file:
+Profile a whole module from the command line, with no edit of the file:
 
 ```
 raco profile file.rkt
@@ -82,59 +85,61 @@ raco profile --delay 0.001 --repeat 5 file.rkt
 raco profile --use-errortrace file.rkt
 ```
 
-The ordering flags are `--self` / `--total` / `--topological` (default) —
-there is no `--order`. `raco profile` runs the module's `main` submodule if
-present.
+The order flags are `--self`, `--total`, and `--topological` (the default).
+There is no `--order`. `raco profile` runs the `main` submodule of the
+module if it is present.
 
-## errortrace mode — precision vs cost
+## The errortrace mode: precision against cost
 
-`#:use-errortrace?` (or `--use-errortrace`) attributes time to exact source
-positions instead of whole functions, at a large slowdown and with
-tail-call behavior changed (errortrace disables some tail-call optimization,
-so the call structure you see is not the optimized one). Use it to localize
-*within* a function the sampler flagged, not as the default.
+`#:use-errortrace?` (or `--use-errortrace`) attributes the time to exact
+source positions instead of whole functions. The cost is a large slowdown
+and a changed tail-call behavior. errortrace disables some tail-call
+optimization, so the call structure that you see is not the optimized one.
+Use it to locate the hot spot *inside* a function that the sampler flagged,
+not as the default.
 
-## contract overhead
+## The contract overhead
 
-If a profile is dominated by contract wrappers, measure it directly.
-`contract-profile` reports what fraction of run time is spent checking
-contracts and which contracts cost the most:
+If contract wrappers dominate a profile, measure them directly.
+`contract-profile` reports the fraction of the run time that the contract
+checks take, and which contracts cost the most:
 
 ```racket
 (require contract-profile)
 (contract-profile (run-workload))     ; => "Running time is 23% contracts"
 ```
 
-A high percentage means the boundary is too hot — move the contract outward,
-relax it on an internal path, or drop to `define/contract`-free code there
-(see [contracts](../contracts/SKILL.md)). Confirm with evidence before
-removing any check.
+A high percentage means that the boundary is too hot. Move the contract
+outward, relax it on an internal path, or remove `define/contract` from the
+code there (see [contracts](../contracts/SKILL.md)). Confirm with evidence
+before you remove a check.
 
 ## Memory
 
-`(current-memory-use)` returns bytes currently reachable; sample it before
-and after a phase to estimate retained memory. `time`'s gc column and
-`(current-gc-milliseconds)` measure collection time. For finer counters,
-`vector-set-performance-stats!` fills a vector with GC counts, thread stats,
-and more.
+`(current-memory-use)` returns the bytes that are reachable now. Sample it
+before and after a phase to estimate the retained memory. The gc column of
+`time` and `(current-gc-milliseconds)` measure the collection time. For
+finer counters, `vector-set-performance-stats!` fills a vector with GC
+counts, thread statistics, and more.
 
 ## Rules that prevent rework
 
 - **Profile a realistic workload.** A toy input finishes before the sampler
-  collects enough samples and exercises different paths than production —
-  size the input so the run lasts well over a second.
-- **Trust the sample count, not one run.** Check "samples taken"; if it is
-  small the percentages are noise. Raise `#:repeat`/lower `#:delay` until the
-  ranking is stable across runs.
-- **Optimize the dominant self-time node, then re-measure.** Fixing anything
-  else yields an improvement too small to notice. After each change, re-profile —
-  the hot spot shifts.
-- **Keep the simple reference implementation.** Per project standards, a
-  nontrivial optimization needs benchmark/profile evidence that it is
-  necessary, and the clear version should remain alongside it for
-  documentation and comparison.
-- **Separate allocation from computation.** A big gc column points at
-  consing; reducing allocation often beats tuning the inner arithmetic.
-- **Measure contract cost before deleting contracts.** Use `contract-profile`
-  to prove a boundary is the bottleneck rather than removing safety on a hunch
-  ([contracts](../contracts/SKILL.md)).
+  collects enough samples, and it exercises different paths from
+  production. Size the input so the run lasts well over a second.
+- **Trust the sample count, not one run.** Check "samples taken". If it is
+  small, the percentages are noise. Raise `#:repeat` or lower `#:delay`
+  until the ranking is stable across runs.
+- **Optimize the dominant self-time node, then measure again.** A fix at
+  any other place gives an improvement that is too small to see. After each
+  change, profile again. The hot spot moves.
+- **Keep the simple reference implementation.** Per the project standards, a
+  nontrivial optimization needs benchmark or profile evidence that it is
+  necessary, and the clear version must stay beside it for documentation
+  and comparison.
+- **Separate the allocation from the computation.** A large gc column points
+  at consing. A reduction of the allocation often beats a tune of the inner
+  arithmetic.
+- **Measure the contract cost before you delete contracts.** Use
+  `contract-profile` to show that a boundary is the bottleneck. Do not
+  remove safety on a guess ([contracts](../contracts/SKILL.md)).

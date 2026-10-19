@@ -1,39 +1,39 @@
 ---
-description: Concurrency and parallelism in Racket — green threads, synchronous channels and thread mailboxes, async-channels, semaphores, the synchronizable-event system (sync, handle-evt, choice-evt, alarm-evt), real parallelism with futures and places, and resource lifecycle with custodians. Use when coordinating threads, choosing a communication mechanism, waiting on multiple events, parallelizing CPU work, or cleaning up groups of threads/ports.
+description: Concurrency and parallelism in Racket. Covers green threads, synchronous channels and thread mailboxes, async channels, semaphores, the synchronizable-event system (sync, handle-evt, choice-evt, alarm-evt), real parallelism with futures and places, and the resource life cycle with custodians. Use when you coordinate threads, when you choose a communication mechanism, when you wait on several events, when you parallelize CPU work, or when you clean up a group of threads or ports.
 allowed-tools: Read, Grep, Glob
 ---
 
-# Concurrency and Parallelism in Racket
+# Concurrency and parallelism in Racket
 
-Racket separates two things people conflate:
+Racket separates two things that people confuse:
 
-For exact signatures across threads, channels, semaphores, and the
-synchronizable-event system, read `reference.md` in this skill directory.
+For the exact signatures of the threads, the channels, the semaphores, and
+the synchronizable-event system, read `reference.md` in this skill directory.
 
-- **Concurrency** — `thread` creates *green threads* that interleave on one
-  OS thread within a place. They are cheap and preemptively scheduled, but do
-  **not** run simultaneously, so they give responsiveness and structure, not
-  CPU speedup.
-- **Parallelism** — `future` and `place` actually use multiple cores.
-  `places` have separate memory and talk by message; `futures` parallelize
-  work that allocates little and avoids unsafe operations ("future-safe",
-  defined below).
+- **Concurrency.** `thread` creates *green threads* that interleave on one OS
+  thread inside a place. They are cheap, and the scheduler preempts them.
+  But they do **not** run at the same time. So they give responsiveness and
+  structure, not CPU speed.
+- **Parallelism.** `future` and `place` use several cores. A `place` has its
+  own memory and talks by message. A `future` parallelizes work that
+  allocates little and avoids unsafe operations ("future-safe", defined
+  below).
 
-Pick by need: threads to *organize* concurrent activity, futures/places to
-*speed up* CPU-bound work.
+Pick by need. Use threads to *organize* concurrent activity. Use futures or
+places to *speed up* CPU-bound work.
 
 ## Threads
 
 ```racket
 (define t (thread (lambda () (do-work))))
-(thread-wait t)                  ; block until t finishes
-(break-thread t)                 ; request cancellation (raises exn:break in t)
-(kill-thread t)                  ; force-terminate (no cleanup) — prefer break
+(thread-wait t)                  ; wait until t finishes
+(break-thread t)                 ; request a cancellation (raises exn:break in t)
+(kill-thread t)                  ; force a stop (no cleanup). Prefer break.
 (sleep 0.1)                      ; yield for a while
 ```
 
-Cooperative cancellation is cleaner than `kill-thread`: have the thread guard
-with `exn:break?` so it can release resources:
+Cooperative cancellation is cleaner than `kill-thread`. Let the thread guard
+with `exn:break?`, so it can release its resources:
 
 ```racket
 (thread (lambda ()
@@ -41,13 +41,13 @@ with `exn:break?` so it can release resources:
             (let loop () (sleep 0.01) (loop)))))
 ```
 
-## Communicating between threads
+## Communication between threads
 
-Prefer passing messages to sharing mutable state. Three mechanisms:
+Prefer messages to shared mutable state. There are three mechanisms:
 
-- **Synchronous channels** (`make-channel`) — a *rendezvous*: `channel-put`
-  blocks until another thread `channel-get`s, and vice versa. No buffer; the
-  hand-off itself synchronizes the two threads.
+- **Synchronous channels** (`make-channel`) are a *rendezvous*. `channel-put`
+  waits until an other thread calls `channel-get`, and the reverse. There is
+  no buffer. The hand-off itself synchronizes the two threads.
 
   ```racket
   (define ch (make-channel))
@@ -55,82 +55,85 @@ Prefer passing messages to sharing mutable state. Three mechanisms:
   (channel-get ch)               ; => 'hi
   ```
 
-- **Thread mailboxes** (`thread-send`/`thread-receive`) — each thread has an
-  asynchronous queue; the sender never blocks. Good for actor-style workers.
+- **Thread mailboxes** (`thread-send` and `thread-receive`). Each thread has
+  an asynchronous queue. The sender never waits. This is good for workers in
+  the actor style.
 
   ```racket
   (define w (thread (lambda () (let loop () (handle (thread-receive)) (loop)))))
   (thread-send w 'task)
   ```
 
-- **Async channels** (`racket/async-channel`) — a buffered channel:
-  `async-channel-put` returns immediately, `async-channel-get` blocks when
-  empty. Use when the sender must never block waiting for the receiver
-  (the buffer is unbounded by default).
+- **Async channels** (`racket/async-channel`) are buffered channels.
+  `async-channel-put` returns at once. `async-channel-get` waits when the
+  channel is empty. Use them when the sender must never wait for the
+  receiver. The buffer is unbounded by default.
 
 ## Synchronization
 
 When threads must share mutable state, guard the critical section with a
-semaphore — `call-with-semaphore` acquires and *always* releases, even on
-escape:
+semaphore. `call-with-semaphore` acquires it and *always* releases it, also
+on an escape:
 
 ```racket
 (define sem (make-semaphore 1))         ; 1 = a mutex
 (call-with-semaphore sem (lambda () (set! counter (add1 counter))))
 ```
 
-Even so, message-passing with immutable data is usually the better design: it
-keeps state owned by one thread and removes the lock entirely.
+Even so, messages with immutable data are usually the better design. One
+thread owns the state, and the lock disappears.
 
-## Synchronizable events — the unifying idea
+## Synchronizable events: the idea that unifies all
 
-Almost everything waitable is an **event**: channels, semaphores, threads
-(their death), ports, timeouts. `sync` blocks until one event is ready and
-returns its value; this is Racket's `select`:
+Almost everything that you can wait on is an **event**: a channel, a
+semaphore, a thread (its end), a port, a timeout. `sync` waits until one
+event is ready, and it returns the value of that event. This is the `select`
+of Racket:
 
 ```racket
 (sync (handle-evt ch1 (lambda (v) (list 'from-1 v)))   ; post-process the result
       (handle-evt ch2 (lambda (v) (list 'from-2 v))))
-(sync/timeout 0.5 some-evt)             ; => #f if nothing ready in 0.5s
+(sync/timeout 0.5 some-evt)             ; => #f if nothing is ready in 0.5 s
 ```
 
-Key combinators:
+The key combinators:
 
-- **`handle-evt`** / **`wrap-evt`** — run a procedure on the ready value.
-  `handle-evt` preserves tail position (its proc may `sync` again);
-  `wrap-evt`'s proc must not sync.
-- **`choice-evt`** — ready when any sub-event is (the variadic `sync` already
-  does this).
-- **`alarm-evt`** — becomes ready at an absolute time (ms); for timeouts.
-- **`guard-evt`** / **`nack-guard-evt`** — build the event lazily at sync
-  time; the NACK (negative-acknowledgment) form learns if it *wasn't*
-  chosen (to cancel work).
-- **`always-evt`** / **`never-evt`** — immediately ready / never ready.
+- **`handle-evt`** and **`wrap-evt`** run a procedure on the ready value.
+  `handle-evt` keeps the tail position (its procedure can `sync` again). The
+  procedure of `wrap-evt` must not sync.
+- **`choice-evt`** is ready when one of its sub-events is ready. The variadic
+  `sync` already does this.
+- **`alarm-evt`** becomes ready at an absolute time (in ms). Use it for a
+  timeout.
+- **`guard-evt`** and **`nack-guard-evt`** build the event at sync time. The
+  NACK (negative acknowledgment) form learns whether it *was not* chosen, so
+  it can cancel work.
+- **`always-evt`** is ready at once. **`never-evt`** is never ready.
 
-An async-channel and a thread are themselves events: `(sync ac)` yields a
-received value; `(sync (thread-dead-evt t))` waits for `t` to end.
+An async channel and a thread are events too. `(sync ac)` gives a received
+value. `(sync (thread-dead-evt t))` waits for the end of `t`.
 
 ## Real parallelism
 
-### Futures — parallel expressions
+### Futures: parallel expressions
 
-`future` runs a thunk in parallel if it stays "future-safe" (arithmetic,
-vector/flonum ops, no I/O, limited allocation); `touch` waits for the result.
-A future that hits an unsafe operation blocks until `touch`ed on the main
-thread.
+`future` runs a thunk in parallel if the thunk stays "future-safe"
+(arithmetic, vector and flonum operations, no I/O, limited allocation).
+`touch` waits for the result. A future that reaches an unsafe operation waits
+until the main thread calls `touch` on it.
 
 ```racket
 (require racket/future)
 (define fs (for/list ([i 4]) (future (lambda () (heavy-compute i)))))
-(map touch fs)                          ; results, computed across cores
-(processor-count)                       ; available hardware threads
+(map touch fs)                          ; the results, computed across the cores
+(processor-count)                       ; the available hardware threads
 ```
 
-### Places — parallel processes with separate memory
+### Places: parallel processes with separate memory
 
-A `place` runs a body on its own OS thread with its own heap; you communicate
-only through its place-channel, sending allowable (mostly immutable/flat)
-messages:
+A `place` runs a body on its own OS thread with its own heap. You
+communicate only through its place channel, with messages that are permitted
+(mostly immutable or flat values):
 
 ```racket
 (require racket/place)
@@ -139,45 +142,47 @@ messages:
             (place-channel-put pch (* n n))))
 (place-channel-put p 9)
 (place-channel-get p)                   ; => 81
-(place-wait p)                          ; wait for the place to exit
+(place-wait p)                          ; wait for the exit of the place
 ```
 
-**A `place` body re-instantiates its enclosing module in the new place**, so
-any module top-level side effects run again there. Keep place code in a
-dedicated module or a submodule, and keep top-level effects under
-`(module+ main …)`, or you will see duplicated output and re-run setup.
-`place-message-allowed?` checks whether a value can cross.
+**A `place` body instantiates its module again in the new place.** So each
+side effect at the top level of the module runs again there. Keep the place
+code in a dedicated module or submodule, and keep the top-level effects under
+`(module+ main …)`. Otherwise you see duplicated output and a second run of
+the setup. `place-message-allowed?` checks whether a value can cross.
 
-## Resource lifecycle: custodians
+## The resource life cycle: custodians
 
-A custodian owns the threads, ports, and places created under it; shutting it
-down reclaims them all at once — the clean way to bound a subsystem's
-lifetime:
+A custodian owns the threads, the ports, and the places created under it. A
+shutdown of the custodian reclaims them all at once. That is the clean way
+to bound the lifetime of a subsystem:
 
 ```racket
 (define cust (make-custodian))
 (parameterize ([current-custodian cust])
   (thread (lambda () (serve))))         ; this thread belongs to cust
-(custodian-shutdown-all cust)           ; kills it (and everything else under cust)
+(custodian-shutdown-all cust)           ; kills it, and everything else under cust
 ```
 
 ## Rules that prevent rework
 
-- **Message-passing over shared state.** Give each piece of state one owning
-  thread and communicate by channel/mailbox; it removes most locks and races
-  by keeping side effects isolated in one thread. Reach for a semaphore only for a genuine
-  shared critical section, via `call-with-semaphore`.
-- **Threads are concurrency, not speedup.** Green threads interleave on one
-  core. For CPU-bound work use `future` (shared heap, future-safe ops) or
-  `place` (separate heap, any code); don't expect `thread` to use more cores.
-- **`sync` is select — wait on events, don't poll.** Combine channels,
-  timeouts (`alarm-evt`/`sync/timeout`), and thread death into one `sync`
-  instead of spinning with `sleep`.
+- **Messages over shared state.** Give each piece of state one owner thread,
+  and communicate by channel or mailbox. That removes most locks and races,
+  because the side effects stay in one thread. Use a semaphore only for a
+  real shared critical section, through `call-with-semaphore`.
+- **Threads are concurrency, not speed.** Green threads interleave on one
+  core. For CPU-bound work, use `future` (a shared heap, future-safe
+  operations) or `place` (a separate heap, any code). Do not expect `thread`
+  to use more cores.
+- **`sync` is select. Wait on events. Do not poll.** Combine channels,
+  timeouts (`alarm-evt`, `sync/timeout`), and the end of a thread in one
+  `sync`. Do not spin with `sleep`.
 - **Prefer `break-thread` to `kill-thread`.** Cooperative cancellation lets a
-  thread clean up via `exn:break?`; killing leaks half-released resources.
-- **Keep place code out of module top level.** A place re-runs the module;
-  isolate its body and put effects under `module+ main` so they don't execute
-  twice.
-- **Bound subsystems with a custodian.** Create a subsystem's threads/ports
-  under a fresh custodian so one `custodian-shutdown-all` tears the whole
-  thing down deterministically.
+  thread clean up through `exn:break?`. A kill leaks half-released
+  resources.
+- **Keep the place code out of the top level of the module.** A place runs
+  the module again. Isolate its body, and put the effects under `module+
+  main`, so they do not run twice.
+- **Bound a subsystem with a custodian.** Create the threads and the ports of
+  a subsystem under a fresh custodian. Then one `custodian-shutdown-all`
+  tears the whole subsystem down, with a predictable result.

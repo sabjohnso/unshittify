@@ -1,52 +1,54 @@
 ---
-description: "Iterate and build data with Racket for-loops and sequences — the for family (for/list, for/vector, for/hash, for/fold, for/sum), iteration clauses (#:when, #:break, #:final, parallel bindings), sequence constructors (in-range, in-list, in-vector, in-hash, in-naturals), racket/sequence operations, and the three ways to define new sequences (prop:sequence, make-do-sequence, define-sequence-syntax). Use when writing a loop or comprehension, choosing a sequence constructor, or making a value iterable."
+description: "Iterate and build data with the Racket for loops and sequences. Covers the for family (for/list, for/vector, for/hash, for/fold, for/sum), the iteration clauses (#:when, #:break, #:final, parallel bindings), the sequence constructors (in-range, in-list, in-vector, in-hash, in-naturals), the racket/sequence operations, and the three ways to define a new sequence (prop:sequence, make-do-sequence, define-sequence-syntax). Use when you write a loop or a comprehension, when you choose a sequence constructor, or when you make a value iterable."
 allowed-tools: Read, Grep, Glob
 ---
 
-# For-loops and Sequences
+# For loops and sequences
 
-A `for` loop walks one or more **sequences**, binding a variable to each
-element. The plain `for` runs its body for effect; the `for/…`
-comprehensions collect the body's results into a list, vector, hash, or fold.
-Sequences are the common iteration protocol — lists, vectors, strings,
-hashes, ranges, ports, and your own types all flow through the same `for`.
+A `for` loop walks one or more **sequences**, and it binds a variable to
+each element. The plain `for` runs its body for the effect. The `for/…`
+comprehensions collect the results of the body into a list, a vector, a
+hash, or a fold. A sequence is the common iteration protocol. Lists,
+vectors, strings, hashes, ranges, ports, and your own types all flow through
+the same `for`.
 
-For the exact `for`-clause grammar, the full sequence-constructor list, and
-the three ways to define a sequence, read `reference.md` in this skill
-directory.
+For the exact grammar of a `for` clause, the full list of sequence
+constructors, and the three ways to define a sequence, read `reference.md`
+in this skill directory.
 
 ```racket
-(for ([x (in-list '(a b c))]) (displayln x))          ; effect
+(for ([x (in-list '(a b c))]) (displayln x))          ; an effect
 (for/list ([x (in-range 5)]) (* x x))                 ; => '(0 1 4 9 16)
 ```
 
 ## The for family
 
-Pick the variant by what you want back:
+Pick the variant by the result that you want:
 
-| Form                     | Result                                      |
-|--------------------------|---------------------------------------------|
-| `for`                    | `(void)` — run body for effect              |
-| `for/list`               | a list of body values                       |
-| `for/vector`             | a vector (`#:length` to preallocate)        |
-| `for/hash` `for/hasheq`  | a hash; body returns `(values key val)`     |
-| `for/fold`               | one or more accumulators (below)            |
-| `for/sum` `for/product`  | numeric reduction of body values            |
-| `for/and` `for/or`       | boolean reduction (short-circuits)          |
-| `for/first` `for/last`   | the first / last body value                 |
-| `for/lists`              | several parallel lists from a `values` body |
+| Form                     | Result                                        |
+|--------------------------|-----------------------------------------------|
+| `for`                    | `(void)`. It runs the body for the effect     |
+| `for/list`               | a list of the body values                     |
+| `for/vector`             | a vector (`#:length` allocates it in advance) |
+| `for/hash` `for/hasheq`  | a hash. The body returns `(values key val)`   |
+| `for/fold`               | one or more accumulators (below)              |
+| `for/sum` `for/product`  | a numeric reduction of the body values        |
+| `for/and` `for/or`       | a boolean reduction (it short-circuits)       |
+| `for/first` `for/last`   | the first or the last body value              |
+| `for/lists`              | several parallel lists from a `values` body   |
 
-Each has a `for*/…` sibling that nests the clauses (a Cartesian product)
-instead of iterating them in parallel.
+Each one has a `for*/…` sibling that nests the clauses (a Cartesian
+product) and does not iterate them in parallel.
 
-There is **no `for/string` or `for/bytes`** — build those from `for/list`:
-`(list->string (for/list ([c (in-string s)]) (char-upcase c)))`, and
-`list->bytes` likewise. (`2htdp/abstraction` defines a `for/string`, but it
-is a teaching-language form, not part of `racket`.)
+There is **no `for/string` and no `for/bytes`**. Build those from
+`for/list`: `(list->string (for/list ([c (in-string s)]) (char-upcase c)))`,
+and `list->bytes` in the same way. (`2htdp/abstraction` defines a
+`for/string`, but it is a form of a teaching language, not part of
+`racket`.)
 
-## for/fold — accumulate
+## for/fold: accumulate
 
-`for/fold` threads accumulators through the loop; the body returns a new
+`for/fold` threads accumulators through the loop. The body returns a new
 value per accumulator with `values`, and `#:result` shapes the final answer:
 
 ```racket
@@ -55,22 +57,23 @@ value per accumulator with `values`, and `#:result` shapes the final answer:
   (values (+ sum x) (+ cnt 1)))            ; => 4  (the average)
 ```
 
-`for/foldr` folds from the right. `for/fold` is the general tool — the other
-comprehensions are specializations of it.
+`for/foldr` folds from the right. `for/fold` is the general tool. The other
+comprehensions are special cases of it.
 
-## Iteration clauses
+## The iteration clauses
 
 Inside the clause list, after the bindings:
 
-- **Parallel bindings** iterate together, stopping at the shortest:
-  `([x (in-range 10)] [y (in-naturals 100)])`.
-- **`#:when cond` / `#:unless cond`** filter; bindings *before* them are in
-  scope, and a binding *after* `#:when` restarts iteration (it nests).
-- **`#:break cond`** stops the loop (excluding the current element);
+- **Parallel bindings** iterate together, and they stop at the shortest
+  sequence: `([x (in-range 10)] [y (in-naturals 100)])`.
+- **`#:when cond` and `#:unless cond`** filter. The bindings *before* them
+  are in scope. A binding *after* `#:when` starts a new iteration (it
+  nests).
+- **`#:break cond`** stops the loop (without the current element).
   **`#:final cond`** runs this iteration, then stops.
-- **`#:do [body ...]`** runs side-effecting code between clauses.
-- **`(k v)` patterns** bind multiple values per step, e.g. from `in-hash` or
-  `in-indexed`.
+- **`#:do [body ...]`** runs code with side effects between the clauses.
+- **A `(k v)` pattern** binds several values per step, for example from
+  `in-hash` or `in-indexed`.
 
 ```racket
 (for/list ([x (in-range 10)] [y (in-naturals 100)]
@@ -80,34 +83,34 @@ Inside the clause list, after the bindings:
 (for/list ([x (in-naturals)] #:break (> x 4)) x)   ; => '(0 1 2 3 4)
 ```
 
-`for*` is the nested form: `(for*/list ([x '(1 2)] [y '(a b)]) (list x y))`
-yields all four combinations.
+`for*` is the nested form. `(for*/list ([x '(1 2)] [y '(a b)]) (list x y))`
+gives all four combinations.
 
-## Sequence constructors
+## The sequence constructors
 
 The `in-…` forms describe how to iterate a value. **Prefer the specific
-constructor** — `(in-list xs)` not bare `xs` — because `for` then compiles a
-specialized, allocation-free loop; a bare value falls back to the generic
+constructor**, `(in-list xs)` and not a bare `xs`. Then `for` compiles a
+specialized loop with no allocation. A bare value falls back to the generic
 `sequence?` dispatch.
 
-| Constructor                                                   | Iterates                                  |
-|---------------------------------------------------------------|-------------------------------------------|
-| `(in-range end)` / `(in-range a b step)`                      | numbers                                   |
-| `(in-list xs)` `(in-vector v)` `(in-string s)` `(in-bytes b)` | elements                                  |
-| `(in-hash h)` / `in-hash-keys` / `in-hash-values`             | hash entries                              |
-| `(in-naturals [start])`                                       | `0,1,2,…` — a counter to pair in parallel |
-| `(in-cycle seq …)`                                            | the sequence(s), forever                  |
-| `(in-value v)`                                                | exactly one element (`v`)                 |
-| `(in-indexed seq)`                                            | `(values element index)`                  |
-| `(in-sequences s …)` / `(in-parallel s …)`                    | concatenate / zip                         |
-| `(in-port read p)` `(in-lines p)`                             | a port's data                             |
+| Constructor                                                   | Iterates                                      |
+|---------------------------------------------------------------|-----------------------------------------------|
+| `(in-range end)` / `(in-range a b step)`                      | numbers                                       |
+| `(in-list xs)` `(in-vector v)` `(in-string s)` `(in-bytes b)` | the elements                                  |
+| `(in-hash h)` / `in-hash-keys` / `in-hash-values`             | the hash entries                              |
+| `(in-naturals [start])`                                       | `0,1,2,…`, a counter to pair in parallel      |
+| `(in-cycle seq …)`                                            | the sequences, without an end                 |
+| `(in-value v)`                                                | exactly one element (`v`)                     |
+| `(in-indexed seq)`                                            | `(values element index)`                      |
+| `(in-sequences s …)` / `(in-parallel s …)`                    | a concatenation / a zip                       |
+| `(in-port read p)` `(in-lines p)`                             | the data of a port                            |
 
-`in-naturals` paired with another sequence is the idiomatic index counter.
+`in-naturals` paired with an other sequence is the idiomatic index counter.
 
-## racket/sequence operations
+## The racket/sequence operations
 
-`(require racket/sequence)` for sequence-level combinators that work on any
-sequence without realizing it to a list first:
+`(require racket/sequence)` gives sequence-level combinators that work on
+every sequence, with no conversion to a list first:
 
 ```racket
 (sequence->list (in-range 3))                    ; '(0 1 2)
@@ -119,16 +122,16 @@ sequence without realizing it to a list first:
 ```
 
 `empty-sequence`, `sequence-append`, `sequence-fold`, and `sequence-length`
-round out the set.
+complete the set.
 
-## Defining new sequences
+## Define a new sequence
 
-Three mechanisms, from simplest to fastest:
+There are three mechanisms, from the simplest to the fastest:
 
-### 1. `prop:sequence` — make a struct iterable
+### 1. `prop:sequence`: make a struct iterable
 
-When a struct just wraps something already iterable, delegate. This is the
-easiest and usually enough (see `../structs/SKILL.md`):
+When a struct only wraps something that is already iterable, delegate. This
+is the easiest way, and it is usually enough (see `../structs/SKILL.md`):
 
 ```racket
 (struct ring (items)
@@ -137,36 +140,37 @@ easiest and usually enough (see `../structs/SKILL.md`):
 (for/list ([x (ring '(a b c))]) x)               ; => '(a b c)
 ```
 
-### 2. `make-do-sequence` — a sequence value from position functions
+### 2. `make-do-sequence`: a sequence value from position functions
 
-For iteration not backed by an existing collection, return a sequence whose
-thunk supplies the position protocol: element-from-position, next-position,
-initial-position, and continue-while predicates.
+For an iteration with no existing collection behind it, return a sequence
+whose thunk gives the position protocol: the element from a position, the
+next position, the initial position, and the predicates that decide whether
+to continue.
 
 ```racket
 (define (in-countdown n)
   (make-do-sequence
    (lambda ()
-     (values (lambda (pos) pos)        ; pos -> element
-             (lambda (pos) (sub1 pos)) ; next position
-             n                         ; initial position
-             (lambda (pos) (> pos 0))  ; continue while true
+     (values (lambda (pos) pos)        ; the element from a position
+             (lambda (pos) (sub1 pos)) ; the next position
+             n                         ; the initial position
+             (lambda (pos) (> pos 0))  ; continue while this is true
              #f #f))))
 (for/list ([x (in-countdown 5)]) x)              ; => '(5 4 3 2 1)
 ```
 
-### 3. `define-sequence-syntax` — an `in-X` that inlines in `for`
+### 3. `define-sequence-syntax`: an `in-X` that `for` inlines
 
 For a hot, reusable iterator, define a macro that the compiler splices
-*inline* into the loop via `:do-in` (no per-step closure), with a procedure
-**fallback** for when it is used as an ordinary sequence value. Always
-provide the fallback:
+*inline* into the loop through `:do-in` (no closure per step), with a
+procedure **fallback** for a use as an ordinary sequence value. Always give
+the fallback:
 
 ```racket
 (require (for-syntax racket/base))
 (define-sequence-syntax in-evens
-  (lambda () #'in-evens/proc)                     ; fallback value form
-  (lambda (stx)                                   ; inline expansion in `for`
+  (lambda () #'in-evens/proc)                     ; the fallback value form
+  (lambda (stx)                                   ; the inline expansion in `for`
     (syntax-case stx ()
       [[(x) (_ hi)]
        #'[(x) (:do-in ([(h) hi]) #t ([i 0]) (< i h)
@@ -174,24 +178,26 @@ provide the fallback:
 (define (in-evens/proc hi) (sequence-map (lambda (i) (* 2 i)) (in-range hi)))
 ```
 
-For lazy or coroutine-style sequences, `in-generator` (from
-`racket/generator`) is an easier alternative: a body that `yield`s values
-becomes a sequence (see `../macros/SKILL.md` only if you need
-compile-time inlining).
+For a lazy or coroutine-style sequence, `in-generator` (from
+`racket/generator`) is an easier alternative. A body that `yield`s values
+becomes a sequence. See `../macros/SKILL.md` only if you need the
+compile-time inline expansion.
 
 ## Rules that prevent rework
 
-- **Use specific sequence constructors for speed.** Write `(in-list xs)`/`(in-vector v)`, not
-  the bare value — `for` then emits a specialized loop. The bare form works
-  but goes through generic dispatch and allocates.
-- **`for/fold` bodies return `values`.** One value per accumulator, in order;
-  use `#:result` to project the final answer instead of post-processing.
-- **`#:when`/`#:unless` nest; they don't just filter.** A binding after a
-  `#:when` re-iterates for each surviving outer element — exactly `for*`-style
-  nesting; order clauses accordingly.
-- **Pick the comprehension, don't rebuild it.** `for/sum`, `for/hash`,
-  `for/first` already exist; reach for `for/fold` only when none fit.
-- **Make structs iterable with `prop:sequence` first.** Drop to
-  `make-do-sequence` only for non-collection iteration, and to
-  `define-sequence-syntax` only when profiling (`../profiling/SKILL.md`)
-  shows the loop is hot — and always give it a proc fallback.
+- **Use the specific sequence constructors for speed.** Write `(in-list
+  xs)` or `(in-vector v)`, not the bare value. Then `for` emits a
+  specialized loop. The bare form works, but it goes through the generic
+  dispatch and it allocates.
+- **A `for/fold` body returns `values`.** One value per accumulator, in
+  order. Use `#:result` to project the final answer. Do not post-process it.
+- **`#:when` and `#:unless` nest. They do not only filter.** A binding after
+  a `#:when` iterates again for each outer element that survives. That is
+  exactly the `for*` nest. Order the clauses accordingly.
+- **Pick the comprehension. Do not build it again.** `for/sum`, `for/hash`,
+  and `for/first` already exist. Use `for/fold` only when none of them fits.
+- **Make a struct iterable with `prop:sequence` first.** Drop to
+  `make-do-sequence` only for an iteration with no collection behind it.
+  Drop to `define-sequence-syntax` only when a profile
+  (`../profiling/SKILL.md`) shows that the loop is hot, and always give it a
+  procedure fallback.

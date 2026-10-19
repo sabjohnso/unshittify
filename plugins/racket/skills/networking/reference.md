@@ -1,22 +1,22 @@
 # Networking / Web Reference — signatures
 
-Companion to SKILL.md. Source: docs.racket-lang.org/reference/ (networking)
-and docs.racket-lang.org/web-server/. Checked against Racket v9.1 [cs].
+This file accompanies SKILL.md. Sources: docs.racket-lang.org/reference/ (networking)
+and docs.racket-lang.org/web-server/. The signatures agree with Racket v9.1 [cs].
 
 ## racket/tcp
 
 ```racket
 (tcp-listen port-no [max-allow-wait reuse? hostname-or-#f]) -> tcp-listener?
-   ; port-no 0 => an ephemeral port chosen by the OS
-(tcp-accept listener) -> (values input-port? output-port?)   ; blocks
+   ; port-no 0 => the OS chooses an ephemeral port
+(tcp-accept listener) -> (values input-port? output-port?)   ; waits
 (tcp-accept/enable-break listener) -> (values in out)
 (tcp-accept-evt listener) -> evt?                ; ready -> (list in out)
 (tcp-connect hostname port-no [local-host local-port]) -> (values in out)
 (tcp-connect/enable-break ...) 
 (tcp-addresses tcp-port-or-listener [port-numbers?])
-   -> (values local-host remote-host) or 4 values with port numbers
+   -> (values local-host remote-host) or 4 values, if port-numbers? is true
 (tcp-close listener)   (tcp-listener? v)   (tcp-port? v)
-(tcp-abandon-port tcp-port)                      ; close one direction
+(tcp-abandon-port tcp-port)                      ; closes one direction
 ```
 
 ## racket/udp
@@ -25,13 +25,13 @@ and docs.racket-lang.org/web-server/. Checked against Racket v9.1 [cs].
 (udp-open-socket [family-hostname family-port]) -> udp?
 (udp-bind! sock hostname-or-#f port-no [reuse?])
 (udp-connect! sock hostname-or-#f port-no-or-#f)
-(udp-send-to sock hostname port-no bytes [start end])   ; unconnected
-(udp-send    sock bytes [start end])                    ; connected
-(udp-receive! sock bytes [start end]) -> (values len host port)   ; blocks
-(udp-receive!* sock bytes ...)                  ; non-blocking, #f len if none
+(udp-send-to sock hostname port-no bytes [start end])   ; socket not connected
+(udp-send    sock bytes [start end])                    ; socket connected
+(udp-receive! sock bytes [start end]) -> (values len host port)   ; waits
+(udp-receive!* sock bytes ...)                  ; does not wait, len is #f if no datagram
 (udp-send-to-evt sock host port bytes) -> evt?  (udp-receive!-evt sock bytes) -> evt?
 (udp-addresses sock [port-numbers?])   (udp-close sock)   (udp? v)
-(udp-multicast-join-group! sock addr iface)  ; + leave / loopback / ttl / interface
+(udp-multicast-join-group! sock addr iface)  ; also leave / loopback / ttl / interface
 ```
 
 ## net/url
@@ -42,15 +42,15 @@ and docs.racket-lang.org/web-server/. Checked against Racket v9.1 [cs].
 (string->url str) -> url?      (url->string u) -> string?
 (combine-url/relative base str) -> url?
 (path->url path) -> url?       (url->path u) -> path?
-;; ports (each takes a url; "pure" drops headers, "impure" keeps them):
+;; ports (each takes a url; "pure" drops the headers, "impure" keeps them):
 (get-pure-port    u [headers #:redirections n]) -> input-port?
-(get-impure-port  u [headers]) -> input-port?       ; response incl. status+headers
+(get-impure-port  u [headers]) -> input-port?       ; response with status and headers
 (post-pure-port   u data [headers]) -> input-port?
 (post-impure-port u data [headers]) -> input-port?
 (put-pure-port u data [headers])  (delete-pure-port u [headers])
 (head-pure-port u [headers])      (head-impure-port u [headers])
-(call/input-url u connect handle [headers]) -> any   ; opens, runs handle, closes
-(purify-port in) -> string     ; read+strip an impure port's header block
+(call/input-url u connect handle [headers]) -> any   ; opens, calls handle, closes
+(purify-port in) -> string     ; reads and removes the header block of an impure port
 ```
 
 ## net/http-client
@@ -61,7 +61,7 @@ and docs.racket-lang.org/web-server/. Checked against Racket v9.1 [cs].
                [#:headers (listof string/bytes)] [#:data bytes-or-#f]
                [#:content-decode '(gzip deflate)])
    -> (values status-bytes  (listof bytes)-headers  input-port-body)
-;; connection-oriented (reuse a connection):
+;; connection-oriented (these reuse a connection):
 (http-conn-open  host [#:ssl? _ #:port _]) -> http-conn?
 (http-conn-open! conn host ...) 
 (http-conn-send! conn uri [#:method _ #:headers _ #:data _])
@@ -75,7 +75,7 @@ and docs.racket-lang.org/web-server/. Checked against Racket v9.1 [cs].
 (uri-encode str) (uri-decode str)        (uri-path-segment-encode str) ...
 (form-urlencoded->alist str) -> (listof (cons symbol string))
 (alist->form-urlencoded alist) -> string
-(current-alist-separator-mode)           ; '& vs '; vs 'amp ...
+(current-alist-separator-mode)           ; values: '& or '; or 'amp ...
 (base64-encode bytes [linesep]) -> bytes   (base64-decode bytes) -> bytes
 ```
 
@@ -84,11 +84,11 @@ and docs.racket-lang.org/web-server/. Checked against Racket v9.1 [cs].
 ```racket
 (jsexpr? v)        ; (or/c (hash/c symbol? jsexpr?) (listof jsexpr?)
                    ;       string exact-integer inexact-real boolean json-null)
-                   ; object keys are SYMBOLS ONLY: (jsexpr? (hash "n" 42)) is #f
+                   ; object keys must be symbols: (jsexpr? (hash "n" 42)) is #f
 (read-json [in])   (write-json v [out])
 (string->jsexpr str) -> jsexpr     (jsexpr->string v) -> string
-   ; both writers emit object keys in SORTED order, not insertion order
-(json-null) -> 'null               ; parameter; the value for JSON null
+   ; both writers write object keys in sorted order, not in insertion order
+(json-null) -> 'null               ; a parameter, the value for JSON null
 ```
 
 ## web-server/servlet-env
@@ -96,10 +96,10 @@ and docs.racket-lang.org/web-server/. Checked against Racket v9.1 [cs].
 ```racket
 (serve/servlet handler            ; (-> request? response?) ; or a dispatcher
   [#:port n] [#:listen-ip ip-or-#f] [#:servlet-path str]
-  [#:servlet-regexp rx]           ; which paths go to `handler` (#rx"" = all)
+  [#:servlet-regexp rx]           ; the paths that go to `handler` (#rx"" = all)
   [#:launch-browser? bool] [#:command-line? bool]   ; #:command-line? #t: no extra setup
   [#:stateless? bool] [#:server-root-path dir]
-  [#:extra-files-paths (listof dir)]                ; serve static files
+  [#:extra-files-paths (listof dir)]                ; serves static files
   [#:log-file path] [#:ssl? bool] [#:ssl-cert path] [#:ssl-key path]) -> void
 ```
 
@@ -125,8 +125,8 @@ and docs.racket-lang.org/web-server/. Checked against Racket v9.1 [cs].
    ; output-proc : (output-port -> any)
 (response/full code message seconds mime-type headers (listof bytes)) -> response?
 (response/xexpr xexpr [#:code _ #:headers _ #:mime-type _ #:preamble _]) -> response?
-   ; renders + HTML-escapes an X-expression
-(redirect-to url-string [status #:headers _]) -> response?   ; status: permanently / see-other / temporarily
+   ; renders an X-expression and escapes the HTML
+(redirect-to url-string [status #:headers _]) -> response?   ; status is permanently, see-other, or temporarily
 ```
 
 ## web-server/dispatch
@@ -139,26 +139,26 @@ and docs.racket-lang.org/web-server/. Checked against Racket v9.1 [cs].
    maybe-method     = #:method (or "get" "post" regexp ...)
 (dispatch-rules+applies [pattern handler] ... [else handler])
    -> (values dispatch url-generator applies?)   ; applies? : (request? -> boolean?)
-(dispatch-rules! ...)                        ; like dispatch-rules, mutable rule set
-(dispatch-case [pattern handler] ... [else handler])     ; dispatch fn only, no url gen
-(dispatch-url  [pattern handler] ...)                    ; url generator only
+(dispatch-rules! ...)                        ; like dispatch-rules, with a mutable rule set
+(dispatch-case [pattern handler] ... [else handler])     ; the dispatch function only, no url generator
+(dispatch-url  [pattern handler] ...)                    ; the url generator only
 (serve/dispatch dispatch) -> void
-   ; serve/servlet with #:servlet-regexp #rx"" so every request reaches dispatch
+   ; calls serve/servlet with #:servlet-regexp #rx"" so that every request reaches dispatch
 (define-container id ...)  (container? v)
-;; NOTE: there is no define-dispatch-rules. The full export list of
-;; web-server/dispatch is exactly the identifiers named in this section.
+;; NOTE: define-dispatch-rules does not exist. The export list of
+;; web-server/dispatch is the identifiers named in this section and no others.
 ```
 
 ## web-server/web-server (embed a server)
 
 ```racket
 (serve #:dispatch dispatcher [#:port n #:listen-ip _ #:max-waiting _
-       #:connection-timeout _ #:tcp@ _]) -> (-> void)     ; returns a SHUTDOWN thunk
+       #:connection-timeout _ #:tcp@ _]) -> (-> void)     ; returns a thunk that shuts down the server
 (serve/ports #:dispatch d #:ports (list n ...)) -> (-> void)
-;; dispatchers compose: web-server/dispatchers/* (filter, sequencer, files, servlet)
+;; dispatchers can combine: web-server/dispatchers/* (filter, sequencer, files, servlet)
 ```
 
 Other useful modules: `web-server/templates` (`include-template` for HTML
-templates), `web-server/formlets` (composable form handling),
-`web-server/servlet` (`send/suspend`/`send/suspend/dispatch` continuation-based
-flow), `net/cookies/server` + `net/cookies/common` (cookies).
+templates), `web-server/formlets` (forms that you can combine),
+`web-server/servlet` (`send/suspend` and `send/suspend/dispatch` for control flow
+with continuations), `net/cookies/server` and `net/cookies/common` (cookies).

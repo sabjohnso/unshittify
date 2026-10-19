@@ -1,34 +1,34 @@
 ---
-description: Render Racket graphics with racket/draw and pict, independent of any window — imperative drawing on a dc<%> (bitmap-dc%, svg-dc%, pdf-dc%, post-script-dc%, pens, brushes, dc-path%, transforms, text metrics) and composable pictures with pict (circle/text/append/superimpose, colorize/scale/rotate, pin-arrow-line connectors, pict->bitmap). Use when producing an image, a diagram, or an SVG/PDF/PostScript file, composing or measuring picts, or looking up a dc<%> or pict procedure; for the window and widgets around a canvas see ../gui/SKILL.md, and for a timer-driven redraw loop see ../canvas-animation/SKILL.md.
+description: Render Racket graphics with racket/draw and pict, with no window. Covers imperative draws on a dc<%> (bitmap-dc%, svg-dc%, pdf-dc%, post-script-dc%, pens, brushes, dc-path%, transforms, text metrics) and composable pictures with pict (circle, text, append, superimpose, colorize, scale, rotate, pin-arrow-line connectors, pict->bitmap). Use when you produce an image, a diagram, or an SVG, PDF, or PostScript file, when you compose or measure picts, or when you look up a dc<%> or pict procedure. For the window and the widgets around a canvas, see ../gui/SKILL.md. For a redraw loop that a timer drives, see ../canvas-animation/SKILL.md.
 allowed-tools: Read, Grep, Glob
 ---
 
 # Drawing: racket/draw and pict
 
-Two layers, used together:
+There are two layers, and you use them together:
 
 For the full `dc<%>` method list, the `dc-path%` and resource signatures,
 and the pict constructor catalogue, read `reference.md` in this skill
 directory.
 
-- **`racket/draw`** is imperative drawing onto a **drawing context**
-  (`dc<%>`): you set a pen and brush, then issue `draw-line`,
-  `draw-rectangle`, `draw-text`, … The same `dc<%>` API targets bitmaps,
-  GUI canvases ([gui](../gui/SKILL.md)), and vector files
-  (SVG/PDF/PostScript).
-- **`pict`** is a functional picture library built on top: a `pict` is an
-  immutable value with a bounding box, created and combined by pure functions
-  (`hc-append`, `cc-superimpose`, `colorize`). It renders to a `dc<%>` when
-  displayed.
+- **`racket/draw`** is imperative. You draw on a **drawing context**
+  (`dc<%>`). You set a pen and a brush, then you issue `draw-line`,
+  `draw-rectangle`, `draw-text`, and so on. The same `dc<%>` API targets
+  bitmaps, GUI canvases ([gui](../gui/SKILL.md)), and vector files (SVG,
+  PDF, PostScript).
+- **`pict`** is a functional picture library on top of it. A `pict` is an
+  immutable value with a bounding box. Pure functions create and combine
+  picts (`hc-append`, `cc-superimpose`, `colorize`). A pict renders to a
+  `dc<%>` when it is shown.
 
-Choose **pict** to compose and lay out pictures and diagrams declaratively;
-drop to **`racket/draw`** for pixel-level control or to produce image files.
-DrRacket shows a `pict` inline, and Scribble embeds them
+Choose **pict** to compose and lay out pictures and diagrams declaratively.
+Drop to **`racket/draw`** for pixel-level control or to produce an image
+file. DrRacket shows a `pict` inline, and Scribble embeds picts
 ([scribble-docs](../scribble-docs/SKILL.md)).
 
-## racket/draw — drawing on a dc<%>
+## racket/draw: draw on a dc<%>
 
-Get a context, set drawing state, issue commands. A `bitmap-dc%` draws
+Get a context, set the draw state, and issue commands. A `bitmap-dc%` draws
 offscreen with no window:
 
 ```racket
@@ -40,14 +40,14 @@ offscreen with no window:
 (send dc set-pen (new pen% [color "navy"] [width 2]))
 (send dc draw-ellipse 10 10 80 60)
 (send dc draw-text "hi" 20 20)
-(send bm save-file "out.png" 'png)        ; PNG/JPEG/etc.
+(send bm save-file "out.png" 'png)        ; PNG, JPEG, and other formats
 ```
 
-Other contexts: a GUI `canvas%`'s `get-dc` ([gui](../gui/SKILL.md)); and
-vector backends `svg-dc%`, `pdf-dc%`, `post-script-dc%` for
-resolution-independent files.
-The vector backends build a **stateful document** — construct with
-`[interactive #f]`, then bracket drawing with the page lifecycle:
+Other contexts: the `get-dc` of a GUI `canvas%` ([gui](../gui/SKILL.md)),
+and the vector back ends `svg-dc%`, `pdf-dc%`, and `post-script-dc%` for a
+file that is independent of the resolution. A vector back end builds a
+**stateful document**. Construct it with `[interactive #f]`, then bracket
+the draws with the page life cycle:
 
 ```racket
 (define dc (new pdf-dc% [interactive #f] [width 200] [height 150] [output "fig.pdf"]))
@@ -56,23 +56,24 @@ The vector backends build a **stateful document** — construct with
 (send dc end-page) (send dc end-doc)       ; flushes the file
 ```
 
-Key pieces of the `dc<%>` model:
+The key pieces of the `dc<%>` model:
 
-- **Pen and brush** decide outline and fill: `(set-pen pen%-or "color" w style)`,
-  `(set-brush brush%-or "color" style)`. Reuse cached instances via
-  `the-pen-list`/`the-brush-list`/`the-color-database` instead of allocating
-  per draw.
-- **Paths** (`dc-path%`) describe arbitrary shapes — `move-to`, `line-to`,
-  `curve-to`, `close` — then `(send dc draw-path p)`.
-- **State**: `translate`/`scale`/`rotate` transform the coordinate system;
-  save and restore it with `get-transformation`/`set-transformation` around a
-  block. `set-alpha` for opacity, `set-clipping-rect`/`set-clipping-region`
-  to mask, `set-smoothing` for antialiasing. Gradients via
-  `linear-gradient%`/`radial-gradient%` set as a brush.
+- **The pen and the brush** decide the outline and the fill: `(set-pen
+  pen%-or "color" w style)`, `(set-brush brush%-or "color" style)`. Use the
+  cached instances from `the-pen-list`, `the-brush-list`, and
+  `the-color-database`. Do not allocate one per draw.
+- **A path** (`dc-path%`) describes an arbitrary shape (`move-to`,
+  `line-to`, `curve-to`, `close`). Then call `(send dc draw-path p)`.
+- **The state**: `translate`, `scale`, and `rotate` transform the coordinate
+  system. Save and restore it with `get-transformation` and
+  `set-transformation` around a block. `set-alpha` sets the opacity.
+  `set-clipping-rect` and `set-clipping-region` mask. `set-smoothing` sets
+  the antialias mode. A gradient is a `linear-gradient%` or a
+  `radial-gradient%` set as a brush.
 
-## pict — composable pictures
+## pict: composable pictures
 
-Build pictures from constructors and combine them functionally:
+Build pictures from constructors, and combine them functionally:
 
 ```racket
 (require pict)
@@ -81,68 +82,70 @@ Build pictures from constructors and combine them functionally:
 (bitmap a-bitmap%)                          ; wrap a racket/draw bitmap as a pict
 ```
 
-Combine along axes or by stacking, then style:
+Combine along an axis or by a stack, then style:
 
 ```racket
-(hc-append 10 (circle 20) (disk 20))        ; horizontal, centers aligned
-(vl-append 5 (text "a") (text "bb"))        ; vertical, left edges aligned
-(cc-superimpose (rectangle 60 60) (disk 30)); overlay, centered
+(hc-append 10 (circle 20) (disk 20))        ; horizontal, with the centers aligned
+(vl-append 5 (text "a") (text "bb"))        ; vertical, with the left edges aligned
+(cc-superimpose (rectangle 60 60) (disk 30)); an overlay, centered
 (table 2 (list a b c d) cc-superimpose cc-superimpose 10 10)  ; a grid
 
-(colorize (disk 20) "red")                  ; recolor
+(colorize (disk 20) "red")                  ; a new color
 (scale (circle 10) 2)   (rotate (rectangle 30 10) 0.5)   (scale-to-fit p 40 40)
-(frame (inset p 8))                         ; border with padding
+(frame (inset p 8))                         ; a border with padding
 (linewidth 3 (circle 10))   (ghost p)   (cellophane p 0.5)  ; thicker / invisible / faint
 ```
 
-Every pict has geometry: `pict-width`, `pict-height`, `pict-ascent`,
-`pict-descent` — use them to position things precisely.
+Every pict has a geometry: `pict-width`, `pict-height`, `pict-ascent`, and
+`pict-descent`. Use them to position things precisely.
 
-### Connecting picts into diagrams
+### Connect picts into a diagram
 
-Lay out child picts, then draw connectors between them by *finding* their
+Lay out the child picts, then draw connectors between them. *Find* their
 positions in the combined picture. A find function (`cc-find`, `lt-find`,
-`cb-find`, …) returns a sub-pict's location in a base; `pin-line` /
-`pin-arrow-line` draw between two found points:
+`cb-find`, and so on) returns the location of a sub-pict in a base.
+`pin-line` and `pin-arrow-line` draw between two found points:
 
 ```racket
 (define a (disk 30)) (define b (disk 30))
 (define base (vc-append 60 a b))
-(pin-arrow-line 8 base a cb-find b ct-find) ; arrow from bottom of a to top of b
+(pin-arrow-line 8 base a cb-find b ct-find) ; an arrow from the bottom of a to the top of b
 ```
 
-- `pin-over` / `pin-under` place a pict at a coordinate without changing the
-  base's bounding box; `panorama` then grows the box to include overflow.
-- The sub-pict you pass to a find function must be the *same value* embedded
-  in the base — keep a binding to it (don't reconstruct an equal pict).
+- `pin-over` and `pin-under` put a pict at a coordinate. They do not change
+  the bounding box of the base. `panorama` then grows the box to include the
+  overflow.
+- The sub-pict that you pass to a find function must be the *same value*
+  that is embedded in the base. Keep a binding to it. Do not construct an
+  equal pict again.
 
-### Rendering and bridging back
+### Render, and go back the other way
 
-`(pict->bitmap p)` rasterizes a pict to a `bitmap%`; `(dc draw-proc w h)`
-goes the other way — wraps imperative `dc<%>` drawing as a pict of size
-`w×h`, so you can drop custom `racket/draw` code into a pict composition.
+`(pict->bitmap p)` rasterizes a pict to a `bitmap%`. `(dc draw-proc w h)`
+goes the other way. It wraps imperative `dc<%>` draws as a pict of size
+`w×h`. So you can put custom `racket/draw` code into a pict composition.
 Sub-libraries add effects: `pict/color` (`red`, `green`, …), `pict/shadow`
-(`shadow`), `pict/conditional` (`show`/`hide` for staged reveals),
-`pict/balloon`, `pict/flash`.
+(`shadow`), `pict/conditional` (`show` and `hide` for a staged reveal),
+`pict/balloon`, and `pict/flash`.
 
 ## Rules that prevent rework
 
-- **Compose with pict; draw pixels with racket/draw.** Reach for pict's pure
-  combinators for layout and diagrams (declarative, testable by bounding
-  box); use `dc<%>` for per-pixel control or file output. Bridge with `dc`
-  and `pict->bitmap` when you need both.
-- **Save and restore the transformation.** Wrap `translate`/`scale`/`rotate`
-  in `get-transformation` … `set-transformation` so later drawing isn't
-  skewed by leftover transforms.
-- **Reuse pens and brushes from the caches.** `the-pen-list`/`the-brush-list`
-  return shared instances; allocating a `new pen%` per draw call is wasted
-  work in a hot paint loop ([profiling](../profiling/SKILL.md)).
-- **`pin-over` overflows the bounding box — use `panorama`.** Content pinned
-  past the edges is clipped by the parent unless you `panorama` to widen the
-  box.
-- **Find the embedded pict, not a copy.** `cc-find` and friends locate a
-  specific sub-pict value; pass the binding you appended, or the location
-  lookup fails.
-- **Vector dcs need the document lifecycle.** `pdf-dc%`/`post-script-dc%`
-  produce nothing until `start-doc`/`start-page` … `end-page`/`end-doc`; build
-  them with `[interactive #f]`.
+- **Compose with pict. Draw pixels with racket/draw.** Use the pure
+  combinators of pict for layout and diagrams (declarative, testable by the
+  bounding box). Use `dc<%>` for control per pixel or for file output.
+  Bridge with `dc` and `pict->bitmap` when you need both.
+- **Save and restore the transformation.** Wrap `translate`, `scale`, and
+  `rotate` in `get-transformation` … `set-transformation`. Otherwise a
+  leftover transform skews the later draws.
+- **Use the pens and the brushes from the caches.** `the-pen-list` and
+  `the-brush-list` return shared instances. A `new pen%` per draw call is
+  wasted work in a hot paint loop ([profiling](../profiling/SKILL.md)).
+- **`pin-over` overflows the bounding box. Use `panorama`.** The parent clips
+  the content that is pinned past the edges, unless you widen the box with
+  `panorama`.
+- **Find the embedded pict, not a copy.** `cc-find` and the related
+  functions locate a specific sub-pict value. Pass the binding that you
+  appended. Otherwise the lookup of the location fails.
+- **A vector dc needs the document life cycle.** `pdf-dc%` and
+  `post-script-dc%` produce nothing before `start-doc` and `start-page` …
+  `end-page` and `end-doc`. Build them with `[interactive #f]`.

@@ -1,19 +1,19 @@
-# racket/draw + pict Reference — signatures
+# racket/draw + pict Reference (signatures)
 
-Companion to SKILL.md. Source: docs.racket-lang.org/draw/ and
-docs.racket-lang.org/pict/. Checked against Racket v9.1 [cs].
+This file accompanies SKILL.md. The sources are docs.racket-lang.org/draw/ and
+docs.racket-lang.org/pict/. The text was checked against Racket v9.1 [cs].
 
 ## Drawing contexts (racket/draw)
 
 ```racket
-(new bitmap-dc% [bitmap bmp])              ; offscreen, on a bitmap%
-(send a-canvas get-dc)                     ; a GUI canvas's context (gui skill)
+(new bitmap-dc% [bitmap bmp])              ; draws offscreen on a bitmap%
+(send a-canvas get-dc)                     ; the context of a canvas in the graphical user interface (gui skill)
 (new svg-dc%  [width w][height h][output path-or-port][exists 'replace]
               [interactive #f])
 (new pdf-dc%  [interactive #f][width w][height h][output path-or-port][as-eps bool])
 (new post-script-dc% [interactive #f][width w][height h][output path])
-(new record-dc% [width w][height h])       ; record drawing, replay later
-;; vector dcs (svg/pdf/ps) are documents:
+(new record-dc% [width w][height h])       ; records drawing, to replay later
+;; the vector drawing contexts (svg/pdf/ps) are documents:
 (send dc start-doc reason) (send dc start-page) ... (send dc end-page) (send dc end-doc)
 ```
 
@@ -26,7 +26,7 @@ docs.racket-lang.org/pict/. Checked against Racket v9.1 [cs].
 (send dc set-text-foreground c) (send dc set-text-background c) (send dc set-background c)
 (send dc set-alpha 0.0..1.0)
 (send dc translate dx dy) (send dc scale sx sy) (send dc rotate radians)
-(send dc get-transformation) (send dc set-transformation t)   ; save/restore
+(send dc get-transformation) (send dc set-transformation t)   ; save and restore
 (send dc set-clipping-rect x y w h) (send dc set-clipping-region region-or-#f)
 ;; draw
 (send dc draw-line x1 y1 x2 y2)   (send dc draw-lines (list (cons x y) ...) [dx dy])
@@ -37,7 +37,7 @@ docs.racket-lang.org/pict/. Checked against Racket v9.1 [cs].
 (send dc draw-text str x y [combine? offset angle])
 (send dc draw-bitmap bmp x y [style color mask])
 (send dc get-text-extent str [font]) -> (values w h descent extra-vertical-space)
-   ; the 4th value is extra space ABOVE the text, not the ascent
+   ; the fourth value is extra space ABOVE the text. It is not the ascent.
 (send dc get-size) -> (values w h)   (send dc clear)   (send dc flush)
 ```
 
@@ -80,12 +80,12 @@ docs.racket-lang.org/pict/. Checked against Racket v9.1 [cs].
 ```racket
 (circle d)  (disk d)  (ellipse w h)  (filled-ellipse w h)
 (rectangle w h)  (filled-rectangle w h)  (rounded-rectangle w h [corner])
-(text str [style size angle])          ; style: a font sym list, e.g. '(bold italic)
-(hline w h)  (vline w h)               ; thin rule picts (no bare `line`)
+(text str [style size angle])          ; style is a list of font symbols, for example '(bold italic)
+(hline w h)  (vline w h)               ; thin rule picts (there is no bare `line`)
 (arrow size radians)  (arrowhead size radians)
 (blank [w h]) (blank size)             ; empty space (a strut)
-(bitmap path-or-bitmap%)               ; wrap a bitmap as a pict
-(dc draw-proc w h [ascent descent])    ; custom: draw-proc : (dc<%> dx dy -> any)
+(bitmap path-or-bitmap%)               ; makes a pict from a bitmap
+(dc draw-proc w h [ascent descent])    ; custom pict. The type of draw-proc is (dc<%> dx dy -> any)
 (cloud w h)  (file-icon w h color)  (standard-fish w h)   ; from pict (fun extras)
 ```
 
@@ -109,10 +109,10 @@ docs.racket-lang.org/pict/. Checked against Racket v9.1 [cs].
 (scale p factor)  (scale p xf yf)  (scale-to-fit p w h)  (rotate p radians)
 (colorize p color)  (linewidth n p)
 (frame p [#:segment _ #:color _]) (inset p amt) (inset p l t r b)
-(ghost p)               ; same bbox, invisible
+(ghost p)               ; same bounding box, invisible
 (cellophane p alpha)    ; partial transparency
-(clip p)                ; clip drawing to bbox     (panorama p) ; bbox includes overflow
-(launder p)             ; new pict, child tags hidden
+(clip p)                ; clip drawing to the bounding box     (panorama p) ; the bounding box includes overflow
+(launder p)             ; makes a new pict and hides the child tags
 (pict-width p) (pict-height p) (pict-ascent p) (pict-descent p)
 (pict->bitmap p [smoothing]) -> bitmap%
 ```
@@ -120,11 +120,11 @@ docs.racket-lang.org/pict/. Checked against Racket v9.1 [cs].
 ## pict connectors and finders
 
 ```racket
-;; finder: base + embedded sub-pict -> (values x y) at that anchor point
+;; finder: takes a base and an embedded sub-pict, returns (values x y) at that anchor point
 (lt-find b p) (ct-find b p) (rt-find b p)
 (lc-find b p) (cc-find b p) (rc-find b p)
 (lb-find b p) (cb-find b p) (rb-find b p)
-(pin-over base dx-or-find-pict [find] p)      ; place p over base, bbox unchanged
+(pin-over base dx-or-find-pict [find] p)      ; places p over base, the bounding box does not change
 (pin-under base dx-or-find-pict [find] p)
 (pin-line  base src src-find dst dst-find [#:start-angle _ #:color _ #:line-width _])
 (pin-arrow-line  arrow-size base src src-find dst dst-find [#:line-width _ #:color _])
@@ -136,8 +136,8 @@ docs.racket-lang.org/pict/. Checked against Racket v9.1 [cs].
 ```racket
 (require pict/color)        ; (red p) (green p) (blue p) (orange p) ... (light c) (dark c)
 (require pict/shadow)       ; (shadow p radius [dx dy] #:color _ #:shadow-color _)
-(require pict/conditional)  ; (show p [show?]) (hide p [hide?]) — staged reveal via ghosting
+(require pict/conditional)  ; (show p [show?]) (hide p [hide?]) ; shows or hides a pict in stages with ghost
 (require pict/balloon)      ; callout balloons around a pict
 (require pict/flash)        ; (filled-flash w h ...) (outline-flash w h ...)
-(require pict/convert)      ; prop:pict-convertible — make a type display as a pict
+(require pict/convert)      ; prop:pict-convertible. It makes a type display as a pict
 ```

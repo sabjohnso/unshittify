@@ -1,22 +1,22 @@
 ---
-description: Add Racket contracts with racket/contract — function contracts (->, ->*, ->i, case->), contract-out on module exports, struct and data-structure contracts (listof, hash/c, struct/c, recursive-contract), combinators (or/c, and/c, between/c), and reading blame. Use when contracting a module boundary, specifying argument/result constraints, debugging a contract violation / blame message, or choosing between contract-out and define/contract.
+description: Add Racket contracts with racket/contract. Covers function contracts (->, ->*, ->i, case->), contract-out on module exports, struct and data-structure contracts (listof, hash/c, struct/c, recursive-contract), combinators (or/c, and/c, between/c), and how to read a blame message. Use when you put a contract on a module boundary, when you specify argument or result constraints, when you debug a contract violation or a blame message, or when you choose between contract-out and define/contract.
 allowed-tools: Read, Grep, Glob
 ---
 
-# Racket Contracts
+# Racket contracts
 
-A contract is a runtime agreement checked when a value crosses a boundary —
-usually a module's `provide`. When the check fails, the contract system
-raises an error that **blames** the party that broke the agreement. Built
-into `#lang racket`; under `racket/base` add `(require racket/contract)`.
-For exact grammars and the full combinator list, read `reference.md` in this
-skill directory.
+A contract is a runtime agreement that the system checks when a value
+crosses a boundary, usually the `provide` of a module. When the check fails,
+the contract system raises an error that **blames** the party that broke the
+agreement. The contract system is part of `#lang racket`. Under
+`racket/base`, add `(require racket/contract)`. For the exact grammars and
+the full combinator list, read `reference.md` in this skill directory.
 
 ## Where to attach a contract
 
-Prefer **`contract-out` in `provide`** for exported bindings — the contract
-sits exactly at the module boundary, so internal calls run unchecked and the
-blame names the right module:
+Prefer **`contract-out` in `provide`** for an exported binding. The contract
+sits exactly at the module boundary. So an internal call runs with no check,
+and the blame names the right module:
 
 ```racket
 #lang racket/base
@@ -37,81 +37,84 @@ blame names the right module:
   [struct account ([owner string?] [balance (and/c real? (not/c negative?))])]))
 ```
 
-Use **`define/contract`** only for a binding you are *not* exporting and
-want checked locally. It re-checks on every call (including recursion), so
-it is slower and can change recursion behavior — not a drop-in for export
-contracts.
+Use **`define/contract`** only for a binding that you do *not* export and
+want checked locally. It checks the contract again on every call, also in a
+recursion. So it is slower, and it can change the behavior of a recursion.
+It is not a direct replacement for an export contract.
 
 ```racket
 (define/contract (double n) (-> number? number?) (* 2 n))
 ```
 
-## The function-contract ladder
+## The ladder of function contracts
 
-Pick the simplest rung that expresses the constraint:
+Pick the simplest step that expresses the constraint:
 
-- **`->`** — fixed arity, each domain and the range a contract:
-  `(-> number? string? boolean?)`.
-- **`->*`** — mandatory + optional + keyword args:
-  `(->* (string?) (#:loud? boolean?) string?)` is one required positional,
-  an optional `#:loud?`, returning a string. `#:rest rest/c` for the tail.
-- **`->i`** — dependent: a later contract may reference earlier arguments by
-  name. `[amt (a) (<=/c (account-balance a))]` reads "`amt` depends on `a`."
-  Use it when a bound, length, or result is computed from another argument.
-- **`case->`** — one binding with several distinct arities, each its own
+- **`->`**: a fixed arity, with a contract for each domain and for the
+  range: `(-> number? string? boolean?)`.
+- **`->*`**: mandatory, optional, and keyword arguments.
+  `(->* (string?) (#:loud? boolean?) string?)` is one required positional
+  argument, an optional `#:loud?`, and a string result. `#:rest rest/c`
+  covers the tail.
+- **`->i`**: dependent. A later contract can refer to an earlier argument by
+  name. `[amt (a) (<=/c (account-balance a))]` reads "`amt` depends on `a`".
+  Use it when a bound, a length, or a result is computed from an other
+  argument.
+- **`case->`**: one binding with several distinct arities, each with its own
   arrow.
 
-### `any` vs `any/c` in the range — a real trap
+### `any` and `any/c` in the range: a real trap
 
-`any/c` means **exactly one value, unconstrained**. `any` means **any number
-of values, unconstrained** — use it for procedures that may return multiple
-values (or when you simply don't constrain the result). `(-> ... any/c)`
-*rejects* a multiple-values return; `(-> ... any)` accepts it.
+`any/c` means **exactly one value, with no constraint**. `any` means **any
+number of values, with no constraint**. Use `any` for a procedure that can
+return several values, or when you do not constrain the result at all.
+`(-> ... any/c)` *rejects* a return of several values. `(-> ... any)`
+accepts it.
 
 ## Flat contracts and combinators
 
-Any predicate of one argument is already a flat contract: `number?`,
-`string?`, `account?`, or your own `(lambda (x) ...)`. Build richer ones with
-combinators:
+Each predicate of one argument is already a flat contract: `number?`,
+`string?`, `account?`, or your own `(lambda (x) ...)`. Build richer
+contracts with combinators:
 
-| Combinator                       | Means                               |
-|----------------------------------|-------------------------------------|
-| `(or/c c ...)` / `(and/c c ...)` | disjunction / conjunction           |
-| `(not/c c)`                      | negation                            |
-| `(one-of/c v ...)`               | `eqv?` to one of the listed values  |
-| `'sym` / `42` / `"s"`            | a literal datum is its own contract |
-| `(=/c n)` `(>/c n)` `(<=/c n)` … | numeric comparison                  |
-| `(between/c lo hi)`              | real in `[lo, hi]`                  |
-| `(integer-in lo hi)`             | exact integer in range              |
-| `(string-len/c n)`               | string shorter than `n`             |
+| Combinator                       | Meaning                              |
+|----------------------------------|--------------------------------------|
+| `(or/c c ...)` / `(and/c c ...)` | disjunction / conjunction            |
+| `(not/c c)`                      | negation                             |
+| `(one-of/c v ...)`               | `eqv?` to one of the listed values   |
+| `'sym` / `42` / `"s"`            | a literal datum is its own contract  |
+| `(=/c n)` `(>/c n)` `(<=/c n)` … | a numeric comparison                 |
+| `(between/c lo hi)`              | a real in `[lo, hi]`                 |
+| `(integer-in lo hi)`             | an exact integer in the range        |
+| `(string-len/c n)`               | a string shorter than `n`            |
 
-`(or/c 'a 'b)` is the idiomatic "enum"; quoted symbols compare by value.
+`(or/c 'a 'b)` is the idiomatic "enum". Quoted symbols compare by value.
 
 ## Data-structure contracts
 
-Contract the contents of compound values:
+Put a contract on the contents of a compound value:
 
 `(listof c)`, `(non-empty-listof c)`, `(vectorof c)`, `(hash/c key/c val/c)`,
-`(cons/c car/c cdr/c)`, `(list/c c ...)` (fixed-length), `(box/c c)`,
-`(parameter/c c)`. For structs, list field contracts in `contract-out`'s
-`struct` clause (above). For self-referential data, wrap the recursive
-position in `recursive-contract`:
+`(cons/c car/c cdr/c)`, `(list/c c ...)` (a fixed length), `(box/c c)`,
+`(parameter/c c)`. For a struct, list the field contracts in the `struct`
+clause of `contract-out` (above). For self-referential data, wrap the
+recursive position in `recursive-contract`:
 
 ```racket
 (define tree/c
   (recursive-contract (or/c number? (cons/c tree/c tree/c)) #:flat))
 ```
 
-`parametric->/c` expresses parametric polymorphism — `(parametric->/c [X]
-(-> X X))` guarantees the result came from the input rather than being
+`parametric->/c` expresses parametric polymorphism. `(parametric->/c [X]
+(-> X X))` guarantees that the result came from the input and was not
 fabricated.
 
-## Reading a blame message
+## How to read a blame message
 
-Each contract has two parties: the **positive** party (the module that
-*made* the promise — usually the one with the `provide`) and the
-**negative** party (the *caller*). A bad argument blames the caller; a bad
-result blames the provider.
+Each contract has two parties. The **positive** party *made* the promise.
+That is usually the module with the `provide`. The **negative** party is the
+*caller*. A bad argument blames the caller. A bad result blames the
+provider.
 
 ```
 deposit: contract violation
@@ -124,28 +127,30 @@ deposit: contract violation
   at: /path/bank.rkt:15:3
 ```
 
-Read it as: *the contract lives at `bank.rkt`; the caller passed `-5` for
-the 2nd argument, which must be `> 0`, so the caller is blamed.* When blame
-points at the provider instead, the function returned a value its own range
-contract forbids — the bug is inside the module.
+Read it as: *the contract is at `bank.rkt`. The caller passed `-5` for the
+2nd argument, which must be `> 0`. So the caller is blamed.* When the blame
+points at the provider instead, the function returned a value that its own
+range contract forbids. The bug is inside the module.
 
 ## Rules that prevent rework
 
-- **Contract at the boundary, not everywhere.** `contract-out` checks once,
-  at the `provide`. Sprinkling `define/contract` on internal helpers adds
-  per-call overhead and re-checks recursion for no extra safety.
-- **Climb the ladder only as needed.** Use `->`; move to `->*` for
-  optional/keyword args; reach `->i` only when one part genuinely depends on
-  another. `->i` is the slowest and least readable — don't default to it.
-- **`any` for the range when the result is unconstrained or multi-valued.**
-  Reserve `any/c` for "exactly one value, any type." Mixing them up rejects
-  legitimate `(values …)` returns.
-- **A bad-result blame means your code is wrong, not the caller's.** Don't
-  loosen the argument contracts to silence it — fix the function or its
-  range contract.
-- **Quoted literals are contracts.** Write `(or/c 'red 'green)` rather than a
-  hand-rolled `symbol?`-plus-`memq` predicate.
-- **Higher-order contracts wrap, and wrapping has a cost.** A contract on a
-  function or struct that flows through hot paths re-checks at each crossing;
-  measure before contracting performance-critical internals, and consider
-  `opt/c` for heavily reused contracts.
+- **Put the contract at the boundary, not everywhere.** `contract-out`
+  checks once, at the `provide`. A `define/contract` on each internal helper
+  adds a cost per call and checks a recursion again, with no extra safety.
+- **Climb the ladder only as far as necessary.** Use `->`. Move to `->*` for
+  optional or keyword arguments. Use `->i` only when one part really depends
+  on an other. `->i` is the slowest and the least readable. Do not use it by
+  default.
+- **Use `any` for the range when the result is unconstrained or has several
+  values.** Keep `any/c` for "exactly one value, of any type". A mix of the
+  two rejects a legitimate `(values …)` return.
+- **A blame on the result means that your code is wrong, not the caller.**
+  Do not loosen the argument contracts to silence it. Fix the function or
+  its range contract.
+- **A quoted literal is a contract.** Write `(or/c 'red 'green)`. Do not
+  write a hand-made predicate with `symbol?` plus `memq`.
+- **A higher-order contract wraps the value, and the wrap has a cost.** A
+  contract on a function or a struct that flows through a hot path checks
+  again at each crossing. Measure before you put a contract on
+  performance-critical internals. Consider `opt/c` for a contract that is
+  used a lot.

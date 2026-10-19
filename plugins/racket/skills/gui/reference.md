@@ -1,10 +1,11 @@
-# racket/gui Reference — classes and signatures
+# racket/gui Reference: Classes and Signatures
 
 Companion to SKILL.md. Source: docs.racket-lang.org/gui/ and racket/draw.
-Class and method names checked against Racket v9.1 [cs] by interface
-introspection (`interface->method-names`) with no display attached. That
-confirms a method exists; it does NOT confirm an init-argument name, which
-only realising a window would catch.
+The class names and method names were checked against Racket v9.1 [cs] by
+interface introspection (`interface->method-names`) without an attached
+display. This check confirms that a method exists. It does NOT confirm an
+init-argument name. Only the creation of a window can find a wrong
+init-argument name.
 
 ## Class hierarchy (interfaces)
 
@@ -28,7 +29,7 @@ area<%>              ; anything with a size: min-width, stretchable-*, ...
    ; styles: 'no-resize-border 'no-caption 'fullscreen-button 'float ...
    ; methods: show, is-shown?, center, maximize, set-label, create-status-line
 (new dialog% [label str] [parent #f] [width n] [height n] [style ...])
-   ; (send dlg show #t) blocks until the dialog is dismissed (modal)
+   ; (send dlg show #t) blocks until the user dismisses the dialog (modal)
    ; methods: show, is-shown?, center, show-without-yield
    ;          show-without-yield is on dialog% only, NOT on frame%
 
@@ -84,7 +85,7 @@ Common `control<%>`/`window<%>` methods: `enable`, `is-enabled?`, `show`,
    ; methods: get-dc, refresh, on-paint, on-event, on-char, on-size, suspend-flush
 (new editor-canvas% [parent p] [editor an-editor])   ; for text%/pasteboard%
 
-;; dc<%> (a drawing context; from canvas get-dc or a bitmap-dc%)
+;; dc<%> (a drawing context from canvas get-dc or from a bitmap-dc%)
 (send dc set-pen pen-or-color width style)   (send dc set-brush brush-or-color style)
 (send dc set-font font%)   (send dc set-smoothing 'aligned/'unsmoothed/'smoothed)
 (send dc set-text-foreground color)   (send dc set-background color)
@@ -131,7 +132,7 @@ scroll-event% : get-position, get-direction
 (make-eventspace) -> eventspace?
 (queue-callback thunk [high-priority?])    ; run thunk on the handler thread
 (yield [evt-or-'wait]) -> any              ; process pending events once
-(sleep/yield secs)                         ; sleep while dispatching events
+(sleep/yield secs)                         ; sleep and dispatch events
 (eventspace-shutdown? es)  (eventspace-handler-thread es)
 (event-dispatch-handler)                   ; parameter, advanced
 (new timer% [notify-callback (-> any)] [interval msecs-or-#f] [just-once? bool])

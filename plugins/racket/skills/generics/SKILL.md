@@ -1,15 +1,16 @@
 ---
-description: "Define generic interfaces in Racket with racket/generic — define-generics to declare a set of methods, implement them per type via #:methods gen:NAME, provide defaults/fallbacks (#:defaults, #:fast-defaults, #:fallbacks), call sibling methods with define/generic, introspect support (#:defined-predicate, exn:fail:support?), and contract instances with generic-instance/c. Use when several types should share an interface with runtime dispatch, or extending an interface to existing types."
+description: "Define generic interfaces in Racket with racket/generic. Covers define-generics to declare a set of methods, the implementation of the methods per type with #:methods gen:NAME, defaults and fallbacks (#:defaults, #:fast-defaults, #:fallbacks), a call to a sibling method with define/generic, the introspection of support (#:defined-predicate, exn:fail:support?), and a contract on an instance with generic-instance/c. Use when several types must share an interface with runtime dispatch, or when you extend an interface to existing types."
 allowed-tools: Read, Grep, Glob
 ---
 
-# Generic Interfaces with racket/generic
+# Generic interfaces with racket/generic
 
-`racket/generic` lets you declare an **interface** — a named set of methods —
-once, then implement it for many types. Calling a method dispatches at
-runtime on its first argument. This is the mechanism behind built-in
-interfaces like `gen:custom-write` and `gen:equal+hash` (see
-[structs](../structs/SKILL.md)); `define-generics` lets you define your own.
+With `racket/generic`, you declare an **interface** (a named set of methods)
+once, and then you implement it for many types. A call to a method
+dispatches at run time on its first argument. This is the mechanism behind
+the built-in interfaces such as `gen:custom-write` and `gen:equal+hash` (see
+[structs](../structs/SKILL.md)). With `define-generics`, you define your
+own.
 
 For the exact grammar of `define-generics`, its keyword options, and the
 contract forms, read `reference.md` in this skill directory.
@@ -19,7 +20,7 @@ contract forms, read `reference.md` in this skill directory.
 
 (define-generics shape
   (area shape)
-  (describe shape [prefix]))             ; [prefix] is an optional method arg
+  (describe shape [prefix]))             ; [prefix] is an optional method argument
 
 (struct square (side)
   #:methods gen:shape
@@ -33,21 +34,22 @@ contract forms, read `reference.md` in this skill directory.
 
 From `(define-generics shape (area shape) …)` you get:
 
-- **`gen:shape`** — the binding you pass to `#:methods` to implement the
+- **`gen:shape`**, the binding that you pass to `#:methods` to implement the
   interface for a struct.
-- **`shape?`** — a predicate: true for any value implementing the interface.
-- **`area`, `describe`, …** — the generic methods, each dispatching on its
+- **`shape?`**, a predicate. It is true for every value that implements the
+  interface.
+- **`area`, `describe`, …**, the generic methods. Each one dispatches on its
   `shape` argument.
 
-The name in the first position of each method clause (`shape`) marks which
-argument is dispatched on; it must be the same across the methods.
+The name in the first position of each method clause (`shape`) marks the
+argument that the dispatch uses. It must be the same across the methods.
 
-## Implementing the interface
+## Implement the interface
 
-Implement in a struct with `#:methods gen:NAME` (see
-[structs](../structs/SKILL.md)). To call **another method of the same
+Implement it in a struct with `#:methods gen:NAME` (see
+[structs](../structs/SKILL.md)). To call **an other method of the same
 interface** from inside a method body, you must capture it with
-`define/generic` — a bare reference does **not** dispatch and fails with
+`define/generic`. A bare reference does **not** dispatch, and it fails with
 "method not implemented":
 
 ```racket
@@ -57,15 +59,15 @@ interface** from inside a method body, you must capture it with
    (define (render w) (string-append "[" (super-render (wrapped-inner w)) "]"))])
 ```
 
-This is a common mistake with `racket/generic`: inside
-`#:methods`/`#:fallbacks`, sibling calls go through a `define/generic` alias.
+This is a common mistake with `racket/generic`. Inside `#:methods` and
+`#:fallbacks`, a sibling call goes through a `define/generic` alias.
 
 ## Defaults and fallbacks
 
-Three ways to supply behavior beyond a per-struct `#:methods`:
+There are three ways to give behavior beyond a `#:methods` per struct:
 
-- **`#:defaults ([pred impl …] …)`** — implement the interface for existing
-  types you don't control (e.g. `number?`, `string?`):
+- **`#:defaults ([pred impl …] …)`** implements the interface for existing
+  types that you do not control (for example `number?`, `string?`):
 
   ```racket
   (define-generics shape
@@ -74,12 +76,12 @@ Three ways to supply behavior beyond a per-struct `#:methods`:
   (area 5)                                ; => 25
   ```
 
-- **`#:fast-defaults ([pred impl …] …)`** — same, but checked *before* the
-  normal dispatch, for hot built-in types.
+- **`#:fast-defaults ([pred impl …] …)`** is the same, but the check comes
+  *before* the normal dispatch, for hot built-in types.
 
-- **`#:fallbacks [impl …]`** — default method bodies used when an
-  implementing type leaves a method out. Write them in terms of other
-  methods (captured with `define/generic`):
+- **`#:fallbacks [impl …]`** gives default method bodies for a method that
+  an implementer leaves out. Write them in terms of the other methods
+  (captured with `define/generic`):
 
   ```racket
   (define-generics container
@@ -87,19 +89,20 @@ Three ways to supply behavior beyond a per-struct `#:methods`:
     (size container)
     #:fallbacks
     [(define/generic g-items items)
-     (define (size c) (length (g-items c)))])   ; size defaults to item count
+     (define (size c) (length (g-items c)))])   ; size defaults to the item count
   ```
 
-`#:requires (method …)` declares methods an implementation must provide (the
-ones fallbacks depend on). `#:derive-property prop expr` attaches a struct
-type property computed from the methods — e.g. derive `prop:custom-write`
-from a `->string` method so instances print through the interface.
+`#:requires (method …)` declares the methods that an implementation must
+give (the ones that the fallbacks depend on). `#:derive-property prop expr`
+attaches a struct type property computed from the methods. For example,
+derive `prop:custom-write` from a `->string` method, so the instances print
+through the interface.
 
-## Asking what a value implements
+## Ask what a value implements
 
-`#:defined-predicate name` adds a procedure to test whether a specific
-instance implements a given method; `#:defined-table name` exposes the full
-map. Calling an *un*implemented method raises `exn:fail:support?`:
+`#:defined-predicate name` adds a procedure that tests whether a specific
+instance implements a given method. `#:defined-table name` exposes the full
+map. A call to a method with *no* implementation raises `exn:fail:support?`:
 
 ```racket
 (define-generics container (items container) (size container)
@@ -107,11 +110,12 @@ map. Calling an *un*implemented method raises `exn:fail:support?`:
 (container-implements? some-stack 'size)         ; #t / #f
 ```
 
-## Contracting an interface
+## A contract on an interface
 
-`(generic-instance/c gen:shape)` is a contract satisfied by any value
-implementing the interface — use it at module boundaries to demand "something
-shaped," not a concrete struct (see [contracts](../contracts/SKILL.md)):
+`(generic-instance/c gen:shape)` is a contract that every value that
+implements the interface satisfies. Use it at a module boundary to demand
+"something with a shape", not a concrete struct (see
+[contracts](../contracts/SKILL.md)):
 
 ```racket
 (provide (contract-out [total-area (-> (listof (generic-instance/c gen:shape)) real?)]))
@@ -119,30 +123,31 @@ shaped," not a concrete struct (see [contracts](../contracts/SKILL.md)):
 
 ## When to use a generic interface
 
-Reach for `racket/generic` when **several types** should answer the same
-operations and callers shouldn't care which type they hold — open extension,
-where new types implement the interface without touching the callers. For a
-closed set of cases, a plain function with `match`/`cond`
+Use `racket/generic` when **several types** must answer the same operations,
+and the callers must not care which type they hold. That is open extension.
+A new type implements the interface, and the callers do not change. For a
+closed set of cases, a plain function with `match` or `cond`
 ([pattern-matching](../pattern-matching/SKILL.md)) is simpler. For one type,
-just write functions. Generics earn their keep when the type set is open and
-dispatch must stay out of the call sites.
+write functions. Generics earn their place when the set of types is open and
+the dispatch must stay out of the call sites.
 
 ## Rules that prevent rework
 
-- **`define/generic` for every sibling call.** Inside `#:methods`/`#:fallbacks`,
-  capture other methods with `define/generic` before calling them; a bare
-  reference fails at runtime.
-- **Dispatch is on the first (marked) argument only.** Design methods so the
-  type that selects the implementation comes first; `racket/generic` is
-  single-dispatch.
-- **Extend existing types with `#:defaults`, not wrappers.** Implement the
-  interface for `number?`/`string?`/etc. directly instead of boxing them.
-- **Use `#:fallbacks` for derivable methods.** Define the minimal primitive
-  methods per type and let fallbacks compute the rest in terms of them —
-  fewer per-struct method bodies to keep in sync.
-- **`provide` the `gen:NAME` binding to let other modules implement it.**
-  Export `gen:shape` (and the predicate/methods) so downstream structs can
-  add `#:methods gen:shape` (see [modules](../modules/SKILL.md)).
-- **Contract with `generic-instance/c`, not the struct predicate.** Accept any
-  implementer at the boundary so new types keep working
-  ([contracts](../contracts/SKILL.md)).
+- **Use `define/generic` for every sibling call.** Inside `#:methods` and
+  `#:fallbacks`, capture the other methods with `define/generic` before you
+  call them. A bare reference fails at run time.
+- **The dispatch is on the first (marked) argument only.** Design the methods
+  so that the type that selects the implementation comes first.
+  `racket/generic` has single dispatch.
+- **Extend an existing type with `#:defaults`, not with a wrapper.**
+  Implement the interface for `number?`, `string?`, and the like directly.
+  Do not box them.
+- **Use `#:fallbacks` for a method that can be derived.** Define the minimal
+  primitive methods per type, and let the fallbacks compute the rest from
+  them. Then fewer method bodies per struct must stay in step.
+- **`provide` the `gen:NAME` binding, so an other module can implement it.**
+  Export `gen:shape` (and the predicate and the methods). Then a downstream
+  struct can add `#:methods gen:shape` (see [modules](../modules/SKILL.md)).
+- **Put a `generic-instance/c` contract at the boundary, not the struct
+  predicate.** Accept every implementer at the boundary, so new types
+  continue to work ([contracts](../contracts/SKILL.md)).

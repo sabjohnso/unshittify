@@ -1,27 +1,27 @@
-# Canvas Animation Reference — signatures
+# Canvas Animation Reference: signatures
 
 Companion to SKILL.md. Source: docs.racket-lang.org/gui/ (canvas%, timer%).
-Member names checked against Racket v9.1 [cs] by interface introspection
-(`interface->method-names`) with no display attached. That confirms a method
-exists; it does NOT confirm an init-argument name, which only realising a
-window would catch. See ../gui/SKILL.md and ../drawing/SKILL.md for the full
-widget and dc<%> APIs.
+Interface introspection (`interface->method-names`) checked the member names
+against Racket v9.1 [cs] with no display attached. This shows that a method
+exists. It does not show that an init-argument name is correct. Only a
+created window can show that. For the full widget and dc<%> APIs, see
+../gui/SKILL.md and ../drawing/SKILL.md.
 
 ## canvas% — animation-relevant members
 
 ```racket
 (new canvas% [parent p]
-     [paint-callback (-> canvas% (is-a?/c dc<%>) any)]   ; called to repaint
-     [style (listof sym)])        ; '(no-autoclear) = canvas won't auto-clear;
+     [paint-callback (-> canvas% (is-a?/c dc<%>) any)]   ; the canvas calls this to repaint
+     [style (listof sym)])        ; '(no-autoclear) = the canvas does not clear itself
                                   ; '(transparent) ; '(gl) for OpenGL (sgl)
 ;; repaint control
-(send cv refresh)                 ; queue a repaint (async, coalesced) — use in a loop
-(send cv refresh-now [paint-proc #:flush? bool])  ; paint synchronously, now
-(send cv on-paint)                ; default paints via paint-callback (override alt)
-(send cv get-dc) -> (is-a?/c dc<%>)               ; the canvas's drawing context
-;; flush control (batch drawing, reduce flicker)
+(send cv refresh)                 ; queue a repaint (asynchronous, coalesced). Use it in a loop
+(send cv refresh-now [paint-proc #:flush? bool])  ; paint now, synchronously
+(send cv on-paint)                ; the default calls paint-callback (override as an alternative)
+(send cv get-dc) -> (is-a?/c dc<%>)               ; the drawing context of the canvas
+;; flush control (batch the drawing to reduce flicker)
 (send cv suspend-flush)           ; stop on-screen updates
-(send cv resume-flush)            ; re-enable; pair with suspend-flush
+(send cv resume-flush)            ; re-enable. Pair it with suspend-flush
 (send cv flush)                   ; force pending drawing to the screen
 ;; geometry / focus (from canvas<%>, window<%>)
 (send cv get-size) -> (values w h)        (send cv get-client-size) -> (values w h)
@@ -30,37 +30,37 @@ widget and dc<%> APIs.
 (send cv on-char key-event%)              (send cv on-event mouse-event%)
 ```
 
-`canvas%` is double-buffered, so `paint-callback` drawing is composited
-offscreen and shown without flicker. `'(no-autoclear)` suppresses the
-automatic clear before each paint — then you must `(send dc clear)` (or blit a
-full-frame bitmap) yourself.
+The `canvas%` class uses double buffering. The system composes the drawing of
+`paint-callback` offscreen and shows it without flicker. `'(no-autoclear)`
+stops the automatic clear before each paint. Then you must call
+`(send dc clear)` or blit a full-frame bitmap.
 
-## timer% — the animation clock
+## timer%: the animation clock
 
 ```racket
 (new timer% [notify-callback (-> any)]    ; runs on the eventspace handler thread
-            [interval msec-or-#f]         ; fire every interval ms; #f = inactive
+            [interval msec-or-#f]         ; fire every interval ms. #f = inactive
             [just-once? bool])            ; #t = fire a single time
 (send t start interval [just-once?])      ; (re)start with an interval
 (send t stop)                             ; stop firing
 (send t interval) -> (or/c exact-positive-integer? #f)
 ```
 
-A `timer%` belongs to `(current-eventspace)`; its callback is serialized with
-paints and input on the handler thread.
+A `timer%` belongs to `(current-eventspace)`. The handler thread runs its
+callback in sequence with paints and input.
 
 ## Timing and scheduling primitives
 
 ```racket
-(current-inexact-monotonic-milliseconds) -> flonum   ; for dt; never goes backward
-(current-inexact-milliseconds) -> flonum             ; wall clock (may jump)
+(current-inexact-monotonic-milliseconds) -> flonum   ; use for dt. It never goes backward
+(current-inexact-milliseconds) -> flonum             ; wall clock (it can jump)
 (queue-callback thunk [high?])            ; run thunk on the handler thread (from a worker)
 (yield) (sleep/yield secs)                ; dispatch events at top level (not in callbacks)
 ```
 
-Compute `dt` from successive `current-inexact-monotonic-milliseconds`
-readings; integrate motion as `(+ pos (* speed dt))` with `speed` in
-units per second.
+Compute `dt` from successive readings of
+`current-inexact-monotonic-milliseconds`. Integrate motion as
+`(+ pos (* speed dt))`. Give `speed` in units per second.
 
 ## Offscreen double-buffer pattern (racket/draw)
 
@@ -73,17 +73,18 @@ units per second.
 (lambda (cv dc) (send dc draw-bitmap buf 0 0))
 ```
 
-Redraw `buf` only when the scene actually changes (a static background, a
-costly composite); blit it every frame. See the drawing skill for the full
-`dc<%>`/`bitmap-dc%` API.
+Redraw `buf` only when the scene changes, for example a static background or
+a costly composite. Blit it every frame. For the full `dc<%>` and
+`bitmap-dc%` API, see the drawing skill.
 
-## Loop drivers — when to use which
+## Loop drivers: when to use which
 
-- **`timer%`** — the default: periodic `notify-callback` on the handler
-  thread, automatically coalesced with paints/input. Use for nearly all UI
-  animation.
-- **A worker `thread` + `queue-callback`** — when frames depend on slow
-  off-thread work; compute on the thread, then `queue-callback` to update the
-  model and `refresh` on the handler thread (see the concurrency skill).
-- **`refresh-now` in a bounded loop** — only for synchronous, non-interactive
-  rendering (e.g. exporting frames), never as the live animation tick.
+- **`timer%`**: the default. It calls `notify-callback` periodically on the
+  handler thread, and the system coalesces it with paints and input. Use it
+  for nearly all UI animation.
+- **A worker `thread` + `queue-callback`**: use it when frames depend on slow
+  off-thread work. Compute on the thread. Then call `queue-callback` to update
+  the model and `refresh` on the handler thread (see the concurrency skill).
+- **`refresh-now` in a bounded loop**: use it only for synchronous,
+  non-interactive rendering (for example, to export frames). Never use it as
+  the live animation tick.

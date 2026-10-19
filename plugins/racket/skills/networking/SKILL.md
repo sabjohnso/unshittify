@@ -1,58 +1,58 @@
 ---
-description: Networking and web servers in Racket — TCP/UDP sockets (racket/tcp, racket/udp), HTTP clients (net/url, net/http-client), JSON (json), and the web-server stack (serve/servlet, dispatch-rules routing, request/response, response/xexpr). Use when writing a network client or server, calling an HTTP API, parsing/producing JSON, building a web app or REST endpoint, or testing servers headlessly.
+description: Networks and web servers in Racket. Covers TCP and UDP sockets (racket/tcp, racket/udp), HTTP clients (net/url, net/http-client), JSON (json), and the web-server stack (serve/servlet, dispatch-rules routes, request and response, response/xexpr). Use when you write a network client or server, when you call an HTTP API, when you parse or produce JSON, when you build a web application or a REST endpoint, or when you test a server with no display.
 allowed-tools: Read, Grep, Glob
 ---
 
-# Networking and Web Servers
+# Networks and web servers
 
-Three layers, lowest to highest:
+There are three layers, from the lowest to the highest:
 
-For exact signatures across `racket/tcp`, `racket/udp`, `net/url`,
+For the exact signatures across `racket/tcp`, `racket/udp`, `net/url`,
 `net/http-client`, and the web-server forms, read `reference.md` in this
 skill directory.
 
-- **Sockets** — `racket/tcp` and `racket/udp` give you raw connections as
+- **Sockets.** `racket/tcp` and `racket/udp` give you raw connections as
   ordinary Racket ports.
-- **HTTP client** — `net/url` for quick GET/POST, `net/http-client` for full
-  control of method/headers/body.
-- **Web server** — `web-server` serves HTTP, with routing, request/response
-  values, and a quick-start launcher.
+- **HTTP client.** `net/url` for a quick GET or POST. `net/http-client` for
+  full control of the method, the headers, and the body.
+- **Web server.** `web-server` serves HTTP, with routes, request and
+  response values, and a quick-start launcher.
 
-Servers are inherently concurrent (a thread per connection) and resource-
-owning (ports, listeners) — the threads and custodians of
-`../concurrency/SKILL.md` are the tools that keep them correct and easy to
-shut down cleanly.
+A server is concurrent by nature (a thread per connection), and it owns
+resources (ports, listeners). The threads and the custodians of
+`../concurrency/SKILL.md` are the tools that keep a server correct and easy
+to shut down.
 
 ## TCP
 
-A server listens and accepts; a client connects. Both sides get a normal
+A server listens and accepts. A client connects. Both sides get a normal
 input port and output port:
 
 ```racket
 (require racket/tcp)
-(define listener (tcp-listen 0 4 #t "127.0.0.1"))     ; port 0 = OS picks one
+(define listener (tcp-listen 0 4 #t "127.0.0.1"))     ; port 0: the OS picks one
 (define-values (host port _ph _pp) (tcp-addresses listener #t))  ; read it back
 
-;; accept loop: one thread per connection (see ../concurrency/SKILL.md)
+;; the accept loop: one thread per connection (see ../concurrency/SKILL.md)
 (thread (lambda ()
   (let loop ()
     (define-values (in out) (tcp-accept listener))
     (thread (lambda () (handle in out) (close-output-port out) (close-input-port in)))
     (loop))))
 
-;; client
+;; the client
 (define-values (cin cout) (tcp-connect "127.0.0.1" port))
 (write-string "hi\n" cout) (flush-output cout)
 (read-line cin)
 ```
 
-Run the accept loop and its connection threads under a `make-custodian` so
-`custodian-shutdown-all` closes every socket at once.
+Run the accept loop and its connection threads under a `make-custodian`.
+Then `custodian-shutdown-all` closes every socket at once.
 
 ## UDP
 
-Connectionless datagrams — open a socket, optionally bind, send and receive
-into a buffer:
+UDP sends datagrams with no connection. Open a socket, bind it if
+necessary, then send and receive into a buffer:
 
 ```racket
 (require racket/udp)
@@ -60,12 +60,12 @@ into a buffer:
 (udp-bind! s "127.0.0.1" 0)
 (udp-send-to s "127.0.0.1" peer-port #"ping")
 (define buf (make-bytes 1024))
-(define-values (len from-host from-port) (udp-receive! s buf))   ; blocks
+(define-values (len from-host from-port) (udp-receive! s buf))   ; waits
 ```
 
 ## HTTP client
 
-For simple requests, `net/url`:
+For a simple request, use `net/url`:
 
 ```racket
 (require net/url racket/port)
@@ -73,8 +73,9 @@ For simple requests, `net/url`:
 (port->string (post-pure-port (string->url "https://example.com/api") #"body=1"))
 ```
 
-`get-pure-port` skips response headers; `get-impure-port` keeps them (parse
-with `purify-port`). For method/header/body control, `net/http-client`:
+`get-pure-port` skips the response headers. `get-impure-port` keeps them
+(parse them with `purify-port`). For control of the method, the headers,
+and the body, use `net/http-client`:
 
 ```racket
 (require net/http-client)
@@ -84,34 +85,34 @@ with `purify-port`). For method/header/body control, `net/http-client`:
                  #:data (jsexpr->string (hash 'name "Ada"))))
 ```
 
-The `net/http-easy` package offers a friendlier client (sessions, JSON,
-auth), but it is a separate install (`../packages/SKILL.md`), not in the base
+The `net/http-easy` package gives a simpler client (sessions, JSON, auth).
+But it is a separate install (`../packages/SKILL.md`). It is not in the base
 distribution.
 
 ## JSON
 
-The `json` module handles JSON, the usual API exchange format: `jsexpr`s are
-hashes keyed by **symbols only**, lists, strings, numbers, booleans, and
-`(json-null)`. A string key is not a legal jsexpr — `(jsexpr? (hash "n" 42))`
-is `#f`, and `jsexpr->string` on it raises `expected argument of type <legal
-JSON key value>`.
+The `json` module handles JSON, the usual format for an API exchange. A
+`jsexpr` is a hash with **symbol keys only**, a list, a string, a number, a
+boolean, or `(json-null)`. A string key is not a legal jsexpr. `(jsexpr?
+(hash "n" 42))` is `#f`, and `jsexpr->string` on it raises `expected argument
+of type <legal JSON key value>`.
 
 ```racket
 (require json)
-(jsexpr->string (hash 'ok #t 'n 42))        ; => "{\"n\":42,\"ok\":true}"  (keys sorted)
-(string->jsexpr "{\"n\":42}")                ; => (hasheq 'n 42) — hasheq, not hash
-(read-json a-port)  (write-json v a-port)    ; stream from/to ports
+(jsexpr->string (hash 'ok #t 'n 42))        ; => "{\"n\":42,\"ok\":true}"  (sorted keys)
+(string->jsexpr "{\"n\":42}")                ; => (hasheq 'n 42), a hasheq, not a hash
+(read-json a-port)  (write-json v a-port)    ; stream from a port or to a port
 ```
 
-`jsexpr->string` and `write-json` emit object keys in sorted order, not
-insertion order, so don't assert on a multi-key object's exact text — compare
-the parsed `jsexpr` instead.
+`jsexpr->string` and `write-json` emit the object keys in sorted order, not
+in the order of insertion. So do not assert on the exact text of an object
+with several keys. Compare the parsed `jsexpr` instead.
 
 ## Web server
 
 `serve/servlet` (from `web-server/servlet-env`) starts a server with one
-handler. Route requests with `dispatch-rules`, and build replies with the
-`web-server/http` response constructors:
+handler. Route the requests with `dispatch-rules`. Build the replies with
+the response constructors of `web-server/http`:
 
 ```racket
 (require web-server/servlet-env web-server/http web-server/dispatch json)
@@ -132,24 +133,27 @@ handler. Route requests with `dispatch-rules`, and build replies with the
                #:launch-browser? #f)
 ```
 
-- **Routing:** `dispatch-rules` patterns mix literal segments with typed
-  captures — `(string-arg)`, `(integer-arg)`, `(symbol-arg)` — bound as extra
-  handler arguments; `#:method` restricts the verb; `else` is the fallback.
-- **Request:** `web-server/http` exposes `request-method`,
-  `request-uri`, `request-bindings/raw` + `bindings-assq`, and
-  `binding:form-value` to read form data; `request-headers/raw` +
-  `headers-assq` for headers.
-- **Response:** `response/xexpr` renders an X-expression to HTML (and
-  **escapes it**); `response/output` writes a body via a callback with a
-  `#:mime-type`; `response/full` controls code/headers/body bytes exactly.
-- **Running for real:** `serve/servlet` blocks. To embed a server, the lower
-  `serve` (`web-server/web-server`) returns a *shutdown thunk*; run it under a
-  custodian and call the thunk to stop.
+- **Routes.** A `dispatch-rules` pattern mixes literal segments with typed
+  captures (`(string-arg)`, `(integer-arg)`, `(symbol-arg)`). The captures
+  become extra handler arguments. `#:method` restricts the verb. `else` is
+  the fallback.
+- **The request.** `web-server/http` gives `request-method`,
+  `request-uri`, `request-bindings/raw` plus `bindings-assq`, and
+  `binding:form-value` to read form data. It gives `request-headers/raw` plus
+  `headers-assq` for the headers.
+- **The response.** `response/xexpr` renders an X-expression to HTML (and
+  **escapes it**). `response/output` writes a body through a callback, with
+  a `#:mime-type`. `response/full` controls the code, the headers, and the
+  body bytes exactly.
+- **A real run.** `serve/servlet` blocks. To embed a server, the lower
+  `serve` (`web-server/web-server`) returns a *shutdown thunk*. Run it under
+  a custodian, and call the thunk to stop the server.
 
-## Testing servers headlessly
+## Test a server with no display
 
 Start the server under a custodian in a thread, fetch with `net/url`, then
-shut it down — a self-contained integration test (`../rackunit/SKILL.md`):
+shut it down. That is a self-contained integration test
+(`../rackunit/SKILL.md`):
 
 ```racket
 (define cust (make-custodian))
@@ -164,22 +168,26 @@ shut it down — a self-contained integration test (`../rackunit/SKILL.md`):
 
 ## Rules that prevent rework
 
-- **One thread per connection, bounded by a custodian.** Spawn a handler
-  thread per `tcp-accept`/connection so a slow client can't block others, and
-  create them under a custodian so one `custodian-shutdown-all` closes
-  everything (`../concurrency/SKILL.md`).
-- **Escape output; never trust input.** Build HTML with `response/xexpr`
-  (it escapes) rather than string-concatenating request data, and validate
-  every binding before use — request data is attacker-controlled (a security
-  baseline; don't let one unchecked input compromise the server).
-- **`net/url` for simple, `net/http-client` for control.** Use `get-pure-port`
-  /`post-pure-port` for plain fetches; reach for `http-sendrecv` when you need
-  a specific method, headers, TLS, or to read the status line.
-- **Use ephemeral port `0` in tests.** Let the OS assign a free port and read
-  it back with `tcp-addresses`, so concurrent test runs don't collide.
-- **`serve` (with its shutdown thunk) for embedded servers.**
-  `serve/servlet` blocks and is for apps and tests; to run a server inside a
-  larger program, use the lower-level `serve` and keep the thunk to stop it.
-- **Close ports and stop listeners.** Wrap connection handling so ports close
-  on error, and shut down listeners/custodians on exit; leaked sockets
-  exhaust file descriptors.
+- **One thread per connection, under a custodian.** Start a handler thread
+  per `tcp-accept` or connection, so a slow client cannot block the others.
+  Create the threads under a custodian, so one `custodian-shutdown-all`
+  closes everything (`../concurrency/SKILL.md`).
+- **Escape the output. Never trust the input.** Build HTML with
+  `response/xexpr` (it escapes). Do not concatenate request data into a
+  string. Validate every binding before you use it. Request data is under
+  the control of an attacker. That is a security baseline. Do not let one
+  unchecked input compromise the server.
+- **`net/url` for a simple request, `net/http-client` for control.** Use
+  `get-pure-port` and `post-pure-port` for a plain fetch. Use
+  `http-sendrecv` when you need a specific method, headers, TLS, or the
+  status line.
+- **Use the ephemeral port `0` in a test.** Let the OS assign a free port,
+  and read it back with `tcp-addresses`. Then concurrent test runs do not
+  collide.
+- **Use `serve` (with its shutdown thunk) for an embedded server.**
+  `serve/servlet` blocks, and it is for applications and tests. To run a
+  server inside a larger program, use the lower-level `serve`, and keep the
+  thunk to stop it.
+- **Close the ports, and stop the listeners.** Wrap the connection handler,
+  so the ports close on an error. Shut down the listeners and the custodians
+  at exit. A leaked socket exhausts the file descriptors.

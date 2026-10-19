@@ -1,8 +1,8 @@
-# Profiling Reference — exact signatures
+# Profiling Reference: exact signatures
 
-Companion to SKILL.md. Source: docs.racket-lang.org/profile/ , the Reference
-"Time" / "Performance Hints" sections, and the contract-profile package.
-Checked against Racket v9.1 [cs].
+This file accompanies SKILL.md. Sources: docs.racket-lang.org/profile/ , the
+"Time" and "Performance Hints" sections of the Reference, and the
+contract-profile package. This file was checked against Racket v9.1 [cs].
 
 ## Statistical profiler (require profile)
 
@@ -10,9 +10,9 @@ Checked against Racket v9.1 [cs].
 (profile body ...+
          [#:delay secs]               ; sample interval, default 0.05
          [#:repeat n]                 ; run body n times (default 1)
-         [#:threads all?]             ; profile all threads, not just current
+         [#:threads all?]             ; profile all threads, not only the current thread
          [#:order sym]                ; 'topological (default) | 'self | 'total
-         [#:use-errortrace? bool]     ; line-precise, slower, alters tail calls
+         [#:use-errortrace? bool]     ; gives line precision, is slower, changes tail calls
          [#:render renderer]          ; default: profile/render-text's render
          [#:periodic-renderer pr]     ; live updates during the run
          [#:use-sampler sampler])
@@ -25,25 +25,26 @@ Checked against Racket v9.1 [cs].
    -> the thunk's result
 ```
 
-`#:order` values: `'topological` groups by the call graph; `'self` ranks by
-time in each function's own code; `'total` ranks by time including callees.
+`#:order` values: `'topological` groups the results by the call graph. `'self`
+ranks by the time in the own code of each function. `'total` ranks by the time
+that includes the callees.
 
 ## Analyzer / renderers
 
 ```racket
 (require profile/analyzer)
-(analyze-samples sample-data) -> profile?   ; sample-data from a sampler
+(analyze-samples sample-data) -> profile?   ; sample-data comes from a sampler
 
 (require profile/render-text)
 (render profile-result [#:hide-self %] [#:hide-subs %] [#:truncate-source n])
-   ; prints the textual table (the default renderer)
+   ; prints the text table (this is the default renderer)
 
 (require profile/render-json)
-(profile->json profile-result) -> jsexpr    ; serialize a profile result
-(json->profile jsexpr)         -> profile?  ; read one back
+(profile->json profile-result) -> jsexpr    ; write a profile result as a jsexpr
+(json->profile jsexpr)         -> profile?  ; read a profile result from a jsexpr
 ```
 
-Low-level sampling (build custom tooling):
+Low-level sampling, to build custom tools:
 
 ```racket
 (require profile/sampler)
@@ -64,35 +65,35 @@ raco profile [options] file.rkt [arg ...]
   --topological        order by call structure (DEFAULT)
 ```
 
-The ordering flags are mutually exclusive; there is no `--order`. The module
-is run (its `main` submodule too) under the sampler.
+The ordering flags exclude each other. There is no `--order` flag. The sampler
+runs the module and its `main` submodule.
 
 ## Timing primitives (racket/base)
 
 ```racket
-(time body ...+)                  ; prints "cpu time: real time: gc time:"; returns value
+(time body ...+)                  ; prints "cpu time: real time: gc time:" and returns the value
 (time-apply proc arg-list)
    -> (values result-list cpu-ms real-ms gc-ms)
 (current-process-milliseconds [scope])
-   ; total CPU ms; scope: #f (whole process, default), a thread, or 'subprocesses
-(current-gc-milliseconds)         ; ms spent in GC so far
-(current-inexact-milliseconds)    ; wall clock, flonum, may go backwards
+   ; total CPU milliseconds. The scope is #f (whole process, default), a thread, or 'subprocesses
+(current-gc-milliseconds)         ; milliseconds spent in GC so far
+(current-inexact-milliseconds)    ; wall clock, flonum. The value can decrease
 (current-inexact-monotonic-milliseconds)  ; monotonic wall clock, flonum
 (current-milliseconds)            ; integer wall clock
 ```
 
-There is no `current-cpu-milliseconds`; use `current-process-milliseconds`
-for CPU time.
+There is no `current-cpu-milliseconds`. Use `current-process-milliseconds` to
+get the CPU time.
 
 ## Memory and performance counters
 
 ```racket
-(current-memory-use [mode]) -> exact-nonnegative-integer?   ; bytes reachable
-(dump-memory-stats arg ...)                                 ; debugging dump
+(current-memory-use [mode]) -> exact-nonnegative-integer?   ; bytes that are reachable
+(dump-memory-stats arg ...)                                 ; memory dump to help find faults
 (vector-set-performance-stats! vec [thread])
-   ; fills vec (length up to ~12 global / ~10 thread) with GC counts, bytes
-   ; allocated, thread scheduling stats, etc.
-(collect-garbage [request])       ; force a (major) GC before measuring
+   ; puts the GC counts, the bytes allocated, the thread schedule statistics,
+   ; and more into vec (length up to ~12 global / ~10 thread)
+(collect-garbage [request])       ; forces a major GC before the measurement
 ```
 
 ## Contract profiling (require contract-profile)
@@ -107,7 +108,7 @@ for CPU time.
 (contract-profile-thunk thunk #:keyword ...) -> thunk's result
 ```
 
-Prints the percentage of run time spent checking contracts and a breakdown by
-contract and boundary. Pair with the statistical profiler when contract
-wrappers show up as hot. See the contracts skill for moving/relaxing the
-offending boundary.
+This form prints the percentage of run time that the program spends on contract
+checks, and a breakdown by contract and boundary. If contract wrappers show as
+hot, use it together with the statistical profiler. To move or relax the
+offending boundary, see the contracts skill.

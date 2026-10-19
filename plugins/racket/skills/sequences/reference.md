@@ -1,7 +1,8 @@
-# Sequences / for Reference — exact grammars
+# Sequences and for Reference (exact grammars)
 
-Companion to SKILL.md. Source: docs.racket-lang.org/reference/ "Iterations
-and Comprehensions" and "Sequences". Checked against Racket v9.1 [cs].
+This file accompanies SKILL.md. The source is docs.racket-lang.org/reference/
+"Iterations and Comprehensions" and "Sequences". The author checked it against
+Racket v9.1 [cs].
 
 ## The for family
 
@@ -21,7 +22,7 @@ and Comprehensions" and "Sequences". Checked against Racket v9.1 [cs].
 ;; every form above has a for*/... variant that nests the clauses.
 (for/fold/derived orig-stx ...)                 ; for building custom comprehensions
 (for*/fold/derived ...)
-;; NOT in racket: for/string, for/bytes. Use (list->string (for/list ...))
+;; racket has no for/string and no for/bytes. Use (list->string (for/list ...))
 ;; and (list->bytes (for/list ...)) instead.
 ```
 
@@ -32,15 +33,15 @@ for-clause =
     [id seq-expr]                    ; bind id to each element
   | [(id ...) seq-expr]              ; bind multiple values per element
   | [id ...   seq-expr]              ; shorthand
-  | #:when guard-expr                ; keep iterating only when true (nests)
+  | #:when guard-expr                ; iterate only when true (nests)
   | #:unless guard-expr
   | #:break guard-expr               ; stop, excluding this element
   | #:final guard-expr               ; run this element, then stop
   | #:do [body ...]                  ; side effects between clauses
 
-;; Multiple [id seq] clauses before a #:when iterate in PARALLEL (zip,
-;; stopping at the shortest). In for* they nest. A binding clause after a
-;; #:when/#:unless always nests under it.
+;; Several [id seq] clauses before a #:when iterate in PARALLEL (zip, they
+;; stop at the shortest sequence). In for* they nest. A binding clause after a
+;; #:when or #:unless always nests under it.
 ```
 
 ## Sequence constructors
@@ -62,12 +63,12 @@ for-clause =
 (in-sequences seq ...)                 ; concatenate
 (in-parallel seq ...)                  ; -> (values elem-from-each ...)
 (in-values-sequence seq) (in-values*-sequence seq)
-(in-producer producer [stop arg ...])  ; from a thunk; require racket/sequence
+(in-producer producer [stop arg ...])  ; from a thunk. Require racket/sequence
 (stop-before seq pred)  (stop-after seq pred)
 ```
 
-Constructors used in a `for` clause head are recognized specially and
-compile to tight loops. Used elsewhere they produce ordinary sequence values.
+The compiler recognizes a constructor in a `for` clause head and compiles it
+to a tight loop. A constructor in any other place produces an ordinary sequence value.
 
 ## racket/sequence operations
 
@@ -91,7 +92,7 @@ empty-sequence                         ; the zero-element sequence
 ;; (1) struct property
 #:property prop:sequence (lambda (self) sequence-or-thunk)
 
-;; (2) general constructor — the thunk returns the position protocol:
+;; (2) general constructor. The thunk returns the position protocol:
 (make-do-sequence
  (lambda ()
    (values pos->element        ; (-> pos any) — current element(s)
@@ -100,8 +101,8 @@ empty-sequence                         ; the zero-element sequence
            continue-with-pos?  ; (or/c (-> pos any/c) #f) — check before element
            continue-with-val?  ; (or/c (-> elem any/c) #f) — check after element
            continue-after?)))  ; (or/c (-> pos elem any/c) #f) — check before next
-   ; any predicate may be #f to skip that test. A newer keyword form,
-   ; (make-do-sequence thunk #:pos->element ...), also exists.
+   ; Any predicate can be #f to skip that test. There is also a newer keyword
+   ; form, (make-do-sequence thunk #:pos->element ...).
 
 ;; (3) inlinable in-X macro
 (define-sequence-syntax id
@@ -122,8 +123,8 @@ empty-sequence                         ; the zero-element sequence
 ## Generators (require racket/generator)
 
 ```racket
-(in-generator [#:arity k] body ...+)   ; body uses (yield v ...); a sequence
-(generator (arg ...) body ...+)        ; a resumable procedure; (yield v) inside
+(in-generator [#:arity k] body ...+)   ; body uses (yield v ...). It makes a sequence
+(generator (arg ...) body ...+)        ; a resumable procedure. Use (yield v) inside
 (yield v ...) -> any                    ; suspend, return v to the caller
 (sequence->generator seq)  (sequence->repeated-generator seq)
 ```

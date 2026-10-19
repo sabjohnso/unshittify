@@ -1,27 +1,27 @@
-# Module Reference — exact grammars
+# Module Reference: exact grammars
 
-Companion to SKILL.md. Source: docs.racket-lang.org/reference/module.html
-and require/provide. Checked against Racket v9.1 [cs].
+This file accompanies `SKILL.md`. The sources are docs.racket-lang.org/reference/module.html
+and require/provide. The text was checked against Racket v9.1 [cs].
 
 ## Module and submodule forms
 
 ```racket
-(module id module-path form ...)       ; a top-level/independent module
-(module* id module-path-or-#f form ...) ; submodule; #f = enclosing language + scope
-(module+ id form ...)                   ; submodule that accumulates across uses;
-                                        ;   runs after the enclosing module body
+(module id module-path form ...)       ; a top-level or independent module
+(module* id module-path-or-#f form ...) ; submodule; #f = language and scope of the enclosing module
+(module+ id form ...)                   ; submodule that collects the pieces of all uses;
+                                        ;   runs after the body of the enclosing module
 #lang lang-name                         ; reader shorthand for (module name lang ....)
 ```
 
-- `module` / `module* … <lang>`: isolated — its body sees only what it
-  `require`s, not the enclosing module.
-- `module* … #f`: sees the enclosing module's bindings (incl. unexported)
-  and language; evaluated after the enclosing module.
-- `module+`: like `module* … #f` but several same-named pieces combine; the
-  standard form for `main` and `test`.
+- `module` / `module* … <lang>`: isolated. Its body sees only what it
+  `require`s. It does not see the enclosing module.
+- `module* … #f`: sees the bindings of the enclosing module (also the
+  unexported bindings) and its language. It is evaluated after the enclosing module.
+- `module+`: like `module* … #f`, but pieces with the same name combine.
+  It is the standard form for `main` and `test`.
 
-Ordering: the enclosing module's body runs first; `module+`/`module* #f`
-bodies run after it. The enclosing module may also `require` its own
+Order: the body of the enclosing module runs first. The bodies of `module+`
+and `module* #f` run after it. The enclosing module can also `require` its own
 submodules.
 
 ## module-path (for require / submod)
@@ -29,14 +29,14 @@ submodules.
 ```racket
 module-path =
     "rel/path.rkt"                  ; relative to the enclosing file
-  | id                              ; a collection, e.g. racket/list
+  | id                              ; a collection, for example racket/list
   | (lib "collection/file.rkt")
   | (file "/abs/or/rel/path.rkt")
-  | (planet ....)                   ; legacy
+  | (planet ....)                   ; old form
   | (submod base-module-path id ...); a submodule
   | (submod "." id ...)             ; sibling submodule (same file)
-  | (submod ".." id ...)            ; enclosing module / its submodule
-  | (quote id)                      ; an interactively-declared module
+  | (submod ".." id ...)            ; enclosing module or its submodule
+  | (quote id)                      ; a module declared in the REPL
 ```
 
 ## require-spec
@@ -52,50 +52,50 @@ module-path =
          (only-meta-in phase require-spec ...)
          (for-syntax  require-spec ...)   ; phase +1
          (for-template require-spec ...)  ; phase -1
-         (for-label   require-spec ...)   ; phase #f (no run, e.g. docs)
+         (for-label   require-spec ...)   ; phase #f (no run, for example docs)
          (for-meta    phase require-spec ...))
 ```
 
-Wrappers compose: `(prefix-in p: (only-in m a b))` imports `p:a`, `p:b`.
+Wrappers combine. For example, `(prefix-in p: (only-in m a b))` imports `p:a` and `p:b`.
 
 ## provide-spec
 
 ```racket
 (provide id ...
          (rename-out  [local-id export-id] ...)
-         (struct-out  struct-id)               ; ctor, predicate, accessors, setters
-         (all-defined-out)                      ; all module-level definitions here
-         (all-from-out module-path ...)         ; re-export a module's imports
+         (struct-out  struct-id)               ; constructor, predicate, accessors, setters
+         (all-defined-out)                      ; all module-level definitions in this module
+         (all-from-out module-path ...)         ; export again the imports of a module
          (prefix-out  prefix-id provide-spec)
          (except-out  provide-spec id ...)
          (combine-out provide-spec ...)
          (contract-out [id contract] ...)       ; see the contracts skill
-         (protect-out provide-spec ...)         ; require protected access
+         (protect-out provide-spec ...)         ; the importer needs protected access
          (for-syntax provide-spec ...)          ; export at phase 1
          (for-label  provide-spec ...)
          (for-meta phase provide-spec ...))
 ```
 
-`all-from-out` only re-exports bindings that arrived via `require` (not
-local definitions); `all-defined-out` only exports local definitions (not
-imports).
+`all-from-out` exports again only the bindings that came from `require`. It
+does not export local definitions. `all-defined-out` exports only local
+definitions. It does not export imports.
 
 ## Reflection and tooling
 
 ```racket
 (dynamic-require module-path provided-sym-or-#f [fail-thunk]) -> any
-   ; #f for provided => just instantiate the module for effect.
+   ; If the provided value is #f, the call only instantiates the module for its effects.
 (dynamic-require-for-syntax module-path sym) -> any
 (module->exports module-path)
-   -> (values phase-exports phase-syntax-exports)   ; list per phase
+   -> (values phase-exports phase-syntax-exports)   ; one list for each phase
 (module->imports module-path) -> assoc of phase -> module-path-index list
 (module-predefined? module-path) -> boolean?
 (module-path? v) (resolved-module-path? v) (module-path-index? v)
 ```
 
-Run / build:
+Run and build:
 - `racket file.rkt` instantiates the module and runs `(module+ main ...)`.
-- `raco test file.rkt` runs the `test` submodule (and any submodule listed
-  in `test` config); `(module+ test ...)` is the common home for tests.
-- `raco make file.rkt` compiles to `compiled/*.zo`.
+- `raco test file.rkt` runs the `test` submodule and any submodule that the
+  `test` configuration lists. The usual place for tests is `(module+ test ...)`.
+- `raco make file.rkt` compiles the file to `compiled/*.zo`.
 - `raco exe file.rkt` builds a stand-alone executable from `main`.
