@@ -1,8 +1,8 @@
 # unshittify
 
-A Claude Code plugin marketplace: eight plugins of skills and subagents, plus
-three hook scripts that hold a few working habits in place rather than leaving
-them to memory.
+A Claude Code plugin marketplace. It holds eight plugins of skills and
+subagents, plus three hook scripts. The hooks hold some working habits in
+place, so the habits do not depend on memory.
 
 ## Install
 
@@ -19,32 +19,32 @@ claude plugin list --json          # confirm what is installed and enabled
 
 | Plugin | What it gives you |
 |--------|-------------------|
-| `local` | Project-local settings (`.claude/settings.local.json`) that `/config` does not expose per-project: theme, model, per-project plugin enable/disable, and a settings audit. |
-| `global` | The audit again, against `~/.claude/settings.json`: the checks `local` runs, less the two that only mean anything inside a project, plus one for whether a marketplace's hook scripts are wired into the file - and a slash-command-only repair when they are not. |
-| `git` | Commit-message drafting in this repo's template, and git-history exploration. |
-| `development` | Language-agnostic discipline: a "make changing easy" precondition, and test-driven-development, Normalized Systems Theory, property-test, and efficiency reviews. |
+| `local` | Project-local settings (`.claude/settings.local.json`) that `/config` does not show per project: the theme, the model, the plugins that are enabled per project, and a settings audit. |
+| `global` | The audit again, against `~/.claude/settings.json`. It runs the checks of `local`, less the two that only apply inside a project, plus one check that the hook scripts of a marketplace are wired into the file. A slash-command-only repair adds the wiring when it is absent. |
+| `git` | A draft of a commit message in the template of this repository, and an exploration of the git history. |
+| `development` | Language-agnostic discipline: a "make changing easy" precondition, and the reviews for test-driven development, Normalized Systems Theory, property tests, and efficiency. |
 | `cxx` | C++ work: sanitizer builds, structural search with `clang-query`, and editing idioms. |
-| `racket` | Reference skills for Racket - classes, contracts, macros, concurrency, exceptions, GUI, drawing, testing, packaging, and more - each a `SKILL.md` with a signature-level `reference.md` beside it. |
+| `racket` | Reference skills for Racket: classes, contracts, macros, concurrency, exceptions, GUI, drawing, testing, packaging, and more. Each one is a `SKILL.md` with a signature-level `reference.md` beside it. |
 | `communication` | Holds the condensed rules of Simplified Technical English (ASD-STE100), reviews prose against STE and the house style, and aligns markdown tables. |
-| `meta` | Skills for authoring new skills and agents in this repository's house style. |
+| `meta` | Skills that write new skills and agents in the house style of this repository. |
 
 ## The hooks
 
-`hooks/` is not a plugin and the marketplace manifest does not load it. These
-are three bash scripts you wire into `~/.claude/settings.json` yourself, by
-absolute path, after which they apply in **every** project on the machine -
-not only in this one.
+`hooks/` is not a plugin, and the marketplace manifest does not load it. It
+holds three bash scripts. You wire them into `~/.claude/settings.json`
+yourself, by absolute path. After that, they apply in **every** project on
+the machine, not only in this one.
 
 | Script | Event | What it does |
 |--------|-------|--------------|
-| `enforce-prose-review.sh` | `Stop` | Blocks ending a turn when the final message is substantial prose that the `communication:prose-reviewer` agent has not seen. That agent checks Simplified Technical English first. |
-| `enforce-code-review.sh` | `Stop` | Blocks ending a turn when a file was changed but the four required reviews did not all run. Counts changes made through `Bash` and through a delegated subagent, not only through the `Edit` tool. |
-| `confirm-git-commit-push.sh` | `PreToolUse` (`Bash`) | Denies `git commit` until the message has been prose-reviewed; asks before any commit or push. |
+| `enforce-prose-review.sh` | `Stop` | Blocks the end of a turn when the final message is substantial prose that the `communication:prose-reviewer` agent did not see. That agent checks Simplified Technical English first. |
+| `enforce-code-review.sh` | `Stop` | Blocks the end of a turn when a file changed but not all of the four required reviews ran. It counts the changes made through `Bash` and through a delegated subagent, not only through the `Edit` tool. |
+| `confirm-git-commit-push.sh` | `PreToolUse` (`Bash`) | Denies `git commit` until the prose reviewer has seen the message. Asks before each commit and each push. |
 
-### Wiring them up
+### How to wire them
 
-Either run `/global:check-settings`, which reports exactly what is missing,
-then `/global:repair-hook-wiring`, which adds it with your approval - or edit
+Run `/global:check-settings`, which reports exactly what is absent. Then run
+`/global:repair-hook-wiring`, which adds it after your approval. Or edit
 `~/.claude/settings.json` by hand:
 
 ```json
@@ -65,58 +65,59 @@ then `/global:repair-hook-wiring`, which adds it with your approval - or edit
 }
 ```
 
-Substitute your own checkout path. The scripts need `bash`, `jq`, and `awk`.
+Put the path of your own checkout in place of the example path. The scripts
+need `bash`, `jq`, and `awk`.
 
-Two things are worth knowing before you turn them on. They are global, so a
-hook that blocks a turn blocks it in every repository you open, not just this
-one. And `enforce-code-review.sh` treats delegation to any subagent it does
-not recognise as a possible file change, because a subagent's edits are
-recorded in the subagent's transcript and never reach the one the hook is
-handed. Its `READ_ONLY_AGENTS` table is a judgement about what each listed
-agent is told to do, not a fact read off that agent's `tools:` line - no
-entry earned its place by looking harmless there, and every one defined in
-this repository holds a tool that writes (`Bash`, or `Edit` in
-`communication:prose-reviewer`'s case). Delegating to an agent the table does not name
-costs a redundant review. For `communication:prose-reviewer` it cost more
-than that: `enforce-prose-review.sh` demands that agent on every substantial
-reply, so until the table exempted it the two hooks left no move that
-satisfied both - one required the review, the other blocked the turn for
-having run it.
+Know two things before you turn them on. The hooks are global. A hook that
+blocks a turn blocks it in every repository that you open, not only in this
+one. And `enforce-code-review.sh` treats a delegation to an unknown subagent
+as a possible file change. The edits of a subagent go to the transcript of
+the subagent, and they never reach the transcript that the hook gets. The
+`READ_ONLY_AGENTS` table of that hook is a judgement about what each listed
+agent is told to do. It is not a fact read from the `tools:` line of the
+agent. No entry is in the table because it looks harmless there. Every agent
+in this repository holds a tool that writes: `Bash`, or `Edit` in the case of
+`communication:prose-reviewer`. A delegation to an agent that is not in the
+table costs a redundant review. For `communication:prose-reviewer`, the cost
+was higher. `enforce-prose-review.sh` demands that agent on every substantial
+reply. Until the table exempted it, the two hooks left no move that satisfied
+both. One required the review, and the other blocked the turn for the review.
 
-## Developing
+## Development
 
 ```sh
 tests/run_tests.sh                   # shellcheck, every bats suite, the validator
 tests/hooks/run_tests.sh             # the hook scripts (bats)
-tests/plugins/run_tests.sh           # the validator's own tests (bats)
+tests/plugins/run_tests.sh           # the tests of the validator (bats)
 tests/scripts/run_tests.sh           # scripts/ (bats)
 tests/plugins/validate-plugins.sh    # the validator, against this repository
 scripts/update-install.sh            # publish your edits to the local install
 ```
 
-Editing a file under `plugins/` changes nothing a running session sees.
-Installing copies the tree into
-`~/.claude/plugins/cache/<marketplace>/<plugin>/<version>/`, and that copy is
-what loads. `scripts/update-install.sh` refreshes the marketplace, republishes
-every plugin, and then verifies each installed snapshot against the tree,
-exiting non-zero if any is stale. Use `--dry-run` to see the commands and
-`--verify-only` to check staleness without changing anything.
+An edit of a file under `plugins/` changes nothing that a live session sees.
+An install copies the tree into
+`~/.claude/plugins/cache/<marketplace>/<plugin>/<version>/`, and the session
+loads that copy. `scripts/update-install.sh` refreshes the marketplace,
+publishes every plugin again, and then verifies each installed snapshot
+against the tree. It exits with a nonzero status if a snapshot is stale. Use
+`--dry-run` to see the commands. Use `--verify-only` to check for stale
+snapshots and change nothing.
 
-The verification matters because `claude plugin update` is keyed on the
-version string alone: a plugin edited without a version bump is reported as
-already current while its stale copy stays in place. The script reinstalls
-those plugins instead of updating them.
+The verification matters because `claude plugin update` keys on the version
+string alone. It reports a plugin edited with no version increase as current,
+and the stale copy stays in place. The script reinstalls those plugins and
+does not update them.
 
 `.github/workflows/tests.yml` runs `tests/run_tests.sh` on every push and
-pull request, so one command settles the question locally and in continuous
-integration alike. It runs `shellcheck` first, over the hooks, the validator
-and the runners themselves.
+pull request. So one command settles the question locally and in continuous
+integration. It runs `shellcheck` first, over the hooks, the validator, and
+the runners themselves.
 
-The test suites need `bats` and `shellcheck`; the hook scripts and the
-validator themselves need only `bash`, `jq`, and `awk`. Run
-`validate-plugins.sh` after any edit under `plugins/` - it is the only thing
-that checks the Markdown and JSON, and the defects it catches (a YAML comment
-eating half a description, a reference file nothing points at, a renamed tool)
-are all invisible on inspection.
+The test suites need `bats` and `shellcheck`. The hook scripts and the
+validator need only `bash`, `jq`, and `awk`. Run `validate-plugins.sh` after
+each edit under `plugins/`. It is the only check of the Markdown and the
+JSON. The defects that it catches are invisible to the eye: a YAML comment
+that removes half of a description, a reference file that nothing points to,
+and a renamed tool.
 
-`CLAUDE.md` carries the conventions and the reasoning behind them.
+`CLAUDE.md` holds the conventions and the reasons behind them.
