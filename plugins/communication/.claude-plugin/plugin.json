@@ -1,7 +1,7 @@
 {
   "name": "communication",
   "description": "Write and review prose in Simplified Technical English (ASD-STE100), and format markdown tables. The simplified-technical-english skill holds the condensed STE rules. The review-prose skill and the prose-reviewer agent check prose against STE and the house style of this project (the checklist and its curated examples, plus BadProseExamples.org at the root of the repository when that file is present). The markdown-tables skill aligns the columns of a table.",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "author": {
     "name": "Samuel Bryant Johnson",
     "email": "samuel.bryant.johnson@gmail.com"

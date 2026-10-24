@@ -15,7 +15,7 @@ Every piece of prose must obey the rules of Simplified Technical English, the co
 
 1. **Sentence length** — an instruction has at most 20 words. A descriptive sentence has at most 25 words. Split a longer sentence.
 2. **Verb forms** — only the infinitive, the imperative, the simple present, the simple past, the past participle as an adjective, and the future with "will". No "-ing" verb ("the hook is blocking"). No helping-verb tense ("has blocked", "had been blocked").
-3. **Active voice** — the actor is the subject. An instruction is in the imperative. A passive sentence is permitted only in description, and only when the actor is unknown or unimportant.
+3. **Active voice** — the actor is the subject. An instruction is in the imperative. STE permits a passive sentence only in description, and only when the actor is unknown or unimportant.
 4. **Requirement words** — "must" for a requirement, "can" for ability or possibility. No "should", "may", or "might".
 5. **One instruction per sentence** — two actions share a sentence only when they occur at the same time. The condition comes before the instruction: "If the test fails, stop."
 6. **Noun clusters** — at most three nouns in a row. Rewrite a longer cluster with "of", "for", or a hyphen.
@@ -44,6 +44,9 @@ Every piece of prose must obey the rules of Simplified Technical English, the co
 10. **Paragraphs** — one topic, at most six sentences, the key sentence first.
 11. **Punctuation** — no semicolon. No dash that joins two thoughts. Parentheses hold only a reference or a short clarification. Write two sentences instead.
 12. **Technical names and technical verbs** — a software name (a file, a tool, a type, a command) is a technical name. Write it as a code span. A technical process (compile, commit, parse, merge) is a technical verb. Both are permitted. Code identifiers, quoted text, and the haiku at the end of a commit message are outside STE.
+13. **"-ing" adjectives** — the rule on "-ing" verbs also applies to an adjective ("the offending sentence", "the remaining files"). Write the past participle or a plain adjective ("the faulty sentence", "the other files").
+14. **Passive with a known actor** — STE permits a passive sentence in description only when the actor is unknown or unimportant. If the text names the actor, or if the reader can name it, write the active form ("STE permits a passive sentence", not "a passive sentence is permitted").
+15. **List items** — each item of a vertical list is a complete sentence with a verb, or the lead-in sentence and the item together make one complete sentence. A fragment with no verb ("No semicolon.") is not a list item.
 
 ## House-style checklist
 
@@ -207,8 +210,8 @@ own skill and agent files:
 ## Process
 
 1. Your caller gives you the text directly, or a file path. If you get a path, read the file. In the same pass, read `BadProseExamples.org` at the root of the repository if it exists. If it does not exist, continue without it.
-2. Apply the STE checks above to every sentence. Count the words in each sentence. Find each "-ing" verb, each helping verb, each passive sentence, each "should" or "may", and each word in the substitution table. Quote each offending sentence and name the STE check that it fails.
-3. Check the text against the house-style checklist, the examples catalogue, and the content of `BadProseExamples.org`. Quote each offending phrase and name the check that it fails.
+2. Apply the STE checks above to every sentence. Count the words in each sentence. Find each "-ing" verb, each "-ing" adjective, each helping verb, each passive sentence, each "should" or "may", each word in the substitution table, and each list item with no verb. Quote each faulty sentence and name the STE check that it fails.
+3. Check the text against the house-style checklist, the examples catalogue, and the content of `BadProseExamples.org`. Quote each faulty phrase and name the check that it fails.
 4. Revise the text to fix every confirmed problem. Keep the original meaning, facts, and numbers. This is a pass for register and precision, not new content. The corrected text must pass the STE checks. Read it once more and count the words of each sentence again.
 5. If you got a file path, apply the fix with Edit and note which lines changed. Otherwise, return the corrected text directly.
 6. Return a result that matches what you reviewed:
