@@ -482,6 +482,150 @@ EOF' \
   done
 }
 
+# --- the edit tools, and the files that no review can cover -----------------
+#
+# Edit, Write, and NotebookEdit change a file, but not always a file in the
+# tree under review. A draft of a reply in the scratchpad (under /tmp) or a
+# memory note of the harness (~/.claude/projects/<project>/memory/) is not
+# code. Each one cost four reviews on a turn with no diff. The exempt set
+# has the same traversal guards as the Bash exemption above.
+
+@test "an edit tool on a temporary file is not a code change" {
+  local tool path
+  for tool in Edit Write NotebookEdit; do
+    for path in /tmp/draft.md \
+                /tmp/claude-1000/project/session/scratchpad/reply.md \
+                /var/tmp/notes.txt; do
+      run code_was_edited "$(shaped_event "$tool" file_path="$path")"
+      [ "$status" -ne 0 ] || { echo "falsely flagged: $tool $path"; return 1; }
+    done
+  done
+}
+
+@test "an edit tool on a memory note of the harness is not a code change" {
+  local path
+  for path in "${HOME}/.claude/projects/-home-sbj-Sandbox-miner/memory/MEMORY.md" \
+              "${HOME}/.claude/projects/p/memory/note.md"; do
+    run code_was_edited "$(shaped_event Write file_path="$path")"
+    [ "$status" -ne 0 ] || { echo "falsely flagged: $path"; return 1; }
+  done
+}
+
+@test "a memory-shaped path outside the home directory is a code change" {
+  # A repository can hold its own .claude directory. Only the notes of the
+  # harness, under the home directory of the user, are exempt.
+  local path
+  for path in /srv/repo/.claude/projects/p/memory/note.md \
+              "${HOME}/src/repo/.claude/projects/p/memory/note.md" \
+              "/x${HOME}/.claude/projects/p/memory/note.md"; do
+    run code_was_edited "$(shaped_event Write file_path="$path")"
+    [ "$status" -eq 0 ] || { echo "undetected edit: $path"; return 1; }
+  done
+}
+
+@test "ere_escape: an escaped text matches itself and nothing else" {
+  # The memory exemption puts HOME into a regex. A home directory such as
+  # /home/john.doe must not match /home/johnXdoe.
+  local text
+  for text in '/home/john.doe' '/home/a+b' '/home/(x)' '/home/[ab]' \
+              '/home/{1}' '/home/a|b' '/home/^x$' '/home/a*?' '/home/a\b'; do
+    grep -qE "^$(ere_escape "$text")\$" <<<"$text" \
+      || { echo "no self match: $text"; return 1; }
+  done
+  # bats does not fail a test on a line that starts with "!", so each
+  # negative check fails the test by hand.
+  local pair
+  for pair in '/home/john.doe=/home/johnXdoe' '/home/a|b=b' '/home/a+b=/home/aab'; do
+    if grep -qE "^$(ere_escape "${pair%%=*}")\$" <<<"${pair#*=}"; then
+      echo "false match: ${pair%%=*} matched ${pair#*=}"; return 1
+    fi
+  done
+}
+
+@test "an edit tool with an empty path is a code change" {
+  # shaped_event turns "" into null, so this event is written by hand.
+  run code_was_edited '{"name":"Edit","skill":null,"subagent_type":null,"command":null,"file_path":""}'
+  [ "$status" -eq 0 ]
+}
+
+@test "a newline in a path never hides a file in the tree" {
+  run code_was_edited "$(shaped_event Write file_path=$'/home/sbj/p/src/a.c\n/tmp/x')"
+  [ "$status" -eq 0 ]
+  run code_was_edited "$(shaped_event Write file_path=$'/tmp/x\n/home/sbj/p/src/a.c')"
+  [ "$status" -eq 0 ]
+}
+
+@test "an edit tool on a file in the tree under review is still a code change" {
+  local path
+  for path in /home/sbj/Sandbox/miner/src/parser.cpp \
+              src/parser.cpp \
+              "${HOME}/.claude/settings.json" \
+              "${HOME}/.claude/projects/p/other/note.md" \
+              "${HOME}/.claude/projects/p/memory/sub/note.md"; do
+    run code_was_edited "$(shaped_event Edit file_path="$path")"
+    [ "$status" -eq 0 ] || { echo "undetected edit: $path"; return 1; }
+  done
+}
+
+@test "an edit tool path that leaves an exempt directory is a code change" {
+  local path
+  for path in /tmp/../home/sbj/src/parser.c \
+              /tmp/a/../../home/sbj/src/parser.c \
+              /tmpfoo/bar.c \
+              /var/tmpfoo/bar.c \
+              "${HOME}/.claude/projects/p/memory/../../../../Sandbox/src/a.c" \
+              "${HOME}/.claude/projects/../projects/p/memory/x/../../a.c"; do
+    run code_was_edited "$(shaped_event Write file_path="$path")"
+    [ "$status" -eq 0 ] || { echo "undetected edit: $path"; return 1; }
+  done
+}
+
+@test "an edit tool with no recorded path is a code change" {
+  # The transcript is the only evidence. With no path, the gate cannot show
+  # that the file is outside the tree, so the edit counts.
+  run code_was_edited "$(shaped_event Edit)"
+  [ "$status" -eq 0 ]
+}
+
+@test "an exempt edit beside a real edit is a code change" {
+  # Order invariance and monotonicity for the path exemption: an exempt
+  # write never hides a real one, in either position.
+  local scratch tree
+  scratch="$(shaped_event Write file_path=/tmp/draft.md)"
+  tree="$(shaped_event Edit file_path=/home/sbj/project/src/a.c)"
+  run code_was_edited "$(printf '%s\n%s\n' "$scratch" "$tree")"
+  [ "$status" -eq 0 ]
+  run code_was_edited "$(printf '%s\n%s\n' "$tree" "$scratch")"
+  [ "$status" -eq 0 ]
+}
+
+@test "many exempt edits are still not a code change" {
+  local events="" i
+  for i in 1 2 3; do
+    events+="$(shaped_event Write file_path="/tmp/draft-${i}.md")"$'\n'
+  done
+  run code_was_edited "$events"
+  [ "$status" -ne 0 ]
+}
+
+@test "a notebook edit of a scratch file in a whole turn does not require the reviews" {
+  # NotebookEdit names its file in notebook_path, not file_path. This joins
+  # the shaping in transcript.sh to the exemption in this hook.
+  transcript="$(write_transcript "$(printf '%s\n%s\n' \
+    "$(typed_prompt_event 'try it in a notebook')" \
+    '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"NotebookEdit","input":{"notebook_path":"/tmp/try.ipynb"}}]}}')")"
+  run missing_reviews_for_transcript "$transcript"
+  [ -z "$output" ]
+}
+
+@test "a scratch write in a whole turn does not require the reviews" {
+  transcript="$(write_transcript "$(printf '%s\n%s\n' \
+    "$(typed_prompt_event 'where is the binary')" \
+    "$(tool_use_event Write file_path=/tmp/claude-1000/p/s/scratchpad/reply.md)")")"
+  run missing_reviews_for_transcript "$transcript"
+  [ -z "$output" ]
+}
+
 # --- laws of the missing-review computation, over generated input -----------
 #
 # CLAUDE.md states three laws for this computation, and it requires a
@@ -533,13 +677,16 @@ prng_next() {
 }
 
 # An event spec is a tool name, with an optional "|" and the one argument
-# that decides what that tool did: a Bash command, or a subagent type. The
+# that decides what that tool did: a Bash command, a subagent type, or the
+# file of an edit tool. The edits of exempt files are noise. The
 # two tables are the alphabet of the generator. event_line below turns one
 # spec into the transcript line for it.
 CODE_CHANGE_SPECS=(
   "Edit"
   "Write"
   "NotebookEdit"
+  "Edit|/home/sbj/p/src/a.c"
+  "Write|/tmp/../home/sbj/p/src/b.c"
   "Bash|sed -i 's/a/b/' src/parser.c"
   "Bash|printf 'x' > src/parser.h"
   "Agent|development:change-preparer"
@@ -553,6 +700,9 @@ NOISE_SPECS=(
   "Bash|make > /dev/null"
   "Agent|Explore"
   "Agent|git:git-explorer"
+  "Write|/tmp/claude-1000/p/s/scratchpad/reply.md"
+  "Edit|/var/tmp/notes.md"
+  "Write|${HOME}/.claude/projects/p/memory/note.md"
 )
 
 event_line() {
@@ -561,7 +711,8 @@ event_line() {
     Bash)  bash_command_event "$arg" ;;
     Agent) tool_use_event Agent subagent_type="$arg" ;;
     Skill) tool_use_event Skill skill="$arg" ;;
-    *)     tool_use_event "$name" ;;
+    *)     if [ "$arg" = "$1" ]; then tool_use_event "$name"
+           else tool_use_event "$name" file_path="$arg"; fi ;;
   esac
 }
 

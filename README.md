@@ -38,7 +38,7 @@ the machine, not only in this one.
 | Script | Event | What it does |
 |--------|-------|--------------|
 | `enforce-prose-review.sh` | `Stop` | Blocks the end of a turn when the final message is substantial prose that the `communication:prose-reviewer` agent did not see. That agent checks Simplified Technical English first. |
-| `enforce-code-review.sh` | `Stop` | Blocks the end of a turn when a file changed but not all of the four required reviews ran. It counts the changes made through `Bash` and through a delegated subagent, not only through the `Edit` tool. |
+| `enforce-code-review.sh` | `Stop` | Blocks the end of a turn when a file changed but not all of the four required reviews ran. It counts the changes made through `Bash` and through a delegated subagent, not only through the `Edit` tool. An edit of a temporary file or of a memory note of the harness does not count. |
 | `confirm-git-commit-push.sh` | `PreToolUse` (`Bash`) | Denies `git commit` until the prose reviewer has seen the message. Asks before each commit and each push. |
 
 ### How to wire them

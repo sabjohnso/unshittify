@@ -212,10 +212,13 @@ scan_boundary_candidates() {
 #
 # Prints one compact JSON object per tool_use event from the given 1-based
 # line to the end. Each object has the shape {name, skill, subagent_type,
-# command}. Every field but name is null when it does not apply to that tool.
-# Consumers filter this shape. They do not derive it from the raw transcript
-# again. command carries the command string of a Bash call, because the tool
-# NAME alone cannot say whether a Bash call read a file or rewrote one. The
+# command, file_path}. Every field but name is null when it does not apply to
+# that tool. Consumers filter this shape. They do not derive it from the raw
+# transcript again. command carries the command string of a Bash call,
+# because the tool NAME alone cannot say whether a Bash call read a file or
+# rewrote one. file_path carries the file of an Edit or a Write call, or the
+# notebook_path of a NotebookEdit call, for the same reason: the name alone
+# cannot say whether the file is in the tree under review. The
 # function takes a precomputed boundary, so a caller that already ran
 # find_turn_start_line does not pay a second full-transcript scan. A line
 # that jq cannot read costs that line alone. The function reports every
@@ -236,7 +239,8 @@ tool_use_events_since_line() {
             | select(.type == "tool_use")
             | {name, skill: (.input.skill // null),
                subagent_type: (.input.subagent_type // null),
-               command: (.input.command // null)}
+               command: (.input.command // null),
+               file_path: (.input.file_path // .input.notebook_path // null)}
             | tojson
           end') || jq_status=$?
 

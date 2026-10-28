@@ -91,24 +91,28 @@ reason_field() {
 }
 
 # tool_use_event <name> [skill=<skill>] [subagent_type=<type>]
+#                [file_path=<path>]
 #
 # Prints one compact JSON transcript line for an assistant tool_use event.
 # A test builds a synthetic transcript line by line with it.
 tool_use_event() {
   local name="$1"; shift
-  local skill="" subagent_type=""
+  local skill="" subagent_type="" file_path=""
   local arg
   for arg in "$@"; do
     case "$arg" in
       skill=*) skill="${arg#skill=}" ;;
       subagent_type=*) subagent_type="${arg#subagent_type=}" ;;
+      file_path=*) file_path="${arg#file_path=}" ;;
     esac
   done
   jq -nc --arg name "$name" --arg skill "$skill" --arg subagent_type "$subagent_type" \
+         --arg file_path "$file_path" \
     '{type:"assistant", message:{content:[
        {type:"tool_use", name:$name, input: (
          ({} + (if $skill != "" then {skill:$skill} else {} end)
-             + (if $subagent_type != "" then {subagent_type:$subagent_type} else {} end)))}
+             + (if $subagent_type != "" then {subagent_type:$subagent_type} else {} end)
+             + (if $file_path != "" then {file_path:$file_path} else {} end)))}
      ]}}'
 }
 
@@ -220,8 +224,9 @@ bash_command_event() {
 }
 
 # shaped_event <name> [skill=<skill>] [subagent_type=<type>] [command=<cmd>]
+#              [file_path=<path>]
 #
-# Prints one SHAPED event, the {name, skill, subagent_type, command} form
+# Prints one SHAPED event, the {name, skill, subagent_type, command, file_path} form
 # that tool_use_events_since_line emits. code_was_edited and
 # review_satisfied consume that form. It differs from tool_use_event, which
 # prints the raw assistant transcript LINE that the shaped form comes from.
@@ -229,20 +234,23 @@ bash_command_event() {
 # no error.
 shaped_event() {
   local name="$1"; shift
-  local skill="" subagent_type="" command="" arg
+  local skill="" subagent_type="" command="" file_path="" arg
   for arg in "$@"; do
     case "$arg" in
       skill=*) skill="${arg#skill=}" ;;
       subagent_type=*) subagent_type="${arg#subagent_type=}" ;;
       command=*) command="${arg#command=}" ;;
+      file_path=*) file_path="${arg#file_path=}" ;;
     esac
   done
   jq -nc --arg name "$name" --arg skill "$skill" \
          --arg subagent_type "$subagent_type" --arg command "$command" \
+         --arg file_path "$file_path" \
     '{name: $name,
       skill: (if $skill == "" then null else $skill end),
       subagent_type: (if $subagent_type == "" then null else $subagent_type end),
-      command: (if $command == "" then null else $command end)}'
+      command: (if $command == "" then null else $command end),
+      file_path: (if $file_path == "" then null else $file_path end)}'
 }
 
 # user_prompt_multiblock_event <count> [text]

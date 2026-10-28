@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Stop hook. It blocks the end of the turn when a file was written or edited
 # this turn and not all of the required reviews ran after the last message
-# from the user. An edit is an Edit, Write, or NotebookEdit tool call, a Bash
-# command that matches BASH_WRITE_PATTERNS, or a delegation to an agent that
-# READ_ONLY_AGENTS does not list. The REQUIRED_REVIEWS table below is the set
+# from the user. An edit is an Edit, Write, or NotebookEdit tool call on a
+# file that EDIT_EXEMPT_PATHS does not match, a Bash command that matches
+# BASH_WRITE_PATTERNS, or a delegation to an agent that READ_ONLY_AGENTS does
+# not list. The REQUIRED_REVIEWS table below is the set
 # of required reviews. To require a new review, add a line there. No other
 # code change is necessary.
 set -euo pipefail
@@ -20,7 +21,8 @@ REQUIRED_REVIEWS=(
   "development:review-efficiency|development:efficiency-reviewer"
 )
 
-CODE_CHANGE_TOOL_NAMES='^(Edit|Write|NotebookEdit)$'
+# The tools that change the file that their file_path names.
+CODE_CHANGE_TOOLS=(Edit Write NotebookEdit)
 
 # Bash commands that change a file. The tool name alone cannot answer this
 # question. Bash reads and writes, and the auto mode of the harness tells the
@@ -132,6 +134,51 @@ BASH_WRITE_EXEMPTIONS=(
   "s@(^|[[:space:];&|(])(mkdir|touch)([[:space:]]+-[A-Za-z-]+)*([[:space:]]+${BASH_TEMP_PATH})+${BASH_COMMAND_END}@ @g"
 )
 
+# Files that an Edit, Write, or NotebookEdit call can change with no review.
+# Each entry is an extended regex for the WHOLE path. To widen the exemption,
+# add a line here. No other code change is necessary.
+#
+#   temporary     The same paths as the Bash redirection exemption above. The
+#                 scratchpad of the harness is under /tmp, and the model
+#                 drafts each reply there for the prose review.
+#   memory notes  $HOME/.claude/projects/<project>/memory/<note>. These are
+#                 notes of the harness about the user and the work, not
+#                 code. The entry is anchored on the home directory, because
+#                 a repository can hold a .claude directory of its own. A
+#                 file in a subdirectory of memory/ is not exempt. With no
+#                 absolute HOME, the entry is absent.
+#
+# Each path component comes from BASH_TEMP_COMPONENT, which rejects "." and
+# "..". Thus no path that traverses out of an exempt directory matches. An
+# event with no path, or with an empty path, does not match either, so it
+# counts as an edit.
+EDIT_EXEMPT_PATHS=(
+  "^${BASH_TEMP_PATH}\$"
+)
+
+# ere_escape <text>
+#
+# Prints text with each extended-regex metacharacter escaped, so that the
+# regex matches the text literally. It is a bash loop and not a sed call,
+# because the table below is built each time the hook runs, on the Stop path.
+ere_escape() {
+  local text="$1" escaped="" char i
+  for ((i = 0; i < ${#text}; i++)); do
+    char="${text:i:1}"
+    case "$char" in
+      [][\\.*^\$+?\(\)\{\}\|]) escaped+="\\${char}" ;;
+      *) escaped+="$char" ;;
+    esac
+  done
+  printf '%s' "$escaped"
+}
+
+if [[ "${HOME:-}" == /* ]]; then
+  EDIT_EXEMPT_PATHS+=(
+    "^$(ere_escape "$HOME")/\\.claude/projects/${BASH_TEMP_COMPONENT}/memory/${BASH_TEMP_COMPONENT}\$"
+  )
+fi
+
 # Subagents that the judgement below says do not change the tree under
 # review. Every OTHER subagent_type counts as a possible code change. The
 # Edit calls of a delegated agent are recorded in the transcript of the
@@ -215,11 +262,28 @@ transcript_path_from() {
 
 # edit_tool_used <events-jsonl>
 #
-# True when the tool name of an event is Edit, Write, or NotebookEdit.
+# True when the tool name of an event is Edit, Write, or NotebookEdit, and
+# EDIT_EXEMPT_PATHS does not match the file of that event. An event with no
+# file_path, or an empty one, gets a placeholder that no exempt pattern
+# matches, so it counts.
 edit_tool_used() {
-  local events="$1" names
-  names=$(printf '%s\n' "$events" | jq -r '.name // empty')
-  grep -qE "$CODE_CHANGE_TOOL_NAMES" <<<"$names"
+  local events="$1" paths
+  paths=$(printf '%s\n' "$events" \
+    | jq -r --args 'select(.name as $n | $ARGS.positional | index($n))
+                    | (.file_path // "") | if . == "" then "<no path>" else . end' \
+        "${CODE_CHANGE_TOOLS[@]}")
+  [ -n "$paths" ] || return 1
+  grep -qvE "$(edit_exempt_alternation)" <<<"$paths"
+}
+
+# edit_exempt_alternation
+#
+# The EDIT_EXEMPT_PATHS table joined into one extended regex, for the same
+# reason as bash_write_alternation below.
+edit_exempt_alternation() {
+  local joined
+  joined=$(printf '|%s' "${EDIT_EXEMPT_PATHS[@]}")
+  printf '%s' "${joined:1}"
 }
 
 # bash_wrote_a_file <events-jsonl>

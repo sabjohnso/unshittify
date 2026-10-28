@@ -104,6 +104,20 @@ setup() {
   [[ "$output" == *'"subagent_type":"nst-reviewer"'* ]]
 }
 
+@test "the shaped event carries the path of a file edit tool" {
+  # Write and Edit name their file in file_path. NotebookEdit names it in
+  # notebook_path. Both reach the one file_path field of the shaped event.
+  transcript="$(write_transcript "$(printf '%s\n%s\n%s\n' \
+    "$(user_prompt_event 'write it')" \
+    "$(tool_use_event Write file_path=/tmp/draft.md)" \
+    '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"NotebookEdit","input":{"notebook_path":"/tmp/n.ipynb"}}]}}')")"
+  start="$(find_turn_start_line "$transcript")"
+  run tool_use_events_since_line "$transcript" "$start"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *'"name":"Write"'*'"file_path":"/tmp/draft.md"'* ]]
+  [[ "$output" == *'"name":"NotebookEdit"'*'"file_path":"/tmp/n.ipynb"'* ]]
+}
+
 @test "the function excludes the tool_use events before the turn boundary" {
   # A review from an earlier turn (before the current prompt) must not count.
   transcript="$(write_transcript "$(printf '%s\n%s\n%s\n%s\n' \
