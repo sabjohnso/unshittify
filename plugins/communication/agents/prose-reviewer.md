@@ -71,6 +71,7 @@ Every piece of prose must obey the rules of Simplified Technical English, the co
 19. **Inconsistent terminology.** One concept with different names in one document or across two paired documents ("takes a predicate" in one place, "wants a predicate" in another, "parse an AST" and "build an AST"). Pick one term and use it throughout.
 20. **Ungrammatical sentences.** A comma splice ("`#:when`/`#:unless` nest, they don't just filter"), a verb that disagrees with its compound subject, a misplaced adverb ("returns silently empty"), or a broken parallel ("computation the user waits on and needlessly wastes": the user waits, the code wastes). Fix the grammar and keep the claim.
 21. **Sentence fragments that block understanding.** A fragment whose missing subject or verb leaves the claim unclear ("Same failure as before. Different cause." Which failure, and whose cause?). A short fragment is acceptable in a reference table, a heading, or an instruction where the elided words are obvious. Flag a fragment only when the reader must guess what was left out.
+22. **A number with a unit that has the wrong scale.** A number with a unit that takes a metric prefix (s, m, g, B, Hz, and so on) has one, two, or three digits before the decimal point, and the first digit is not zero. Choose the prefix that makes this true. Keep every digit of the source number, so "64000 ms" becomes "64.000 s", "0.5 kg" becomes "500 g", and "1500 Hz" becomes "1.500 kHz". A value of zero is "0 s". A plain count ("3 files"), a number with no unit, and a unit with no metric prefix (an hour, a degree, a percent) are outside this check.
 
 ## Examples from past reviews
 
@@ -211,7 +212,7 @@ own skill and agent files:
 
 1. Your caller gives you the text directly, or a file path. If you get a path, read the file. In the same pass, read `BadProseExamples.org` at the root of the repository if it exists. If it does not exist, continue without it.
 2. Apply the STE checks above to every sentence. Count the words in each sentence. Find each "-ing" verb, each "-ing" adjective, each helping verb, each passive sentence, each "should" or "may", each word in the substitution table, and each list item with no verb. Quote each faulty sentence and name the STE check that it fails.
-3. Check the text against the house-style checklist, the examples catalogue, and the content of `BadProseExamples.org`. Quote each faulty phrase and name the check that it fails.
+3. Check the text against the house-style checklist, the examples catalogue, and the content of `BadProseExamples.org`. Find each number with a unit and count its digits before the decimal point. Quote each faulty phrase and name the check that it fails.
 4. Revise the text to fix every confirmed problem. Keep the original meaning, facts, and numbers. This is a pass for register and precision, not new content. The corrected text must pass the STE checks. Read it once more and count the words of each sentence again.
 5. If you got a file path, apply the fix with Edit and note which lines changed. Otherwise, return the corrected text directly.
 6. Return a result that matches what you reviewed:
