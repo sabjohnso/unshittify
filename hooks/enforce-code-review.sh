@@ -97,6 +97,23 @@ BASH_TEMP_PATH="/(var/)?tmp(/${BASH_TEMP_COMPONENT})*"
 BASH_WORD_END='([[:space:];&|)]|$)'
 BASH_COMMAND_END='[[:space:]]*([;&|)]|$)'
 
+# The extensions of a documentation file. A file with one of these
+# extensions holds prose, and the required reviews are reviews of code. To
+# exempt one more documentation format, add its extension here. No other code
+# change is necessary. The match is on lower case only. An extension in upper
+# case costs one redundant review.
+DOC_FILE_EXTENSIONS='(md|org|rst)'
+
+# A redirection target that is a documentation file, in any directory.
+# BASH_WORD_END must follow it at each use, so that notes.md.c does not
+# match. The name cannot hold a quote, a parenthesis, a second redirection
+# operator, a backtick, or a "$". Thus `>src/a.c>notes.md` keeps its first
+# redirection, and a quoted or computed target counts as a write. A computed
+# target is not only unknown. A backtick substitution can run a command with
+# no space in it (${IFS} separates the words), and the exemption would
+# remove that command before the write patterns read it.
+BASH_DOC_PATH="[^[:space:];&|()<>\"'\`\$]*\\.${DOC_FILE_EXTENSIONS}"
+
 # Text that writes nothing a review can cover. A space replaces it before the
 # patterns above are matched against a command. To widen the exemption, add
 # a rule here. No other code change is necessary. Each rule is a complete
@@ -107,16 +124,26 @@ BASH_COMMAND_END='[[:space:]]*([;&|)]|$)'
 # space left behind means that the removal of an exempt clause can neither
 # join two commands into a shape that matches nor split one that must match.
 #
+# Each rule also puts back the separator on each side of the clause. The
+# install pattern reads a command position. A mask that removed the ";" of
+# `make >/dev/null;install a b` turned the install into an argument and hid
+# it. sed has no lookahead, so the rule names the separator by its group
+# number: \7 and \8 are the BASH_WORD_END and BASH_COMMAND_END groups, and
+# \1 is the separator before mkdir or touch. A new group to the left of one
+# of them moves its number. The test "an exempt clause never hides the write
+# that follows it" fails when a number is wrong.
+#
 # Two rules, and the purpose of each:
 #
 #   redirection   The redirection pattern is otherwise so broad that a
 #                 routine `make >/dev/null` demands four reviews and teaches
 #                 the user to go around the gate. Exempt targets are discards
 #                 (/dev/null and the like), a duplicated descriptor (2>&1),
-#                 and an absolute path under /tmp. A file under /tmp is not
-#                 in the tree under review. It can reach the tree only
-#                 through a copy back, and this table detects that copy as a
-#                 write.
+#                 an absolute path under /tmp, and a documentation file. A
+#                 file under /tmp is not in the tree under review. It can
+#                 reach the tree only through a copy back, and this table
+#                 detects that copy as a write. A documentation file holds
+#                 no code to review.
 #   scratch dirs  `mkdir -p /tmp/work` and `touch /tmp/x` create nothing a
 #                 review can read. But mkdir and touch are in the write table
 #                 because they create files in the tree as often. The rule
@@ -125,13 +152,13 @@ BASH_COMMAND_END='[[:space:]]*([;&|)]|$)'
 #                 mkdir and is a write.
 #
 # The redirection exemption covers the REDIRECTION OPERATOR only. `cp secret
-# /tmp/x` counts as a write. To find which argument of an arbitrary command
-# is its target, the hook would have to parse the option grammar of every
-# command. For a gate, the error "this was a write" is the correct
-# direction.
+# /tmp/x` counts as a write, and so does `sed -i s/a/b/ README.md`. To find
+# which argument of an arbitrary command is its target, the hook would have
+# to parse the option grammar of every command. For a gate, the error "this
+# was a write" is the correct direction.
 BASH_WRITE_EXEMPTIONS=(
-  "s@>>?[[:space:]]*(/dev/(null|stderr|stdout|fd/[0-9]+)|${BASH_TEMP_PATH}|&[0-9-])${BASH_WORD_END}@ @g"
-  "s@(^|[[:space:];&|(])(mkdir|touch)([[:space:]]+-[A-Za-z-]+)*([[:space:]]+${BASH_TEMP_PATH})+${BASH_COMMAND_END}@ @g"
+  "s@>>?[[:space:]]*(/dev/(null|stderr|stdout|fd/[0-9]+)|${BASH_TEMP_PATH}|${BASH_DOC_PATH}|&[0-9-])${BASH_WORD_END}@ \\7@g"
+  "s@(^|[[:space:];&|(])(mkdir|touch)([[:space:]]+-[A-Za-z-]+)*([[:space:]]+${BASH_TEMP_PATH})+${BASH_COMMAND_END}@\\1 \\8@g"
 )
 
 # Files that an Edit, Write, or NotebookEdit call can change with no review.
@@ -147,13 +174,21 @@ BASH_WRITE_EXEMPTIONS=(
 #                 a repository can hold a .claude directory of its own. A
 #                 file in a subdirectory of memory/ is not exempt. With no
 #                 absolute HOME, the entry is absent.
+#   documentation A file with a DOC_FILE_EXTENSIONS extension, in any
+#                 directory. The required reviews are reviews of code, and
+#                 they have no finding to make on prose. In a repository
+#                 whose product is Markdown, this entry also exempts the
+#                 product.
 #
-# Each path component comes from BASH_TEMP_COMPONENT, which rejects "." and
-# "..". Thus no path that traverses out of an exempt directory matches. An
-# event with no path, or with an empty path, does not match either, so it
-# counts as an edit.
+# Each path component of the two directory entries comes from
+# BASH_TEMP_COMPONENT, which rejects "." and "..". Thus no path that
+# traverses out of an exempt directory matches. The documentation entry
+# reads only the end of the path, so a traversal cannot change its answer.
+# An event with no path, or with an empty path, does not match an entry, so
+# it counts as an edit.
 EDIT_EXEMPT_PATHS=(
   "^${BASH_TEMP_PATH}\$"
+  "\\.${DOC_FILE_EXTENSIONS}\$"
 )
 
 # ere_escape <text>

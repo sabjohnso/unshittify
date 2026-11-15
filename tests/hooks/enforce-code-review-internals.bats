@@ -306,7 +306,7 @@ EOF' \
 @test "a redirection into the working tree is still a code change" {
   local cmd
   for cmd in 'printf "x" > src/parser.h' \
-             'printf "x" > ./notes.md' \
+             'printf "x" > ./notes.txt' \
              'printf "x" > /home/user/project/src/parser.h'; do
     run code_was_edited "$(shaped_event Bash command="$cmd")"
     [ "$status" -eq 0 ] || { echo "undetected write: $cmd"; return 1; }
@@ -325,11 +325,16 @@ EOF' \
 # masker. A mask that is not idempotent, or that can hide a real write,
 # opens the gate with no error. It does not only report the wrong thing.
 
+# Redirection targets that are documentation, one for each extension. All of
+# them go through one rule, so only the first law test below walks them all.
+DOC_TARGETS=(notes.md ./docs/guide.rst /home/user/project/PLAN.org)
+
 @test "every exempt redirection target is exempt" {
   # /dev/stderr, /dev/stdout, and /dev/fd/N were alternatives in the
   # pattern that no test reached.
   local target
-  for target in /dev/null /dev/stderr /dev/stdout /dev/fd/3 /tmp/x /var/tmp/x; do
+  for target in /dev/null /dev/stderr /dev/stdout /dev/fd/3 /tmp/x /var/tmp/x \
+                "${DOC_TARGETS[@]}"; do
     run code_was_edited "$(shaped_event Bash command="make > ${target}")"
     [ "$status" -ne 0 ] || { echo "falsely flagged: > ${target}"; return 1; }
   done
@@ -340,7 +345,7 @@ EOF' \
 @test "idempotence: the decision with an exempt redirection is the decision without it" {
   local target base
   base='grep -rn parse src/'
-  for target in /dev/null /dev/stderr /tmp/log.txt /var/tmp/log.txt; do
+  for target in /dev/null /dev/stderr /tmp/log.txt /var/tmp/log.txt notes.md; do
     run code_was_edited "$(shaped_event Bash command="$base")"
     local without="$status"
     run code_was_edited "$(shaped_event Bash command="${base} > ${target}")"
@@ -351,9 +356,23 @@ EOF' \
 @test "an exempt redirection never masks a real write" {
   local target write
   for write in "sed -i 's/a/b/' src/parser.c" "cp a.c b.c" "printf x > src/out.h"; do
-    for target in /dev/null /tmp/log.txt /var/tmp/log.txt; do
+    for target in /dev/null /tmp/log.txt /var/tmp/log.txt notes.md; do
       run code_was_edited "$(shaped_event Bash command="${write} > ${target}")"
       [ "$status" -eq 0 ] || { echo "masked: ${write} > ${target}"; return 1; }
+    done
+  done
+}
+
+@test "an exempt clause never hides the write that follows it" {
+  # The mask must keep the separator that ends an exempt clause. The install
+  # pattern reads a command position, so a mask that removes the ";" or the
+  # "|" turns the next command into an argument and hides it.
+  local clause separator
+  for clause in 'echo hi >/dev/null' 'echo hi > /tmp/log.txt' 'echo hi >notes.md' \
+                'mkdir -p /tmp/work' 'touch /tmp/x'; do
+    for separator in ';' '; ' '|' '&&'; do
+      run code_was_edited "$(shaped_event Bash command="${clause}${separator}install -m 644 a.c b.c")"
+      [ "$status" -eq 0 ] || { echo "masked: ${clause}${separator}install"; return 1; }
     done
   done
 }
@@ -505,7 +524,7 @@ EOF' \
 @test "an edit tool on a memory note of the harness is not a code change" {
   local path
   for path in "${HOME}/.claude/projects/-home-sbj-Sandbox-miner/memory/MEMORY.md" \
-              "${HOME}/.claude/projects/p/memory/note.md"; do
+              "${HOME}/.claude/projects/p/memory/note.txt"; do
     run code_was_edited "$(shaped_event Write file_path="$path")"
     [ "$status" -ne 0 ] || { echo "falsely flagged: $path"; return 1; }
   done
@@ -515,9 +534,9 @@ EOF' \
   # A repository can hold its own .claude directory. Only the notes of the
   # harness, under the home directory of the user, are exempt.
   local path
-  for path in /srv/repo/.claude/projects/p/memory/note.md \
-              "${HOME}/src/repo/.claude/projects/p/memory/note.md" \
-              "/x${HOME}/.claude/projects/p/memory/note.md"; do
+  for path in /srv/repo/.claude/projects/p/memory/note.txt \
+              "${HOME}/src/repo/.claude/projects/p/memory/note.txt" \
+              "/x${HOME}/.claude/projects/p/memory/note.txt"; do
     run code_was_edited "$(shaped_event Write file_path="$path")"
     [ "$status" -eq 0 ] || { echo "undetected edit: $path"; return 1; }
   done
@@ -560,8 +579,8 @@ EOF' \
   for path in /home/sbj/Sandbox/miner/src/parser.cpp \
               src/parser.cpp \
               "${HOME}/.claude/settings.json" \
-              "${HOME}/.claude/projects/p/other/note.md" \
-              "${HOME}/.claude/projects/p/memory/sub/note.md"; do
+              "${HOME}/.claude/projects/p/other/note.txt" \
+              "${HOME}/.claude/projects/p/memory/sub/note.txt"; do
     run code_was_edited "$(shaped_event Edit file_path="$path")"
     [ "$status" -eq 0 ] || { echo "undetected edit: $path"; return 1; }
   done
@@ -624,6 +643,138 @@ EOF' \
     "$(tool_use_event Write file_path=/tmp/claude-1000/p/s/scratchpad/reply.md)")")"
   run missing_reviews_for_transcript "$transcript"
   [ -z "$output" ]
+}
+
+# --- documentation is not code ----------------------------------------------
+#
+# A file whose name ends in .md, .org, or .rst is documentation. The four
+# reviews are reviews of code, and they have no finding to make on prose. The
+# exemption is by the extension of the file, in any directory. It applies to
+# the edit tools and to the target of a Bash redirection.
+
+@test "an edit tool on a documentation file is not a code change" {
+  # One tool is sufficient. The exemption reads only the path.
+  local path
+  for path in /home/sbj/project/README.md \
+              /home/sbj/project/docs/guide.rst \
+              /home/sbj/project/PLAN.org \
+              docs/api.md \
+              notes.org \
+              /home/sbj/project/.hidden/x.y.rst; do
+    run code_was_edited "$(shaped_event Write file_path="$path")"
+    [ "$status" -ne 0 ] || { echo "falsely flagged: $path"; return 1; }
+  done
+}
+
+@test "a path that only resembles a documentation file is a code change" {
+  # The extension must be the end of the path. A directory with the
+  # extension, a longer extension, and a name with no dot are all code.
+  local path
+  for path in src/parser.md.c \
+              docs.md/parser.c \
+              src/page.mdx \
+              src/a.orgs \
+              src/a.rst~ \
+              src/readme_md \
+              src/md \
+              src/xorg; do
+    run code_was_edited "$(shaped_event Write file_path="$path")"
+    [ "$status" -eq 0 ] || { echo "undetected edit: $path"; return 1; }
+  done
+}
+
+@test "a newline in a path never hides a file behind a documentation name" {
+  run code_was_edited "$(shaped_event Write file_path=$'src/a.c\nnotes.md')"
+  [ "$status" -eq 0 ]
+  run code_was_edited "$(shaped_event Write file_path=$'notes.md\nsrc/a.c')"
+  [ "$status" -eq 0 ]
+}
+
+@test "a documentation edit beside a real edit is a code change" {
+  local doc tree
+  doc="$(shaped_event Write file_path=/home/sbj/project/README.md)"
+  tree="$(shaped_event Edit file_path=/home/sbj/project/src/a.c)"
+  run code_was_edited "$(printf '%s\n%s\n' "$doc" "$tree")"
+  [ "$status" -eq 0 ]
+  run code_was_edited "$(printf '%s\n%s\n' "$tree" "$doc")"
+  [ "$status" -eq 0 ]
+}
+
+@test "many documentation edits are still not a code change" {
+  local events="" extension
+  for extension in md org rst md; do
+    events+="$(shaped_event Edit file_path="/home/sbj/project/doc.${extension}")"$'\n'
+  done
+  run code_was_edited "$events"
+  [ "$status" -ne 0 ]
+}
+
+@test "a redirection into a documentation file is not a code change" {
+  local cmd
+  for cmd in 'printf "x" > ./notes.md' \
+             'printf "x" >> docs/guide.rst' \
+             'printf "x" >PLAN.org' \
+             'cat > /home/user/project/README.md <<EOF
+notes
+EOF' \
+             'date > notes.md; grep -rn parse src/' \
+             'date > notes.md && date >> log.org'; do
+    run code_was_edited "$(shaped_event Bash command="$cmd")"
+    [ "$status" -ne 0 ] || { echo "falsely flagged: $cmd"; return 1; }
+  done
+}
+
+@test "a redirection that only resembles a documentation target is a code change" {
+  # A target that the shell computes can run a command (a backtick
+  # substitution with \${IFS} holds no space and no parenthesis), and its
+  # value is not in the transcript. So a computed or quoted target counts.
+  local cmd
+  for cmd in 'printf x > src/parser.md.c' \
+             'printf x > docs.md/parser.c' \
+             'printf x > src/page.mdx' \
+             'printf x >src/a.c>notes.md' \
+             'printf x > src/a.c > notes.md' \
+             'printf x > "notes.md".c' \
+             'printf x > $(echo src/a.c) # notes.md' \
+             'printf x >`cp${IFS}a.c${IFS}b.c`.md' \
+             'printf x > `rm${IFS}-f${IFS}x.c`.md' \
+             'printf x > ${x:=src/a.c}.md' \
+             'printf x > $dir/notes.md' \
+             'printf x > "notes.md"' \
+             'printf x > src/md'; do
+    run code_was_edited "$(shaped_event Bash command="$cmd")"
+    [ "$status" -eq 0 ] || { echo "undetected write: $cmd"; return 1; }
+  done
+}
+
+@test "a Bash write to a documentation file by another route is a code change" {
+  # The exemption covers the redirection operator only. The hook cannot find
+  # the target of an arbitrary command.
+  local cmd
+  for cmd in "sed -i 's/a/b/' README.md" \
+             'cp src/a.c notes.md' \
+             'printf x | tee notes.md'; do
+    run code_was_edited "$(shaped_event Bash command="$cmd")"
+    [ "$status" -eq 0 ] || { echo "undetected write: $cmd"; return 1; }
+  done
+}
+
+@test "a documentation write in a whole turn does not require the reviews" {
+  transcript="$(write_transcript "$(printf '%s\n%s\n%s\n' \
+    "$(typed_prompt_event 'update the readme')" \
+    "$(tool_use_event Write file_path=/home/sbj/project/README.md)" \
+    "$(bash_command_event 'printf "x" >> /home/sbj/project/CHANGES.rst')")")"
+  run missing_reviews_for_transcript "$transcript"
+  [ -z "$output" ]
+}
+
+@test "a documentation write beside a code write in a whole turn requires the reviews" {
+  transcript="$(write_transcript "$(printf '%s\n%s\n%s\n' \
+    "$(typed_prompt_event 'fix the parser and the readme')" \
+    "$(tool_use_event Write file_path=/home/sbj/project/README.md)" \
+    "$(tool_use_event Edit file_path=/home/sbj/project/src/parser.c)")")"
+  run missing_reviews_for_transcript "$transcript"
+  [ "$(printf '%s\n' "$output" | wc -l)" -eq 4 ]
 }
 
 # --- laws of the missing-review computation, over generated input -----------
@@ -703,6 +854,9 @@ NOISE_SPECS=(
   "Write|/tmp/claude-1000/p/s/scratchpad/reply.md"
   "Edit|/var/tmp/notes.md"
   "Write|${HOME}/.claude/projects/p/memory/note.md"
+  "Write|/home/sbj/p/README.md"
+  "Edit|docs/guide.rst"
+  "Bash|printf 'x' >> PLAN.org"
 )
 
 event_line() {
