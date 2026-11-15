@@ -1,10 +1,10 @@
 ---
-description: Reference for the C++-specific coding idioms that apply when you write or edit C++. Where to put an exception-to-Result guard (the tested library boundary, not the application or main() code). When to split an oversized function into one function per job. When to prefer a range algorithm over an explicit loop, and when an explicit loop is the right tool. The C++-specific TDD mechanics (a compile error is valid red evidence, and a passed assertion is evidence only if it tests the claimed property). Use when you write new C++ code or edit existing C++ code, especially around a fallible boundary, the main() or driver entry point of an executable, or a loop.
+description: Reference for the C++-specific coding idioms that apply when you write or edit C++. Where to put an exception-to-Result guard (the tested library boundary, not the application or main() code). How to order a precondition check (the main path in the first branch and the error in the else, never a guard clause first). When to split an oversized function into one function per job. When to prefer a range algorithm over an explicit loop, and when an explicit loop is the right tool. The C++-specific TDD mechanics (a compile error is valid red evidence, and a passed assertion is evidence only if it tests the claimed property). Use when you write new C++ code or edit existing C++ code, especially around a fallible boundary, the main() or driver entry point of an executable, or a loop.
 ---
 
 # C++ editing idioms
 
-Goal: apply the right C++ idiom at the change site. Where does the exception guard go? When has a function outgrown one job? Must a loop become an algorithm? What counts as red evidence in C++? This is a reference to read while you edit, not a procedure to run from start to end, so it has no numbered steps. The procedure that it feeds is the one in `/development:make-changing-easy`.
+Goal: apply the right C++ idiom at the change site. Where does the exception guard go? Which branch of a precondition check comes first? When has a function outgrown one job? Must a loop become an algorithm? What counts as red evidence in C++? This is a reference to read while you edit, not a procedure to run from start to end, so it has no numbered steps. The procedure that it feeds is the one in `/development:make-changing-easy`.
 
 These idioms generalize a real refactor of the `main()` of an executable. The refactor widened an exception guard that handled only one error type, split a function with nine jobs into one function per job, replaced two explicit loops with range algorithms where that fit, and left one loop as a loop where it did not fit.
 
@@ -36,6 +36,47 @@ Result<std::string> emit_ir_checked(const CheckedModule &m) {
 }
 ```
 
+## Put the main path first
+
+When a function checks a precondition, write the main logic in the first branch and the error in the `else`. Do not write a guard clause that throws or returns an error first and puts the main logic after it. What the function does is more important than its error message. A guard clause puts the error first and hides the main logic below it.
+
+```cpp
+quadrature_rule
+quadrature_rule::gauss(int positive_point_count) {
+  if (positive_point_count >= 1) {
+    const int n = positive_point_count;
+    auto [points, weights] = symmetric_rule_on_unit_interval(n, gauss_point_of(n));
+    return {std::move(points), std::move(weights)};
+  } else {
+    throw std::invalid_argument("A Gauss rule needs at least one point");
+  }
+}
+```
+
+Write the condition as the valid inputs, not as the invalid inputs. Use the plain inverse of the old check (`x < 1` becomes `x >= 1`, `!f()` becomes `f()`, `a < 0 || a >= n` becomes `a >= 0 && a < n`). For an integer, pointer or boolean value, do not write `!(...)` around the old condition.
+
+A plain inverse is exact only for integer, pointer and boolean values. For a floating-point value, `x >= 1` is not the inverse of `x < 1`, because both are false for a NaN (a not-a-number value). To keep the old behavior, write `!(x < 1)`. If a NaN must now take the other branch, the behavior changes. Write a failed test first.
+
+The condition still runs first. Only the order of the text changes. If the new condition is the exact inverse of the old one, the conversion of a guard clause does not change the behavior.
+
+When a function has two or more checks, combine them in the first branch. Then give each error in an `else if`, in the order of the old checks. Each input then gets the same error as before:
+
+```cpp
+if (total[1] <= 0 && total[2] == volume_of_root) {
+  return total[0];
+} else if (total[1] > 0) {
+  throw std::invalid_argument(own_problem ? *own_problem : another_rank_has_a_problem);
+} else {
+  throw std::invalid_argument("The leaves of all ranks must fill the root without a gap or an overlap");
+}
+```
+
+Put one `if`–`else` inside another only when the main path must do work before the next check. Examples are a value that the next condition reads, or a collective call that each rank must make in the same order. Do not combine the conditions if that changes which error an input gets. Do not combine them if a condition is unsafe before an earlier check passes (for example, a dereference after an end check). Keep the short-circuit order of `&&`.
+
+In an `else if` chain, a condition can run two times: one time in the combined condition and one time in its `else if`. If a condition costs time or has a side effect, calculate it one time into a named `const bool` before the `if`. Let the `if` and the `else if` read that name. A named condition runs even when an earlier check fails, so do this only when the condition must run in all cases (for example a collective call that each rank makes). In all other cases, put one `if`–`else` inside another, so that the condition runs only after the earlier checks pass.
+
+A fail-fast validation loop that only checks each element and returns at the first failure has no main path in its body. Keep it as an explicit loop, as the loop-shape rule below says. When a check in a loop body guards the work of that body, the check takes the same form as in a function. A function whose only job is the check (a `require_*` function that ends with the `throw`) has no main path. Keep it as it is, because an empty first branch does not help the reader.
+
 ## Split a function when it does more than one job
 
 A driver function (`main()`, a request handler, a top-level dispatcher) must reduce to two tasks: it classifies its input, and it dispatches to a function per case. It must not also validate, do I/O, and run the pipeline of each case inline. Signs that a function has outgrown a single responsibility:
@@ -62,6 +103,7 @@ The conversion of the first shape and no conversion of the second shape is the c
 
 ## Rules that prevent rework
 
+- **Never write a guard clause that throws or returns an error before the main logic.** Put the main path in the first branch and the error in the `else`. Make the new condition the exact inverse of the old one. Keep the order of the errors. A fail-fast validation loop and a `require_*` function have no main path, so this rule does not apply to them. Change the order of an existing check only when the requested change touches that check.
 - **Never put a guard with a narrow exception and then a generic exception in `main()` or other code that only the executable holds.** If nothing under the test tree links against it, nothing can show that it works. Move it one layer down into the tested library first.
 - **Never leave a fail-fast validation loop as an algorithm call that only approximates an "early abort".** An explicit loop that returns at once on the first failure is already the clearest expression of that behavior.
 - **Never accept a passed test for a specific claim ("preserves the location", "is idempotent", "is thread-safe") before you check that its assertion, and not only its name, tests that specific claim.**
