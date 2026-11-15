@@ -81,12 +81,29 @@ BASH_WRITE_PATTERNS=(
 # yet. A naive one is worse than the false positive. A removal of the quotes
 # hides the real write in `bash -c 'sed -i s/a/b/ f'`.
 
+# The characters that no exempt path can hold, as the inside of a bracket
+# expression: white space, a shell separator, a backslash, a parenthesis, a
+# redirection operator, a backtick, a "$", and the two quotes. Each one ends
+# the path, starts a substitution, or is removed by the shell. The last
+# case matters for a traversal: the shell reads /tmp/"../x" and /tmp/.\./x
+# as /tmp/../x, but the raw text shows no ".." component.
+# BASH_TEMP_COMPONENT and BASH_DOC_PATH both use the set. Thus the two
+# exemptions cannot disagree about where a path ends.
+BASH_PATH_STOP="[:space:];&|\\()<>\`\$\"'"
+
 # One path component under a temporary directory: at least one character, no
 # "/", no shell separator, and never "." or "..". The rejection of ".." stops
 # a traversal from a claim on the exemption. /tmp/../home/user/src leaves
 # /tmp and names a file in the tree under review. The rejection of a lone "."
 # costs a redundant review on /tmp/./x, which nobody writes.
-BASH_TEMP_COMPONENT='(\.\.[^/[:space:];&|)]|\.[^./[:space:];&|)]|[^./[:space:];&|)])[^/[:space:];&|)]*'
+#
+# A component also holds no BASH_PATH_STOP character, such as "<", ">", a
+# parenthesis, a backtick, "$", a quote, or a backslash. A redirection
+# operator ends a path: `>/tmp/a>x.c` writes x.c, and a
+# component that accepted the ">" hid that write. A substitution runs a
+# command: `>/tmp/$(cp${IFS}a${IFS}b)` copies a file. The cost is a redundant
+# review on a temporary path that holds a variable.
+BASH_TEMP_COMPONENT="(\\.\\.[^/${BASH_PATH_STOP}]|\\.[^./${BASH_PATH_STOP}]|[^./${BASH_PATH_STOP}])[^/${BASH_PATH_STOP}]*"
 
 # An absolute path under /tmp or /var/tmp, and nothing else. BASH_WORD_END
 # must follow it at each use. Without that, /tmp matches the head of
@@ -112,7 +129,7 @@ DOC_FILE_EXTENSIONS='(md|org|rst)'
 # target is not only unknown. A backtick substitution can run a command with
 # no space in it (${IFS} separates the words), and the exemption would
 # remove that command before the write patterns read it.
-BASH_DOC_PATH="[^[:space:];&|()<>\"'\`\$]*\\.${DOC_FILE_EXTENSIONS}"
+BASH_DOC_PATH="[^${BASH_PATH_STOP}]*\\.${DOC_FILE_EXTENSIONS}"
 
 # Text that writes nothing a review can cover. A space replaces it before the
 # patterns above are matched against a command. To widen the exemption, add
@@ -130,8 +147,10 @@ BASH_DOC_PATH="[^[:space:];&|()<>\"'\`\$]*\\.${DOC_FILE_EXTENSIONS}"
 # it. sed has no lookahead, so the rule names the separator by its group
 # number: \7 and \8 are the BASH_WORD_END and BASH_COMMAND_END groups, and
 # \1 is the separator before mkdir or touch. A new group to the left of one
-# of them moves its number. The test "an exempt clause never hides the write
-# that follows it" fails when a number is wrong.
+# of them moves its number. That includes a group inside BASH_TEMP_PATH,
+# BASH_DOC_PATH, or DOC_FILE_EXTENSIONS, because the rule expands those
+# constants in place. The test "an exempt clause never hides the write that
+# follows it" fails when a number is wrong.
 #
 # Two rules, and the purpose of each:
 #

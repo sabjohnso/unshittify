@@ -370,7 +370,7 @@ DOC_TARGETS=(notes.md ./docs/guide.rst /home/user/project/PLAN.org)
   local clause separator
   for clause in 'echo hi >/dev/null' 'echo hi > /tmp/log.txt' 'echo hi >notes.md' \
                 'mkdir -p /tmp/work' 'touch /tmp/x'; do
-    for separator in ';' '; ' '|' '&&'; do
+    for separator in ';' '; ' '|' '&&' '&' $'\n'; do
       run code_was_edited "$(shaped_event Bash command="${clause}${separator}install -m 644 a.c b.c")"
       [ "$status" -eq 0 ] || { echo "masked: ${clause}${separator}install"; return 1; }
     done
@@ -433,6 +433,27 @@ DOC_TARGETS=(notes.md ./docs/guide.rst /home/user/project/PLAN.org)
   for cmd in 'printf x > /tmp/../home/sbj/Sandbox/unshittify/src/parser.c' \
              'printf x > /tmp/a/../../home/sbj/src/parser.c' \
              'printf x >> /var/tmp/../../home/sbj/src/parser.c'; do
+    run code_was_edited "$(shaped_event Bash command="$cmd")"
+    [ "$status" -eq 0 ] || { echo "undetected write: $cmd"; return 1; }
+  done
+}
+
+@test "a temporary path never holds a second redirection or a substitution" {
+  # A redirection operator ends a path, and a substitution runs a command.
+  # A temporary path that accepted either one hid the write after it.
+  # The shell removes a quote and a backslash, so a ".." behind one of them
+  # leaves the temporary directory.
+  local cmd
+  for cmd in 'echo hi >/tmp/a>x.c' \
+             'echo hi >>/var/tmp/a>>x.c' \
+             'mkdir /tmp/a>x.c' \
+             'touch /tmp/a<>x.c' \
+             'echo hi >/tmp/`cp${IFS}a.c${IFS}b.c`' \
+             'echo hi >/tmp/$(cp${IFS}a.c${IFS}b.c)' \
+             'mkdir /tmp/$(cp${IFS}a.c${IFS}b.c)' \
+             'echo hi >/tmp/"../home/u/src/x.c"' \
+             "echo hi >/tmp/'../home/u/src/x.c'" \
+             'echo hi >/tmp/.\./home/u/src/x.c'; do
     run code_was_edited "$(shaped_event Bash command="$cmd")"
     [ "$status" -eq 0 ] || { echo "undetected write: $cmd"; return 1; }
   done
