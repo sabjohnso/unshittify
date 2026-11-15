@@ -14,19 +14,29 @@ Goal: produce a `SKILL.md` that fits the house style of this repository, and put
 - Frontmatter fields, in this order:
   - `description` (required). Third person. It states what the skill does and when to use it, and it ends with a concrete trigger phrase ("Use when the user asks to..."). This is the only field that is always loaded into the context. So it must be specific enough to trigger in the right situations and nowhere else.
   - `argument-hint` (optional). A short hint in brackets, shown beside the slash command, for example `"[module hint]"`.
-  - `disable-model-invocation` (optional, bool). Set `true` for a skill that does a consequential action, or that changes a settings file, and that must run only when the user types the slash command. Omit it for a skill that is safe to trigger from the description alone. That covers a consequential action that an explicit-instruction requirement already gates somewhere else. `plugins/git/skills/commit-message/SKILL.md` is a worked example. It omits the field on purpose. A standing instruction already restricts a commit to an explicit user request, and `hooks/confirm-git-commit-push.sh` confirms before the `git commit` runs. A gate on that skill behind the literal slash command only makes a bypass with a freehand message easier.
+  - `disable-model-invocation` (optional, bool). Set `true` for a skill that does a consequential action or changes a settings file. Such a skill must run only when the user types the slash command. Omit it for a skill that is safe to trigger from the description alone. That covers a consequential action that an explicit-instruction requirement already gates somewhere else. `plugins/git/skills/commit-message/SKILL.md` is a worked example. It omits the field on purpose. A standing instruction already restricts a commit to an explicit user request, and `hooks/confirm-git-commit-push.sh` confirms before the `git commit` runs. A gate on that skill behind the literal slash command only makes a bypass with a freehand message easier.
   - `allowed-tools` (optional). Scope the tool access as tightly as the task permits. Prefer an argument-scoped Bash pattern (`Bash(git status:*)`) over a bare `Bash`. List only the tools that the steps use.
 - **Quote each frontmatter value that holds a space and then a `#`.** YAML ends an unquoted scalar at that point. So a description that mentions a Racket `#:keyword` reaches the harness cut in half. It usually loses the `Use when...` clause that makes the skill triggerable at all, while the file on disk reads correctly. Four Racket descriptions shipped this way before anybody saw it. `tests/plugins/validate-plugins.sh` now rejects it.
-- Body: start with a one-line `Goal:` statement, then the reference material (tables, decision maps) that the skill needs, then a section of numbered steps (`## Steps`, or `## 1. ...`, `## 2. ...`).
-- The body prose follows Simplified Technical English (ASD-STE100): the imperative for steps, the active voice, one instruction per sentence, no sentence over 20 words in a step or 25 words in description, no "-ing" verb forms, and "must" for a requirement. The condensed rules are in `plugins/communication/skills/simplified-technical-english/SKILL.md`.
-- Keep everything in the single `SKILL.md` file. A skill in this repository does not use a `references/`, `scripts/`, or `assets/` subdirectory. Add one only when the content cannot fit inline (for example a large lookup table, or a script that must run deterministically), and say why.
+- Body: start with a one-line `Goal:` statement. Then add the reference material (tables, decision maps) that the skill needs. Then add a section of numbered steps (`## Steps`, or `## 1. ...`, `## 2. ...`).
+- The body prose follows Simplified Technical English (ASD-STE100). The condensed rules are in `plugins/communication/skills/simplified-technical-english/SKILL.md`. These rules apply:
+  - Write steps in the imperative.
+  - Use the active voice.
+  - Write one instruction per sentence.
+  - Do not write a sentence over 20 words in a step or over 25 words in description.
+  - Do not use an "-ing" verb form.
+  - Use "must" for a requirement.
+- Keep everything in the single `SKILL.md` file. A skill in this repository does not use a `references/`, `scripts/`, or `assets/` subdirectory. Add one only when the content cannot fit inline (for example a large lookup table, or a script that must run deterministically). Then say why.
 
 ## Steps
 
 1. Confirm the plugin of the skill and its directory: `plugins/<plugin>/skills/<skill-name>/`. If the plugin does not exist yet, stop and ask. Do not create a new plugin as a side effect.
 2. Work out two to four concrete example calls of the skill, if the request does not make them clear. They decide the trigger phrase of the description and the steps of the body.
-3. Draft the frontmatter: the description, an argument-hint if the skill takes user input, disable-model-invocation only if the action is consequential or changes a settings file and nothing else restricts it, and allowed-tools scoped to what the steps call.
-4. Draft the body: the `Goal:` line, a reference or map section if necessary, then the numbered steps in the imperative ("Run X", "Confirm Y"), not in the second person ("You should...").
+3. Draft the frontmatter:
+   - Write the `description`.
+   - Add `argument-hint` if the skill takes user input.
+   - Add `disable-model-invocation` only if the action is consequential or changes a settings file and nothing else restricts it.
+   - Add `allowed-tools`, scoped to what the steps call.
+4. Draft the body: the `Goal:` line, a reference or map section if necessary, then the numbered steps. Write the steps in the imperative ("Run X", "Confirm Y"), not in the second person ("You should...").
 5. Create the directory with `mkdir -p plugins/<plugin>/skills/<skill-name>`. Then write `SKILL.md`.
 6. Run `tests/plugins/validate-plugins.sh`. It is the only check of `plugins/`. There is no compiler and no runtime here. It prints one `path:line: message` per violation. Fix everything that it reports before you continue.
 7. Report the path that you created and the phrase that triggers it. If `disable-model-invocation` is set, report that the skill requires the explicit slash command.

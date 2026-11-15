@@ -1,5 +1,5 @@
 ---
-description: "Write Racket reader macros, and work with readtables. Covers make-readtable, terminating, non-terminating, and dispatch macros, a character remap, comment-like macros, #reader, and a custom #lang reader through syntax/module-reader. Use when you extend the reader of Racket, when you add new lexical syntax, when you map a character such as { to (, or when you build a #lang whose surface syntax differs from s-expressions."
+description: "Write Racket reader macros, and work with readtables. Covers make-readtable, terminating, non-terminating, and dispatch macros, a character remap, comment-like macros, #reader, and a custom #lang reader through syntax/module-reader. Use when you extend the reader of Racket, when you add new lexical syntax, when you map a character such as { to (. Also use when you build a #lang whose surface syntax differs from s-expressions."
 allowed-tools: Read, Grep, Glob
 ---
 
@@ -10,8 +10,8 @@ expansion. A **readtable** maps characters to reader behavior. You extend it
 with `make-readtable`, and then you make `read` and `read-syntax` use it
 with a `parameterize` of `current-readtable`. This is the layer below
 `define-syntax`. Use it only when the change is lexical (a new bracket, a
-sigil, a comment form), not when a macro on ordinary s-expressions is
-enough. For the exact signatures and the full grammar of `make-readtable`,
+sigil, a comment form). Do not use it when a macro on ordinary s-expressions
+is enough. For the exact signatures and the full grammar of `make-readtable`,
 read `reference.md` in this skill directory.
 
 ## The reader-proc protocol
@@ -121,7 +121,7 @@ A comment-like macro: `!` drops the rest of the line and produces no datum:
   default value of `current-readtable` is `#f` (the standard readtable).
 - **In a string or a port through `#reader`:** `read` rejects the `#reader`
   and `#lang` notations, unless `(read-accept-reader #t)` is set.
-- **As a `#lang`:** put a reader at `<collection>/lang/reader.rkt`, and let
+- **As a `#lang`:** put a reader at `<collection>/lang/reader.rkt`. Let
   `syntax/module-reader` install the readtable with `#:wrapper1`, which
   wraps the reader thunk in a `parameterize`:
 

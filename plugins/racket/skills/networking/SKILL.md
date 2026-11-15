@@ -1,5 +1,5 @@
 ---
-description: Networks and web servers in Racket. Covers TCP and UDP sockets (racket/tcp, racket/udp), HTTP clients (net/url, net/http-client), JSON (json), and the web-server stack (serve/servlet, dispatch-rules routes, request and response, response/xexpr). Use when you write a network client or server, when you call an HTTP API, when you parse or produce JSON, when you build a web application or a REST endpoint, or when you test a server with no display.
+description: Networks and web servers in Racket. Covers TCP and UDP sockets (racket/tcp, racket/udp), HTTP clients (net/url, net/http-client), JSON (json), and the web-server stack (serve/servlet, dispatch-rules routes, request and response, response/xexpr). Use when you write a network client or server, when you call an HTTP API, or when you parse or produce JSON. Also use when you build a web application or a REST endpoint, or when you test a server with no display.
 allowed-tools: Read, Grep, Glob
 ---
 

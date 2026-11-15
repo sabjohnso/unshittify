@@ -1,6 +1,6 @@
 ---
 name: table-formatter
-description: Reformats one or more markdown tables so that every pipe aligns in a fixed-width column. It computes the width of each column from its widest cell, and it keeps the declared left, center, or right alignment of each column from the header separator row. Use when a subagent must format a markdown table, for example to align several tables across a long document in one pass, or to keep the mechanical column-width arithmetic out of the main conversation.
+description: Reformats one or more markdown tables so that every pipe aligns in a fixed-width column. It computes the width of each column from its widest cell. It also keeps the declared left, center, or right alignment of each column from the header separator row. Use when a subagent must format a markdown table, for example to align several tables across a long document in one pass. Also use to keep the mechanical column-width arithmetic out of the main conversation.
 tools: Read, Grep, Glob, Edit
 model: haiku
 ---

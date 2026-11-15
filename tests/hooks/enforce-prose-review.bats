@@ -80,8 +80,8 @@ setup() {
 }
 
 @test "the hook still finds a prose-reviewer call of this turn when a last-prompt marker follows it" {
-  # This is the real transcript shape: the genuine user prompt, then the
-  # prose-reviewer call of the turn, then a last-prompt marker that the
+  # This is the real transcript shape. It holds the genuine user prompt, then
+  # the prose-reviewer call of the turn, then a last-prompt marker that the
   # harness appends *after* the tool call. An anchor on the line of the
   # marker skips the review and blocks a turn that was reviewed.
   transcript="$(write_transcript "$(printf '%s\n%s\n%s\n' \
@@ -251,7 +251,7 @@ MSG
 #
 # The hook reads the payload with bare `jq -r '.field'` assignments under
 # `set -e`. A payload that is not a JSON object makes each of those abort the
-# script. The hook exits with a nonzero status and no decision, so the turn
+# script. The hook exits with a nonzero status and no decision. So the turn
 # ends with no judgement and only the parse error of jq as a trace. Whether
 # the harness ever sends one or not, a Stop hook must reach a deliberate
 # verdict on its own input. It must not crash into one.

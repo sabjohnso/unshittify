@@ -61,7 +61,7 @@ stdin_payload() {
 # the channel of the decision JSON. The function captures stderr (the
 # diagnostic warnings) into a file named by $HOOK_STDERR. Thus unrelated
 # stderr text does not break a test that asserts on the JSON shape of
-# $output, and a test that cares about a diagnostic can read it.
+# $output. A test that cares about a diagnostic can read it.
 run_hook() {
   local script="$1"
   local stdin="$2"

@@ -1,12 +1,12 @@
 ---
-description: Draft and apply a git commit message in the format of this repository (an emoji, a [module] summary, Problem and Solution bullets, and a closing haiku). This is the required path for every commit in this repository. Call it whenever the user asks you to commit staged or working-tree changes, also when the request is conversational (for example "commit this") and not the literal slash command. Skip it only if the user explicitly says not to use the template or asks for a freehand message.
+description: Draft and apply a git commit message in the format of this repository. The format has an emoji, a [module] summary, Problem and Solution bullets, and a final haiku. This is the required path for every commit in this repository. Call it whenever the user asks you to commit staged or working-tree changes. Also call it when the request is conversational (for example "commit this") and not the literal slash command. Skip it only if the user explicitly says not to use the template or asks for a freehand message.
 argument-hint: "[module hint]"
 allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git log:*), Bash(git add:*), Bash(git commit:*), Agent(communication:prose-reviewer)
 ---
 
 # Write a commit message in the format of this repository
 
-Goal: produce a commit message that follows the template below, then create the commit. Run this skill only as a direct response to an explicit request to commit. Never call it only because an unrelated task just finished. Inside that limit, treat this skill as the default. Every explicit commit request in this repository must go through it, and not through a message without the template, unless the user has explicitly said to skip the template.
+Goal: produce a commit message that follows the template below, then create the commit. Run this skill only as a direct response to an explicit request to commit. Never call it only because an unrelated task just finished. Inside that limit, treat this skill as the default. Every explicit commit request in this repository must go through it, and not through a message without the template. The only exception is an explicit instruction from the user to skip the template.
 
 ## Template
 
@@ -36,7 +36,7 @@ Solution:
 1. Gather the context in parallel: `git status`, `git diff` (staged and unstaged), and `git log --oneline -10` for the recent style in this repository.
 2. If nothing is staged, stage the specific files that the request covers. Never run `git add -A` or `git add .`. Show what you staged.
 3. Draft the message with the template above.
-4. Write the subject and the bullets in Simplified Technical English (ASD-STE100). The haiku is the one exception. Delegate the draft to the `communication:prose-reviewer` agent and apply the confirmed fixes before the commit. The structure of the template (the emoji, the `[module]` subject, the Problem and Solution bullets, the haiku) is required. It is not a style violation. The review covers the prose inside it: the phrase of the subject, the bullets, and the words of the haiku.
+4. Write the subject and the bullets in Simplified Technical English (ASD-STE100). The haiku is the one exception. Delegate the draft to the `communication:prose-reviewer` agent and apply the confirmed fixes before the commit. The structure of the template (the emoji, the `[module]` subject, the Problem and Solution bullets, the haiku) is necessary. It is not a style violation. The review covers the prose inside it: the phrase of the subject, the bullets, and the words of the haiku.
 5. Create the commit with the message in a heredoc, so the multi-line format survives:
    ```
    git commit -m "$(cat <<'EOF'

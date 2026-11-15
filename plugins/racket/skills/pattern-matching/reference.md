@@ -108,6 +108,6 @@ exports of `racket/match`, not its phase-1 exports.
 ## Failure continuation
 
 In `[pat (=> fail-id) body ...]`, `fail-id` is bound to a thunk. A call to
-`(fail-id)` abandons the current clause and continues matching at the next
+`(fail-id)` abandons the current clause, and the match continues at the next
 clause. This is also true after the pattern matched and the body started. Use
 this call for side conditions that need values that the body computes.

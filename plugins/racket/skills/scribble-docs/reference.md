@@ -88,7 +88,7 @@ flags were checked against Racket v9.1 [cs].
 
 Special datums inside `racketblock`: `(code:line datum ...)`,
 `(code:comment text)` → `;`, `(code:comment2 text)` → `;;`,
-`(code:contract ...)`, `(code:hilite datum)`; `_id` appears as a
+`(code:contract ...)`, `(code:hilite datum)`. `_id` appears as a
 meta-variable. `racketblock` can normalize literals (`2/4` → `1/2`). Use
 `codeblock` when the exact source text matters.
 

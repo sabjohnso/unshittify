@@ -108,7 +108,7 @@ it raises `exn:fail:gen:exhausted` (predicate `exn:fail:gen:exhausted?`).
   `rackcheck` module exports `make-gen`. The `rackcheck/shrink-tree` module adds the
   shrink-tree API (`shrink-tree`, `make-shrink-tree`, `shrink-tree-map`,
   `shrink-proc/c`). The procedure of a custom generator must return a shrink tree.
-- `gen:map`, `gen:bind`, and `gen:let` keep shrinking. A value made
+- `gen:map`, `gen:bind`, and `gen:let` keep the shrink. A value made
   with them shrinks when its inputs shrink. `gen:const` and `gen:no-shrink`
   do not shrink.
 - The size parameter that goes to generators grows during a run (`sample` uses

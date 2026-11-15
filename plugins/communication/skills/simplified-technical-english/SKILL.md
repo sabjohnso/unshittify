@@ -1,5 +1,5 @@
 ---
-description: Reference for writing prose in Simplified Technical English (ASD-STE100) — the condensed writing rules (approved words, technical names and technical verbs, noun clusters, verb forms, sentence and paragraph limits, procedures, descriptive text, warnings, punctuation) and a table of substitutions for software writing. Use when writing or checking any prose — a response to the user, a code comment, a commit message, a planning document, or documentation — and when the user asks what STE permits.
+description: Reference to write prose in Simplified Technical English (STE, ASD-STE100). Covers the condensed rules for approved words, technical names and technical verbs, noun clusters, and verb forms. Also covers sentence and paragraph limits, procedures, descriptive text, warnings, and punctuation. Also covers a table of substitutions for software prose. Use when you write or check any prose. Examples are a response to the user, a code comment, a commit message, a planning document, and documentation. Also use when the user asks what STE permits.
 argument-hint: "[file path or pasted prose]"
 allowed-tools: Read, Grep, Glob
 ---
@@ -20,18 +20,24 @@ The AeroSpace and Defence Industries Association of Europe (ASD) publishes the s
 - Use a word only in its approved meaning and its approved part of speech. One word has one meaning. One meaning has one word.
 - Use the approved spelling. Do not use slang, idiom, or jargon.
 - Use technical names for things: a part, a tool, a file, a type, a command, a language keyword. Write a software name as a code span, for example `transcript.sh` or `READ_ONLY_AGENTS`. A technical name is a noun or an adjective. It is not a verb.
-- Use a technical verb for a technical process when no approved word says the same thing: compile, commit, push, merge, parse, lint, and the like. Use it in an approved verb form.
+- Use a technical verb for a technical process when no approved word says the same thing. Technical verbs are compile, commit, push, merge, parse, lint, and the like. Use it in an approved verb form.
 - Spell out an abbreviation at its first use. Then use the abbreviation.
 - Use one name for one thing in the whole document.
 
 ## Noun clusters
 
-- Do not put more than three nouns in a row. Rewrite a longer cluster with "of", "for", or a hyphen: "the file for the hook test" instead of "the hook test fixture file".
+- Do not put more than three nouns in a row. Rewrite a longer cluster with "of", "for", or a hyphen. For example, write "the file for the hook test" instead of "the hook test fixture file".
 - Put an article (the, a, an) or a demonstrative (this, these) before a noun.
 
 ## Verbs
 
-- Use only these verb forms: the infinitive, the imperative, the simple present, the simple past, the past participle as an adjective, and the future with "will".
+- Use only these verb forms:
+  - The infinitive.
+  - The imperative.
+  - The simple present.
+  - The simple past.
+  - The past participle as an adjective.
+  - The future with "will".
 - Do not use the "-ing" form as a verb. "The hook blocks the turn", not "the hook is blocking the turn". An "-ing" word is permitted only inside a technical name, for example "the wiring".
 - Do not build a tense from a helping verb: not "has blocked", not "had been blocked".
 - Use the active voice. In a procedure, the active voice is mandatory. In descriptive text, use the passive voice only when the agent is unknown or unimportant.

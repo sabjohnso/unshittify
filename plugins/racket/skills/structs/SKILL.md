@@ -1,5 +1,5 @@
 ---
-description: "Define and use Racket structs. Covers the struct form and its options (#:transparent, #:mutable, #:prefab, #:guard, #:auto, #:constructor-name), inheritance and subtype predicates, functional update with struct-copy, and generic interfaces through #:methods (gen:custom-write, gen:equal+hash, prop:procedure). Use when you define a struct, when you choose between transparent, opaque, and prefab, when you control the construction, when you customize the print or the equality, or when you decide between a struct and a list or a hash."
+description: "Define and use Racket structs. Covers the struct form and its options (#:transparent, #:mutable, #:prefab, #:guard, #:auto, #:constructor-name), and inheritance and subtype predicates. Also covers functional update with struct-copy, and generic interfaces through #:methods (gen:custom-write, gen:equal+hash, prop:procedure). Use when you define a struct, when you choose between transparent, opaque, and prefab, or when you control the construction. Also use when you customize the print or the equality, or when you decide between a struct and a list or a hash."
 allowed-tools: Read, Grep, Glob
 ---
 
@@ -173,7 +173,7 @@ Implement a generic interface inline. The common ones:
 access through `struct-info` requires a transparent struct (or the right
 inspector). That is another reason that an opaque struct hides its data. To
 put a contract on the fields of a struct at a module boundary, use the
-`struct` clause of `contract-out` (see [contracts](../contracts/SKILL.md)).
+`struct` clause of `contract-out`. See [contracts](../contracts/SKILL.md).
 
 ## Rules that prevent rework
 

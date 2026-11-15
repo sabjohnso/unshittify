@@ -1,5 +1,5 @@
 ---
-description: Drive a repeated redraw loop on a racket/gui canvas%. Covers the timer% tick that advances a model and then requests a repaint, motion that is independent of the frame rate through a dt clock, a render with no flicker (double buffers, refresh and refresh-now, suspend-flush and resume-flush, offscreen bitmaps), input that feeds the model, and the split of the pure update from the render, so a test needs no window. Use when you build a game loop or an animation, when you make motion smooth or independent of the frame rate, or when you diagnose canvas flicker. For a single paint, see ../drawing/SKILL.md. For the window, the widgets, and the dialogs around the canvas, see ../gui/SKILL.md.
+description: Drive a repeated redraw loop on a racket/gui canvas%. Covers the timer% tick that advances a model and then requests a repaint. Also covers motion that is independent of the frame rate through a dt clock. Also covers a render with no flicker (double buffers, refresh and refresh-now, suspend-flush and resume-flush, offscreen bitmaps). Also covers input that feeds the model, and the split of the pure update from the render, so a test needs no window. Use when you build a game loop or an animation, or when you make motion smooth or independent of the frame rate. Also use when you diagnose canvas flicker. For a single paint, see ../drawing/SKILL.md. For the window, the widgets, and the dialogs around the canvas, see ../gui/SKILL.md.
 allowed-tools: Read, Grep, Glob
 ---
 
@@ -12,9 +12,9 @@ Never the reverse. This skill builds on [gui](../gui/SKILL.md) (the canvas,
 the eventspace, and the input) and on [drawing](../drawing/SKILL.md) (the
 `dc<%>` that you paint with).
 
-For the `canvas%` and `timer%` members that an animation uses, the timing
-primitives, and the offscreen double-buffer pattern, read `reference.md` in
-this skill directory.
+`reference.md` in this skill directory lists the `canvas%` and `timer%`
+members that an animation uses, the timing primitives, and the offscreen
+double-buffer pattern. Read it when you need that detail.
 
 ```racket
 (require racket/gui/base racket/class)
@@ -43,7 +43,7 @@ the paint run in sequence, and the model needs no lock.
 
 A fixed step per tick (`+ 2.0`) moves faster or slower as the real frame rate
 drifts. For a smooth, constant speed, scale the motion by the **elapsed
-time** since the last frame (`dt`), with a monotonic clock:
+time** (`dt`) since the last frame. Use a monotonic clock:
 
 ```racket
 (define last (box (current-inexact-monotonic-milliseconds)))

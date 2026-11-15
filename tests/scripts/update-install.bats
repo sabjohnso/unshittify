@@ -4,11 +4,11 @@
 #
 # The script exists because `claude plugin update` keys on the version
 # string alone. It reports a content change at an unchanged version as
-# "already at the latest version", and the stale snapshot stays. So the
-# decisions to test are these: which plugins the manifest names, which ones
-# an ordinary update skips with no error, and whether the snapshot matches
-# the tree afterwards. Each one is a pure function over paths, and none of
-# them runs the `claude` CLI.
+# "already at the latest version", and the stale snapshot stays. So there
+# are three decisions to test. They are which plugins the manifest names,
+# which ones an ordinary update skips with no error, and whether the
+# snapshot matches the tree afterwards. Each one is a pure function over
+# paths, and none of them runs the `claude` CLI.
 
 load helpers
 
@@ -134,7 +134,7 @@ gamma" ]
 # --- the plan, with no run of the CLI ------------------------------------
 
 # The tests assert the commands line by line, in full. A substring match
-# passes a dropped --yes (which makes the real CLI stop and prompt), and it
+# passes a dropped --yes (which makes the real CLI stop and prompt). It also
 # passes an uninstall and an install in the wrong order (which removes the
 # plugin and puts the same stale copy back). Both leave the searched text
 # present.
@@ -293,7 +293,7 @@ gamma" ]
 # byte for byte across every component that the harness loads. The four
 # examples above pin that for one shape with two components and one fixed
 # edit. That is narrower than the claim. Eight of the ten components are
-# never built, no directory holds more than one file, and no component is
+# never built. No directory holds more than one file. No component is
 # present on one side and absent on the other.
 #
 # So the law is stated over generated trees instead. Reflexivity: an
@@ -303,8 +303,8 @@ gamma" ]
 # exists to prevent.
 #
 # The generator follows the seeded idiom of
-# tests/hooks/enforce-code-review-internals.bats: a fixed seed that only
-# prng_next advances, so a shape that breaks the law occurs again on a
+# tests/hooks/enforce-code-review-internals.bats. It uses a fixed seed that
+# only prng_next advances, so a shape that breaks the law occurs again on a
 # rerun.
 
 SNAPSHOT_SEED=20260830
@@ -324,10 +324,11 @@ snap_prng_next() {
 
 # generate_tree <dir>
 #
-# Builds an arbitrary plugin shape: a random subset of the component
-# directories, each with a random number of files at a random depth, plus a
-# random subset of the single-file components, plus stray paths that are not
-# components and must not change the verdict.
+# Builds an arbitrary plugin shape. It holds a random subset of the
+# component directories, each with a random number of files at a random
+# depth. It also holds a random subset of the single-file components. Last,
+# it holds stray paths that are not components and must not change the
+# verdict.
 generate_tree() {
   local dir="$1" component depth files i path
   mkdir -p "$dir"
@@ -436,10 +437,9 @@ component_files_in() {
 #
 # PLUGIN_COMPONENTS names the parts of a plugin that the harness loads
 # today. If the harness starts to load a new kind, a comparison of only that
-# list reports every plugin as a match and never reads the new directory.
-# That is silent under-verification, and it is worse than a false alarm
-# here, because the purpose of the check is to catch a copy that did not
-# occur.
+# list reports every plugin as a match. It never reads the new directory.
+# That is silent under-verification. It is worse than a false alarm here,
+# because the purpose of the check is to catch a copy that did not occur.
 #
 # So the comparison also covers what the install copied. An entry in the
 # snapshot is compared against the tree whether the list knows the name or

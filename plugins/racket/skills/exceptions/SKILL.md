@@ -1,5 +1,5 @@
 ---
-description: Raise and handle errors in Racket. Covers the raise family (error, raise-argument-error, raise-arguments-error, raise-user-error, raise), the catch with with-handlers and with-handlers*, the exn struct hierarchy and its predicates, the definition of your own exn subtype, guaranteed cleanup with dynamic-wind, the escape with let/ec and call/ec, and how contract violations fit in. Use when you catch an exception, when you choose a procedure that raises an error, when you define a custom exception type, when you guarantee cleanup on a non-local exit, or when you read a Racket error message. For contract violations and blame messages, see ../contracts/SKILL.md. For a compile-time error that a macro raises, see ../macros/SKILL.md.
+description: Raise and handle errors in Racket. Covers the raise family (error, raise-argument-error, raise-arguments-error, raise-user-error, raise). Also covers the catch with with-handlers and with-handlers*, the exn struct hierarchy and its predicates, and the definition of your own exn subtype. Also covers guaranteed cleanup with dynamic-wind, the escape with let/ec and call/ec, and how contract violations fit in. Use when you catch an exception, when you choose a procedure that raises an error, or when you define a custom exception type. Also use when you guarantee cleanup on a non-local exit, or when you read a Racket error message. For contract violations and blame messages, see ../contracts/SKILL.md. For a compile-time error that a macro raises, see ../macros/SKILL.md.
 allowed-tools: Read, Grep, Glob
 ---
 
@@ -81,9 +81,9 @@ In the reverse order, the `:exists` clause is dead code, and nothing warns
 about it.
 
 Before the handler runs, `with-handlers` **escapes to its own
-continuation**. The post thunks of a `dynamic-wind` in the body have already
-run, and each `parameterize` in the body is already undone, when the handler
-body runs. A handler that needs the dynamic context of the raise itself must
+continuation**. During this escape, Racket runs the post thunks of a
+`dynamic-wind` in the body. It also undoes each `parameterize` in the body.
+So both are done before the handler body runs. A handler that needs the dynamic context of the raise itself must
 use `call-with-exception-handler` instead (see `reference.md`).
 
 `with-handlers*` differs from `with-handlers` in exactly two ways. It calls
@@ -117,10 +117,10 @@ exn
 user together with the error that it meant to catch.
 
 `raise` accepts *every* value, not only an `exn`. So a predicate such as
-`exn:fail?` does not see `(raise 'timeout)`. Catch a raise of a value that
-is not an `exn` with a predicate that matches the value (`symbol?`, or the
-predicate of your own struct), or, on purpose, with `void` to catch
-everything.
+`exn:fail?` does not see `(raise 'timeout)`. Use a predicate that matches the
+value to catch a raise of a value that is not an `exn`. Examples are `symbol?`
+and the predicate of your own struct. To catch everything on purpose, use
+`void`.
 
 ## Your own exception type
 

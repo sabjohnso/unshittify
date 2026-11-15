@@ -50,8 +50,8 @@ setup() {
 # --- SIGPIPE: a matcher that reads from a pipe must not report "no match"
 # --- only because the reader exited before the writer finished. Under
 # --- `set -o pipefail`, `producer | grep -q` turns the early exit of the
-# --- reader into SIGPIPE (141) on the producer and fails the whole pipeline.
-# --- So a long event list opens the gate with no error.
+# --- reader into SIGPIPE (141) on the producer. It then fails the whole
+# --- pipeline. So a long event list opens the gate with no error.
 
 @test "code_was_edited finds an Edit at the head of a very long event list" {
   # Shaped events ({name, skill, subagent_type}), as
@@ -365,7 +365,7 @@ DOC_TARGETS=(notes.md ./docs/guide.rst /home/user/project/PLAN.org)
 
 @test "an exempt clause never hides the write that follows it" {
   # The mask must keep the separator that ends an exempt clause. The install
-  # pattern reads a command position, so a mask that removes the ";" or the
+  # pattern reads a command position. So a mask that removes the ";" or the
   # "|" turns the next command into an argument and hides it.
   local clause separator
   for clause in 'echo hi >/dev/null' 'echo hi > /tmp/log.txt' 'echo hi >notes.md' \
@@ -747,7 +747,7 @@ EOF' \
 
 @test "a redirection that only resembles a documentation target is a code change" {
   # A target that the shell computes can run a command (a backtick
-  # substitution with \${IFS} holds no space and no parenthesis), and its
+  # substitution with \${IFS} holds no space and no parenthesis). Its
   # value is not in the transcript. So a computed or quoted target counts.
   local cmd
   for cmd in 'printf x > src/parser.md.c' \
@@ -807,12 +807,13 @@ EOF' \
 # duplicate example duplicated a skill and asserted only that the result was
 # empty.
 #
-# bats has no QuickCheck, so the generator below is bash. It varies the
-# number of code changes, the set of required reviews that are present,
-# whether each one runs as a skill or as its agent, the quantity of
-# read-only noise around them, and the order of all of it. A fixed constant
-# seeds it, and only prng_next advances it. So a trial that breaks a law
-# occurs again on a rerun of the suite. $RANDOM cannot promise that.
+# bats has no QuickCheck, so the generator below is bash. It varies five
+# things. The first is the number of code changes. The second is the set of
+# required reviews that are present. The third is whether each review runs
+# as a skill or as its agent. The fourth is the quantity of read-only noise
+# around them. The fifth is the order of all of it. A fixed constant seeds
+# it, and only prng_next advances it. So a trial that breaks a law occurs
+# again on a rerun of the suite. $RANDOM cannot promise that.
 #
 # One dimension is enumerated, not sampled. The set of reviews that a turn
 # already holds has sixteen values, and the monotonicity law is a statement
@@ -849,10 +850,10 @@ prng_next() {
 }
 
 # An event spec is a tool name, with an optional "|" and the one argument
-# that decides what that tool did: a Bash command, a subagent type, or the
-# file of an edit tool. The edits of exempt files are noise. The
-# two tables are the alphabet of the generator. event_line below turns one
-# spec into the transcript line for it.
+# that decides what that tool did. The argument is a Bash command, a
+# subagent type, or the file of an edit tool. The edits of exempt files are
+# noise. The two tables are the alphabet of the generator. event_line below
+# turns one spec into the transcript line for it.
 CODE_CHANGE_SPECS=(
   "Edit"
   "Write"
@@ -893,9 +894,9 @@ event_line() {
 
 # prepare_generator
 #
-# Prepares what the three law tests share: SPEC_LINE, the transcript line
-# of every spec, encoded once; PROMPT_LINE, the prompt that opens the turn;
-# and REVIEW_SUBSETS, the number of subsets of the required reviews. Each
+# Prepares what the three law tests share. SPEC_LINE is the transcript line
+# of every spec, encoded once. PROMPT_LINE is the prompt that opens the turn.
+# REVIEW_SUBSETS is the number of subsets of the required reviews. Each
 # encoded line costs a jq process, and the trials ask for the same twenty or
 # so specs hundreds of times. An encode on demand made these three tests the
 # slowest part of the suite by a wide margin.
@@ -904,7 +905,7 @@ event_line() {
 # reasons:
 #
 #   REQUIRED_REVIEWS  is not in scope until setup() sources the hook, and
-#                     that occurs after the top level of the file has run. A
+#                     that occurs after the top level of the file runs. A
 #                     count at the top level counts an empty array.
 #                     REVIEW_SUBSETS came out as 1, the generator produced
 #                     turns with no review at all, and every test passed.
@@ -960,10 +961,11 @@ shuffle_specs() {
 
 # gen_turn_with_reviews <mask>
 #
-# Generates one turn into the global SPECS: zero to two code changes, each
-# required review whose bit is set in <mask> in a generated form, and one to
-# three read-only events, all shuffled together. The caller chooses the set
-# of reviews, so a test can enumerate that dimension and not sample it. All
+# Generates one turn into the global SPECS. The turn holds zero to two code
+# changes and one to three read-only events. It also holds each required
+# review whose bit is set in <mask>, in a generated form. The generator
+# shuffles all of these events together. The caller chooses the set of
+# reviews, so a test can enumerate that dimension and not sample it. All
 # the rest of the turn is generated.
 gen_turn_with_reviews() {
   local mask="$1" i n
@@ -1059,7 +1061,7 @@ review_line_for() {
   # that dimension, and it is small enough to enumerate. So the review that
   # the test adds cycles over it and is not sampled. The subset with neither
   # tdd nor nst, with tdd added, is the case that catches a computation that
-  # drops nst as a side effect, and the enumeration guarantees that the test
+  # drops nst as a side effect. The enumeration guarantees that the test
   # reaches it.
   local present idx before after expected
   for ((present = 0; present < REVIEW_SUBSETS; present++)); do

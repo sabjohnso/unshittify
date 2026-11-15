@@ -1,5 +1,5 @@
 ---
-description: Render Racket graphics with racket/draw and pict, with no window. Covers imperative draws on a dc<%> (bitmap-dc%, svg-dc%, pdf-dc%, post-script-dc%, pens, brushes, dc-path%, transforms, text metrics) and composable pictures with pict (circle, text, append, superimpose, colorize, scale, rotate, pin-arrow-line connectors, pict->bitmap). Use when you produce an image, a diagram, or an SVG, PDF, or PostScript file, when you compose or measure picts, or when you look up a dc<%> or pict procedure. For the window and the widgets around a canvas, see ../gui/SKILL.md. For a redraw loop that a timer drives, see ../canvas-animation/SKILL.md.
+description: Render Racket graphics with racket/draw and pict, with no window. Covers imperative draws on a dc<%> (bitmap-dc%, svg-dc%, pdf-dc%, post-script-dc%, pens, brushes, dc-path%, transforms, text metrics). Also covers composable pictures with pict (circle, text, append, superimpose, colorize, scale, rotate, pin-arrow-line connectors, pict->bitmap). Use when you produce an image, a diagram, or an SVG, PDF, or PostScript file. Also use when you compose or measure picts, or when you look up a dc<%> or pict procedure. For the window and the widgets around a canvas, see ../gui/SKILL.md. For a redraw loop that a timer drives, see ../canvas-animation/SKILL.md.
 allowed-tools: Read, Grep, Glob
 ---
 
@@ -7,9 +7,9 @@ allowed-tools: Read, Grep, Glob
 
 There are two layers, and you use them together:
 
-For the full `dc<%>` method list, the `dc-path%` and resource signatures,
-and the pict constructor catalogue, read `reference.md` in this skill
-directory.
+`reference.md` in this skill directory holds the full `dc<%>` method list,
+the `dc-path%` and resource signatures, and the pict constructor catalogue.
+Read it when you need that detail.
 
 - **`racket/draw`** is imperative. You draw on a **drawing context**
   (`dc<%>`). You set a pen and a brush, then you issue `draw-line`,
@@ -43,9 +43,10 @@ offscreen with no window:
 (send bm save-file "out.png" 'png)        ; PNG, JPEG, and other formats
 ```
 
-Other contexts: the `get-dc` of a GUI `canvas%` ([gui](../gui/SKILL.md)),
-and the vector back ends `svg-dc%`, `pdf-dc%`, and `post-script-dc%` for a
-file that is independent of the resolution. A vector back end builds a
+Other contexts are the `get-dc` of a GUI `canvas%` ([gui](../gui/SKILL.md))
+and the vector back ends `svg-dc%`, `pdf-dc%`, and `post-script-dc%`. The
+vector back ends produce a file that is independent of the resolution. A
+vector back end builds a
 **stateful document**. Construct it with `[interactive #f]`, then bracket
 the draws with the page life cycle:
 

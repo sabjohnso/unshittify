@@ -12,7 +12,7 @@ Goal: set the `"theme"` key in the `.claude/settings.local.json` of the **curren
 ## 1. Find the target value
 
 - If the user gave an argument (`$ARGUMENTS`), use it as the theme value directly, with the whitespace trimmed.
-- If `$ARGUMENTS` is empty, ask the user which theme they want. Say that the common values are `dark`, `light`, `dark-daltonized`, `light-daltonized`, `dark-ansi`, and `light-ansi` (the variants for color-blind users and for ANSI only). Do NOT refuse a value outside this list. Claude Code itself is the authority on the valid values. Pass through the value that the user confirms.
+- If `$ARGUMENTS` is empty, ask the user which theme they want. Say that the common values are `dark`, `light`, `dark-daltonized`, `light-daltonized`, `dark-ansi`, and `light-ansi`. The last four values are the variants for color-blind users and the ANSI-only variants. Do NOT refuse a value outside this list. Claude Code itself is the authority on the valid values. Pass through the value that the user confirms.
 
 ## 2. Find or create the settings file
 
@@ -24,7 +24,7 @@ Goal: set the `"theme"` key in the `.claude/settings.local.json` of the **curren
 
 - Read the content of the existing file (if it is present) and parse it as JSON. If the file exists but is empty or does not parse, stop. Tell the user that the file holds invalid JSON that needs a manual fix. Do not overwrite it blindly.
 - Set (or overwrite) only the top-level `"theme"` key to the value from step 1. Keep every other top-level key and nested structure as it is.
-- Write the merged object back to `.claude/settings.local.json` as pretty-printed JSON (an indent of 2 spaces), with a newline at the end, and with the existing key order.
+- Write the merged object back to `.claude/settings.local.json` as pretty-printed JSON (an indent of 2 spaces). End the file with a newline. Keep the existing key order.
 
 ## 4. Confirm
 

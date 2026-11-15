@@ -1,5 +1,5 @@
 ---
-description: Concurrency and parallelism in Racket. Covers green threads, synchronous channels and thread mailboxes, async channels, semaphores, the synchronizable-event system (sync, handle-evt, choice-evt, alarm-evt), real parallelism with futures and places, and the resource life cycle with custodians. Use when you coordinate threads, when you choose a communication mechanism, when you wait on several events, when you parallelize CPU work, or when you clean up a group of threads or ports.
+description: Concurrency and parallelism in Racket. Covers green threads, synchronous channels and thread mailboxes, async channels, and semaphores. Also covers the synchronizable-event system (sync, handle-evt, choice-evt, alarm-evt). Also covers real parallelism with futures and places, and the resource life cycle with custodians. Use when you coordinate threads, when you choose a communication mechanism, or when you wait on several events. Also use when you parallelize CPU work, or when you clean up a group of threads or ports.
 allowed-tools: Read, Grep, Glob
 ---
 
@@ -7,8 +7,9 @@ allowed-tools: Read, Grep, Glob
 
 Racket separates two things that people confuse:
 
-For the exact signatures of the threads, the channels, the semaphores, and
-the synchronizable-event system, read `reference.md` in this skill directory.
+`reference.md` in this skill directory holds the exact signatures of the
+threads, the channels, the semaphores, and the synchronizable-event system.
+Read it when you need that detail.
 
 - **Concurrency.** `thread` creates *green threads* that interleave on one OS
   thread inside a place. They are cheap, and the scheduler preempts them.

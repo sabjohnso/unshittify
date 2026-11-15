@@ -1,5 +1,5 @@
 ---
-description: Profile and time Racket code. Covers time and time-apply for quick cpu, real, and gc numbers, the statistical profiler (profile, profile-thunk, raco profile) to find the hot spots, contract-profile for the contract overhead, and current-memory-use for the allocation. Use when code is slow and you need evidence of where the time goes before you optimize, when you read a profiler report, or when you measure the contract or GC cost.
+description: Profile and time Racket code. Covers time and time-apply for quick cpu, real, and gc numbers, and the statistical profiler (profile, profile-thunk, raco profile) to find the hot spots. Also covers contract-profile for the contract overhead and current-memory-use for the allocation. Use when code is slow and you need evidence of where the time goes before you optimize. Also use when you read a profiler report, or when you measure the contract or GC cost.
 allowed-tools: Bash(racket:*), Bash(raco:*), Read, Grep, Glob
 ---
 
@@ -8,11 +8,12 @@ allowed-tools: Bash(racket:*), Bash(raco:*), Read, Grep, Glob
 Measure before you optimize. A guess about the hot spot is usually wrong. A
 profile tells you where the time goes, so you change the one place that
 matters and leave the rest simple. Work from the cheap tool to the detailed
-tool: `time` for a single number, the statistical `profile` for a
-breakdown, and `contract-profile` when you suspect the contracts.
+tool. Use `time` for a single number. Use the statistical `profile` for a
+breakdown. Use `contract-profile` when you suspect the contracts.
 
-For the exact signatures of the profiler, the renderer options, and the
-timing and memory primitives, read `reference.md` in this skill directory.
+`reference.md` in this skill directory holds the exact signatures of the
+profiler, the renderer options, and the timing and memory primitives. Read
+it when you need that detail.
 
 ## Quick timing
 
@@ -135,7 +136,7 @@ counts, thread statistics, and more.
   change, profile again. The hot spot moves.
 - **Keep the simple reference implementation.** Per the project standards, a
   nontrivial optimization needs benchmark or profile evidence that it is
-  necessary, and the clear version must stay beside it for documentation
+  necessary. The clear version must stay beside it for documentation
   and comparison.
 - **Separate the allocation from the computation.** A large gc column points
   at consing. A reduction of the allocation often beats a tune of the inner

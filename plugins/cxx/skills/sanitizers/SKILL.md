@@ -1,10 +1,10 @@
 ---
-description: Compile and run C++ code with the Clang and GCC sanitizers (AddressSanitizer (ASan), UndefinedBehaviorSanitizer (UBSan), ThreadSanitizer (TSan), MemorySanitizer (MSan), and LeakSanitizer (LSan)). Covers which sanitizers can combine, the flags that each one needs, the runtime options, the CMake integration, and how to read the crash report of a sanitizer. Use when the user asks you to build with sanitizers, to diagnose a memory error, a data race, or an undefined-behavior bug, or to interpret ASan, UBSan, or TSan output.
+description: Compile and run C++ code with the Clang and GCC sanitizers (AddressSanitizer (ASan), UndefinedBehaviorSanitizer (UBSan), ThreadSanitizer (TSan), MemorySanitizer (MSan), and LeakSanitizer (LSan)). Covers which sanitizers can combine, the flags that each one needs, and the runtime options. Also covers the CMake integration and how to read the crash report of a sanitizer. Use when the user asks you to build with sanitizers. Also use when the user asks you to diagnose a memory error, a data race, or an undefined-behavior bug. Also use when the user asks you to interpret ASan, UBSan, or TSan output.
 ---
 
 # Compile and run with sanitizers
 
-Goal: pick the sanitizer that catches the bug at hand, build and run with the flags that it needs, and read its report down to the frame where the bug is. This is a reference to read at each of those points, not a procedure to run from start to end, so it has no numbered steps.
+Goal: pick the sanitizer that catches the bug at hand, and build and run with the flags that it needs. Then read its report down to the frame where the bug is. This is a reference to read at each of those points. It is not a procedure to run from start to end, so it has no numbered steps.
 
 A sanitizer is a set of runtime checks that the compiler inserts. The
 compiler instruments every memory access, arithmetic operation, or thread
@@ -77,8 +77,8 @@ Common options that are worth a set:
 
 ## How to read a report
 
-An ASan report names the error class, the access that triggered it, the
-faulting stack trace, and the stack trace of the allocation or the free:
+An ASan report names the error class and the access that triggered it.
+It also gives the stack trace of the failed access, and the stack trace of the allocation or the free:
 
 ```
 ERROR: AddressSanitizer: heap-use-after-free on address 0x...
@@ -96,8 +96,8 @@ Read each stack from the bottom up. The deepest frame in your own code (for
 example `app.cpp:12`) is where the bug is. The frames inside the sanitizer
 runtime or `operator new` and `delete` are noise. If a report shows a raw
 address instead of a symbol name, the binary has no debug information, or no
-symbolizer is installed (`llvm-symbolizer` for Clang, on `PATH` or named by
-`ASAN_SYMBOLIZER_PATH`).
+symbolizer is installed. For Clang, the symbolizer is `llvm-symbolizer`. It
+must be on `PATH` or be named by `ASAN_SYMBOLIZER_PATH`.
 
 ## The CMake integration
 

@@ -3,10 +3,10 @@
 #
 # Everything under plugins/ is a JSON manifest or a Markdown prompt that the
 # Claude Code harness loads directly. There is no compiler and no runtime to
-# catch a defect there. So a rule stated only in prose, in CLAUDE.md or in
-# the authoring skills of the meta plugin, holds exactly as long as the next
-# author remembers it. A YAML comment truncated four skill descriptions, and
-# they shipped before anybody saw it.
+# catch a defect there. So a rule that exists only in prose holds exactly as
+# long as the next author remembers it. Such prose is in CLAUDE.md or in the
+# authoring skills of the meta plugin. A YAML comment truncated four skill
+# descriptions, and they shipped before anybody saw it.
 #
 # Usage: validate-plugins.sh [marketplace-root]   (default: the repo root)
 #
@@ -17,7 +17,7 @@
 # one full rerun.
 set -euo pipefail
 # Without this, errexit stops at the command substitution that main runs
-# every check inside, and a check that dies in the middle of the tree looks
+# every check inside. Then a check that dies in the middle of the tree looks
 # like a clean tree.
 shopt -s inherit_errexit
 
@@ -30,12 +30,12 @@ shopt -s inherit_errexit
 LC_ALL=C
 
 # The tool names that the harness knows. An allowed-tools list of a skill or
-# a tools list of an agent that names a different tool is a silent failure
-# at load time, not an error. That is how Task(...) survived in a skill after
-# the harness renamed that tool to Agent. Update this list when the tool set
-# of the harness changes. An MCP tool matches by its mcp__<server>__<tool>
-# shape instead. Its name comes from the servers that a user has connected,
-# so no fixed list can hold it.
+# a tools list of an agent can name a different tool. Such a list fails in
+# silence at load time, with no error. That is how Task(...) survived in a
+# skill after the harness renamed that tool to Agent. Update this list when
+# the tool set of the harness changes. An MCP tool matches by its
+# mcp__<server>__<tool> shape instead. Its name comes from the servers that
+# a user connects, so no fixed list can hold it.
 KNOWN_TOOLS=(
   Agent Artifact AskUserQuestion Bash BashOutput CronCreate CronDelete
   CronList DesignSync Edit EnterWorktree ExitPlanMode ExitWorktree Glob
@@ -151,7 +151,7 @@ read_markdown() {
     fi
 
     # A block-sequence item. `tools:` with the entries on the indented lines
-    # that follow is the same list as `tools: Read, Grep`, and it must reach
+    # that follow is the same list as `tools: Read, Grep`. It must reach
     # the tool check as one list. It did not. The check compared an unknown
     # tool spelled this way against an empty string, and the tool passed.
     if [ -n "$pending_key" ] && [[ $line =~ ^[[:space:]]+-[[:space:]]+(.*)$ ]]; then
@@ -305,7 +305,7 @@ body_names() {
 # Fills CITED_ORDER with each distinct Markdown filename that the body
 # names, in order of appearance, so the report is stable. It steps over the
 # ".md" occurrences and not over the words. A skill body has about two
-# thousand words, there are dozens of bodies, and a loop per word over the
+# thousand words, and there are dozens of bodies. A loop per word over the
 # tree cost more than every external process that the validator spawned.
 declare -gA CITED
 declare -ga CITED_ORDER

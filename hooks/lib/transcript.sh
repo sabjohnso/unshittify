@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Shared transcript-parsing helpers for the hook scripts. A hook sources this
 # file. Nothing executes it on its own. It is the single place that knows the
-# raw JSONL transcript schema: where a turn starts, the shape of a tool_use
-# event, and what counts as an exact agent-call match.
+# raw JSONL transcript schema. That schema covers where a turn starts, the
+# shape of a tool_use event, and what counts as an exact agent-call match.
 # enforce-prose-review.sh, enforce-code-review.sh, and
 # confirm-git-commit-push.sh all depend on it. Thus the schema is in one
 # place, and the turn-boundary rule and the name-match rule cannot drift
@@ -17,7 +17,7 @@
 #   partial reads  The harness appends to the transcript while a hook reads
 #                  it, so the final line is often half-written. A parse
 #                  failure must cost that one line and no more. When jq
-#                  aborts after it has emitted events, and those events are
+#                  aborts after it emitted events, and those events are
 #                  then discarded, enforce-code-review.sh reads that nothing
 #                  was edited. That is a fail-open result on the most common
 #                  input there is.
@@ -25,8 +25,8 @@
 #                  itself, so each scan reports the positions it found.
 #                  Nothing downstream counts lines a second time, so no
 #                  second count can drift from the first. It counts the
-#                  newlines consumed, so a final line that the harness has
-#                  not finished is numbered one low. That reports a boundary
+#                  newlines consumed, so a final line that the harness did
+#                  not finish is numbered one low. That reports a boundary
 #                  EARLIER than the record, and that direction costs a
 #                  redundant review and not a missed one.
 #
@@ -163,9 +163,10 @@ find_turn_start_line() {
 # The task-notification case broke a real guarantee, not a hypothetical one.
 # When the model delegates a subagent asynchronously, the harness writes the
 # completion notification AFTER the Agent tool_use that started the subagent.
-# A boundary on that notification is after the delegation, so
-# enforce-prose-review.sh could never see a review it had just demanded. And
-# every review in this harness is delegated that way. Measured on a live
+# A boundary on that notification is after the delegation. So
+# enforce-prose-review.sh could never see a review that it demanded a
+# moment before, in the same turn. And every review in this harness is
+# delegated that way. Measured on a live
 # transcript: lines 198 and 221 of one session were task-notifications that
 # qualified as boundaries. Each sat immediately after the
 # communication:prose-reviewer call that it reported on.
@@ -186,7 +187,7 @@ find_turn_start_line() {
 #                field even now. The rule trims ALL leading whitespace before
 #                it looks for the tag, not one newline. ltrimstr removes its
 #                argument exactly once, so a second newline or a leading
-#                space left the tag unseen, and the injection then acted as a
+#                space left the tag unseen. Then the injection acted as a
 #                boundary. That moved the boundary forward, past the
 #                delegation, in the one direction this rule must never move
 #                it.
@@ -214,11 +215,11 @@ scan_boundary_candidates() {
 # line to the end. Each object has the shape {name, skill, subagent_type,
 # command, file_path}. Every field but name is null when it does not apply to
 # that tool. Consumers filter this shape. They do not derive it from the raw
-# transcript again. command carries the command string of a Bash call,
-# because the tool NAME alone cannot say whether a Bash call read a file or
-# rewrote one. file_path carries the file of an Edit or a Write call, or the
-# notebook_path of a NotebookEdit call, for the same reason: the name alone
-# cannot say whether the file is in the tree under review. The
+# transcript again. command carries the command string of a Bash call. The
+# tool NAME alone cannot say whether a Bash call read a file or rewrote one.
+# file_path carries the file of an Edit or a Write call, or the notebook_path
+# of a NotebookEdit call. The reason is the same: the name alone cannot say
+# whether the file is in the tree under review. The
 # function takes a precomputed boundary, so a caller that already ran
 # find_turn_start_line does not pay a second full-transcript scan. A line
 # that jq cannot read costs that line alone. The function reports every

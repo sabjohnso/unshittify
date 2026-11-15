@@ -1,5 +1,5 @@
 ---
-description: Property-based tests in Racket with rackcheck. Covers laws over generated inputs with property and check-property, inputs from generators (gen:natural, gen:list, gen:let, gen:filter, gen:choice, gen:frequency), the reproduction of a failure by seed with make-config, the shrunk minimal counterexamples, and the classification of inputs with label!. Use when you test invariants or algebraic laws instead of fixed examples, when you write generators, or when you debug a shrunk counterexample.
+description: Property-based tests in Racket with rackcheck. Covers laws over generated inputs with property and check-property, and inputs from generators (gen:natural, gen:list, gen:let, gen:filter, gen:choice, gen:frequency). Also covers the reproduction of a failure by seed with make-config, the shrunk minimal counterexamples, and the classification of inputs with label!. Use when you test invariants or algebraic laws instead of fixed examples, when you write generators, or when you debug a shrunk counterexample.
 allowed-tools: Bash(racket:*), Bash(raco:*), Read, Grep, Glob
 ---
 
@@ -10,11 +10,12 @@ rackcheck checks the law against many cases with random values. When a case
 fails, rackcheck **shrinks** the counterexample to the smallest input that
 still breaks the law. So you debug `n = 50`, not `n = 8347291`. This
 complements the example-based tests of [rackunit](../rackunit/SKILL.md)
-(which pin specific cases), and it fits algebra-driven design: encode the
-laws of the algebra, then verify them.
+(which pin specific cases). It also fits algebra-driven design: encode the
+laws of the algebra, then make sure that they hold.
 
-For the full generator catalogue and the exact signatures of the property
-and configuration forms, read `reference.md` in this skill directory.
+`reference.md` in this skill directory holds the full generator catalogue
+and the exact signatures of the property and configuration forms. Read it
+when you need that detail.
 
 ```racket
 #lang racket/base

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # PreToolUse hook (matcher: Bash). It gates git commit and git push. The hook
-# denies a git commit until the communication:prose-reviewer agent has run
+# denies a git commit until the communication:prose-reviewer agent ran
 # this turn. That run is the required review step of the commit-message
 # skill for the drafted message. A commit that passes that gate, and every
 # push, still asks for confirmation. The standing instruction says that a
@@ -55,9 +55,10 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib/transcript.sh"
 #                 a real command.
 #   heredocs      The function removes a body only when its introducer is a
 #                 << or <<- that is OUTSIDE quotes and not escaped with a
-#                 backslash, with the delimiter adjacent to it (<<EOF,
-#                 <<-EOF, <<'EOF', <<"EOF", never << EOF with a space), and
-#                 with a matching terminator line AFTER it. Adjacency
+#                 backslash. It also requires the delimiter adjacent to the
+#                 introducer (<<EOF, <<-EOF, <<'EOF', <<"EOF", never << EOF
+#                 with a space). It requires a matching terminator line
+#                 AFTER the introducer. Adjacency
 #                 separates a heredoc from a here-string (<<<), an
 #                 arithmetic shift (1 << N), and a C++ stream insertion.
 #   expansions    An UNQUOTED delimiter (<<EOF) means that the shell expands
@@ -67,13 +68,14 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib/transcript.sh"
 #   shell feeds   The function masks nothing when the command names a shell
 #                 interpreter anywhere (SHELL_FEEDS below), pipes into one,
 #                 or calls eval. The body can run somewhere other than its
-#                 own introducer line, as in "{ cat <<EOF ... } | bash" or a
-#                 heredoc captured into a variable and passed to eval later.
+#                 own introducer line. Examples are "{ cat <<EOF ... } | bash"
+#                 and a heredoc captured into a variable and passed to eval
+#                 later.
 #   indirection   A command word that is a variable ($SHELL <<EOF) can name
 #                 any interpreter, so such a line masks nothing.
 #
 # ACCEPTED HOLE, stated and not hidden: the function masks a heredoc that
-# feeds a NON-shell interpreter (python3, perl, node, ruby), but that
+# feeds a NON-shell interpreter (python3, perl, node, ruby). That
 # interpreter can run git itself. python3 - <<'PY' with a subprocess call is
 # a real bypass. A fix adds those names to SHELL_FEEDS, and that defeats the
 # whole purpose of the masker. A python heredoc that mentions a commit in a
@@ -84,8 +86,9 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib/transcript.sh"
 # The introducer keeps the commit form of this repository, where the git
 # call sits on the introducer. An unterminated introducer masks nothing AND
 # stops the removal of comments for the rest of the input. Thus a second
-# mask of the output cannot turn a commented terminator lookalike ("EOF #
-# done", which bash does not accept as a terminator) into a real one.
+# mask of the output cannot turn a commented terminator lookalike into a
+# real one. An example is "EOF # done", which bash does not accept as a
+# terminator.
 mask_nonexecuting() {
   printf '%s' "$1" | awk -v FEED="$FEED_PATTERN" '
     function trim(s) { gsub(/^[[:space:]]+|[[:space:]]+$/, "", s); return s }
@@ -187,9 +190,9 @@ mask_nonexecuting() {
 # "git rev-parse --verify commit" are read-only commands whose ARGUMENT is
 # the watched word. A gate on one of them denies a commit that does not
 # exist and tells the model to review a message that it never wrote. The
-# matcher skips the global options that git accepts before its subcommand,
-# with the value of each option that takes a separate token (-C, -c,
-# --git-dir, and the rest of GIT_GLOBAL_OPTS_WITH_VALUE).
+# matcher skips the global options that git accepts before its subcommand.
+# It also skips the value of each option that takes a separate token (-C,
+# -c, --git-dir, and the rest of GIT_GLOBAL_OPTS_WITH_VALUE).
 #
 # The match is on whole words. A ref such as fix-commit-message or a remote
 # named commit-fixes is not the commit subcommand. A command such as "legit"
@@ -202,7 +205,7 @@ mask_nonexecuting() {
 # text was intact and nothing was masked. The matcher was blind to a quote.
 # The same pattern read a ";" inside a quoted path (git -C "/a;b" commit) as
 # a command separator and stopped there. The removal of quotes must occur
-# before the comparison of words, and only a scanner that tracks the quote
+# before the comparison of words. Only a scanner that tracks the quote
 # state can tell a separator from a character inside a string.
 #
 # There are two passes, because a quoted string is BOTH one word and, when

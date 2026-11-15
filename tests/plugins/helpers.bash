@@ -2,7 +2,7 @@
 #
 # Every test builds a THROWAWAY marketplace tree. It does not assert against
 # the real plugins/ directory. A test that asserts against live repository
-# content fails each time the content changes for a good reason, and that
+# content fails each time the content changes for a good reason. That
 # teaches people to edit the test and not the code. A fixture tree pins the
 # rule itself.
 

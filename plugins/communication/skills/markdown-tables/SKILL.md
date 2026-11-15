@@ -1,5 +1,5 @@
 ---
-description: Reformat one or more markdown tables so that every pipe aligns in a fixed-width column. Compute the width of each column from its widest cell, and keep the declared left, center, or right alignment of each column from the header separator row. Use when you write or edit a markdown table whose columns are not visually aligned, or when the user asks you to fix, align, or clean up the format of a markdown table.
+description: Reformat one or more markdown tables so that every pipe aligns in a fixed-width column. Compute the width of each column from its widest cell. Also keep the declared left, center, or right alignment of each column from the header separator row. Use when you write or edit a markdown table whose columns are not visually aligned. Also use when the user asks you to fix, align, or clean up the format of a markdown table.
 argument-hint: "[file path or pasted table]"
 allowed-tools: Read, Grep, Glob, Edit
 ---
@@ -23,7 +23,7 @@ Read this row before you touch a cell. It alone decides how to pad each column, 
 
 ## How to compute the column widths
 
-1. For each column, measure the length of every cell in that column, with the header. The widest cell sets the fixed width of the column. Use a minimum of 3 characters, also when every cell is shorter, because the separator row needs room for `---` (or `:--`, `--:`, `:-:`).
+1. For each column, measure the length of every cell in that column, with the header. The widest cell sets the fixed width of the column. Use a minimum of 3 characters, also when every cell is shorter. This gives the separator row room for `---` (or `:--`, `--:`, `:-:`).
 2. Treat the width of the separator row as a value that comes from the alignment of the column. Do not measure the dashes that are already there.
 3. Compute the width of every column again after each edit of a cell. Added or removed text in one row changes the necessary padding for every other row in that column.
 

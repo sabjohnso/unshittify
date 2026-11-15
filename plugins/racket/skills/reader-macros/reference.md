@@ -75,8 +75,9 @@ Result conventions:
 - Return `(make-special-comment v)` to show that the characters were a
   comment. The call then yields no datum. `read` and `read-syntax` ignore `v`.
 - Do not return zero values. Zero values raise an arity error.
-- If the proc needs a `line` or `col` that is not `#f`, enable line and column
-  counting on the port with `(port-count-lines! in)`. `position` is always available.
+- If the proc needs a `line` or `col` that is not `#f`, call
+  `(port-count-lines! in)` on the port. This enables line and column counts.
+  `position` is always available.
 
 ```racket
 (make-special-comment v) -> special-comment?

@@ -1,5 +1,5 @@
 ---
-description: "Write Racket tests with rackunit. Covers the check vocabulary (check-equal?, check-pred, check-=, check-exn, check-match), groups with test-case and test-suite (#:before and #:after), a run through raco test or run-tests, a custom failure context with with-check-info, and the BDD-style describe, context, and it forms from the separate rackunit-spec package. Use when you write or organize Racket tests, when you add a test submodule, when you choose a check, or when you structure specs."
+description: "Write Racket tests with rackunit. Covers the check vocabulary (check-equal?, check-pred, check-=, check-exn, check-match), groups with test-case and test-suite (#:before and #:after). Also covers a run through raco test or run-tests, and a custom failure context with with-check-info. Also covers the BDD-style describe, context, and it forms from the separate rackunit-spec package. Use when you write or organize Racket tests, when you add a test submodule, when you choose a check, or when you structure specs."
 allowed-tools: Bash(racket:*), Bash(raco:*), Read, Grep, Glob
 ---
 
@@ -12,8 +12,9 @@ submodule, which `raco test` runs. There is no separate test file, and the
 tests can see the private bindings of the module (see
 [modules](../modules/SKILL.md)).
 
-For the complete check vocabulary and the signatures of the test groups, the
-runners, and the custom checks, read `reference.md` in this skill directory.
+`reference.md` in this skill directory holds the complete check vocabulary
+and the signatures of the test groups, the runners, and the custom checks.
+Read it when you need that detail.
 
 ```racket
 #lang racket/base

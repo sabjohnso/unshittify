@@ -11,10 +11,10 @@
 # This is a script and not a documented pair of commands because of the
 # no-op. `claude plugin update` keys on the version STRING. When the version
 # in the tree equals the installed one, it reports "already at the latest
-# version" and leaves the stale snapshot in place, whatever the content
+# version". It leaves the stale snapshot in place, whatever the content
 # says. So a plugin edited with no version increase is not published, and
 # the report says success. This script finds that case before it occurs and
-# reinstalls those plugins instead. Then it verifies every snapshot against
+# reinstalls those plugins instead. Then it checks every snapshot against
 # the tree, so "published" is a measured claim and not an assumed one.
 #
 # Nothing here writes to the repository. The only state that the script
@@ -110,8 +110,8 @@ update_would_skip() {
 # Neither side alone is authoritative, so the names in the comparison are
 # the union of both. The comparison covers all that the install COPIED,
 # whatever its name. Otherwise a component kind that the harness starts to
-# load after PLUGIN_COMPONENTS was written is never compared, and a false
-# match with no error is worse here than a false alarm. The comparison also
+# load after PLUGIN_COMPONENTS was written is never compared. A false match
+# with no error is worse here than a false alarm. The comparison also
 # covers every component in PLUGIN_COMPONENTS. That catches the reverse
 # case, a component that the install did not copy at all.
 snapshot_matches_tree() {

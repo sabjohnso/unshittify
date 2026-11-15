@@ -28,7 +28,7 @@ Goal: set the `"model"` key in the `.claude/settings.local.json` of the **curren
 
 - Read the content of the existing file (if it is present) and parse it as JSON. If the file exists but is empty or does not parse, stop. Tell the user that the file holds invalid JSON that needs a manual fix. Do not overwrite it blindly.
 - Set (or overwrite) only the top-level `"model"` key to the value from step 1. Keep every other top-level key and nested structure as it is.
-- Write the merged object back to `.claude/settings.local.json` as pretty-printed JSON (an indent of 2 spaces), with a newline at the end, and with the existing key order.
+- Write the merged object back to `.claude/settings.local.json` as pretty-printed JSON (an indent of 2 spaces). End the file with a newline. Keep the existing key order.
 
 ## 4. Confirm
 

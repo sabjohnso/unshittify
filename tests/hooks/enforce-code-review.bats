@@ -148,7 +148,7 @@ all_reviews_via_agents() {
 # insensitivity and order invariance are properties over every turn,
 # and a single fixed turn cannot show that a property holds. These two tests
 # were the whole evidence for two of the three laws that CLAUDE.md says are
-# pinned, and one of them permuted only the case where nothing was missing.
+# pinned. One of them permuted only the case where nothing was missing.
 # The "law: ..." tests in enforce-code-review-internals.bats check the laws
 # themselves over generated turns. These two tests keep the end-to-end
 # coverage of the shapes through the stdin interface of the hook, which the
@@ -180,10 +180,11 @@ all_reviews_via_agents() {
 }
 
 @test "the hook still finds the reviews of this turn when a last-prompt marker follows them" {
-  # The genuine prompt, the reviews of this turn, then a last-prompt marker
-  # that the harness appends out of order (after the reviews), then a later
-  # edit. An anchor on the marker sees the edit but not the reviews, and it
-  # blocks a fully reviewed turn in error.
+  # The transcript holds the genuine prompt, then the reviews of this turn.
+  # Then the harness appends a last-prompt marker out of order, after the
+  # reviews. A later edit follows the marker. An anchor on the marker sees
+  # the edit but not the reviews, and it blocks a fully reviewed turn in
+  # error.
   transcript="$(write_transcript "$(printf '%s\n%s\n%s\n%s\n%s\n%s\n%s\n' \
     "$(user_prompt_event 'implement and review the feature')" \
     "$(tool_use_event Agent subagent_type="$TDD_AGENT")" \

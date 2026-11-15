@@ -1,5 +1,5 @@
 ---
-description: Write or edit Scribble documentation for Racket packages. Covers .scrbl manuals, defproc and defform API docs, live examples, the scribblings entries of info.rkt, and a doc build with raco setup. Use when you document a Racket library, when you edit a .scrbl file, or when you fix a doc-build error (an unlinked identifier, a sandbox failure, a dependency warning).
+description: Write or edit Scribble documentation for Racket packages. Covers .scrbl manuals, defproc and defform API docs, live examples, the scribblings entries of info.rkt, and a doc build with raco setup. Use when you document a Racket library, or when you edit a .scrbl file. Also use when you fix a doc-build error (an unlinked identifier, a sandbox failure, a dependency warning).
 allowed-tools: Bash(racket:*), Bash(raco:*), Read, Grep, Glob
 ---
 

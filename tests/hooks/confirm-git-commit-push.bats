@@ -5,7 +5,7 @@
 #   jq -r '.tool_input.command // empty' | { read -r cmd; if printf '%s' "$cmd" \
 #     | grep -Eq 'git([^&|;]*)(commit|push)'; then echo <ask-JSON>; fi; }
 # The second group covers the prose-review gate. The hook denies a git
-# commit until the communication:prose-reviewer agent has run this turn.
+# commit until the communication:prose-reviewer agent runs in this turn.
 # When the hook cannot judge the transcript (no path, no file, or no turn
 # boundary), the gate degrades to the plain ask.
 
@@ -350,7 +350,7 @@ permission_reason() {
 # preceding-character class of the pattern. So it records the earlier
 # behavior and does not show that the fix works. The three tests after them
 # pin what the fix must not relax. The mask can only remove text that the
-# shell will not execute, so a heredoc that feeds a shell interpreter stays
+# shell will not execute. So a heredoc that feeds a shell interpreter stays
 # gated, although it is a heredoc body.
 
 GITW=git
@@ -627,7 +627,7 @@ GITW=git
 
 # --- Fourth review round, and the matcher, not the masker. Every command
 # --- below is intact. It has no comment, no heredoc, and nothing that the
-# --- mask touches. The pattern still failed to see it, because a quote
+# --- mask touches. The pattern still failed to see it. A quote
 # --- character sat where the pattern demanded whitespace, or a separator
 # --- inside a quoted path ended a segment that the shell never ends. Each
 # --- one runs a real gated command.

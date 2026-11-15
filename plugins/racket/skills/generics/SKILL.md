@@ -1,5 +1,5 @@
 ---
-description: "Define generic interfaces in Racket with racket/generic. Covers define-generics to declare a set of methods, the implementation of the methods per type with #:methods gen:NAME, defaults and fallbacks (#:defaults, #:fast-defaults, #:fallbacks), a call to a sibling method with define/generic, the introspection of support (#:defined-predicate, exn:fail:support?), and a contract on an instance with generic-instance/c. Use when several types must share an interface with runtime dispatch, or when you extend an interface to existing types."
+description: "Define generic interfaces in Racket with racket/generic. Covers define-generics to declare a set of methods, and the implementation of the methods per type with #:methods gen:NAME. Also covers defaults and fallbacks (#:defaults, #:fast-defaults, #:fallbacks), and a call to a sibling method with define/generic. Also covers the introspection of support (#:defined-predicate, exn:fail:support?), and a contract on an instance with generic-instance/c. Use when several types must share an interface with runtime dispatch, or when you extend an interface to existing types."
 allowed-tools: Read, Grep, Glob
 ---
 

@@ -1,5 +1,5 @@
 ---
-description: Build, develop, and distribute Racket code with raco and packages. Covers collections and packages, the info.rkt manifest (deps, build-deps, version, scribblings), a scaffold with raco pkg new, development in place with raco pkg install --link, a build with raco make, setup, and test, a standalone executable with raco exe, and a publication to the package catalog. Use when you structure a package, when you edit info.rkt, when you fix a dependency-check error, or when you ship a Racket library or application.
+description: Build, develop, and distribute Racket code with raco and packages. Covers collections and packages, and the info.rkt manifest (deps, build-deps, version, scribblings). Also covers a scaffold with raco pkg new, and development in place with raco pkg install --link. Also covers a build with raco make, setup, and test, a standalone executable with raco exe, and a publication to the package catalog. Use when you structure a package, when you edit info.rkt, when you fix a dependency-check error, or when you ship a Racket library or application.
 allowed-tools: Bash(racket:*), Bash(raco:*), Read, Grep, Glob
 ---
 
@@ -27,11 +27,17 @@ and the package.
 raco pkg new my-lib
 ```
 
-This generates a package that works: `info.rkt` (the manifest), `main.rkt`
-(the entry module of the collection, with `test` and `main` submodules),
-`scribblings/` (a Scribble manual, see
-[scribble-docs](../scribble-docs/SKILL.md)), `README.md`, `LICENSE-*`, and
-a CI workflow. The collection name defaults to the package name, so
+This generates a package that works. It holds these items:
+
+- `info.rkt` (the manifest).
+- `main.rkt` (the entry module of the collection, with `test` and `main`
+  submodules).
+- `scribblings/` (a Scribble manual, see
+  [scribble-docs](../scribble-docs/SKILL.md)).
+- `README.md` and `LICENSE-*`.
+- A CI workflow.
+
+The collection name defaults to the package name, so
 `(require my-lib)` loads `main.rkt`.
 
 ## The info.rkt manifest
@@ -89,8 +95,8 @@ the package lands with `--scope user` (the default, per user) or
 - **`raco setup`** builds a collection from end to end: the bytecode, the
   docs, and the info. Limit its scope: `raco setup my-lib` or `raco setup
   --pkgs my-lib`. Add `--check-pkg-deps` to validate `deps` and
-  `build-deps`, `--no-docs` to skip the docs, `-j N` for parallel work, and
-  `--clean` to remove the built files first.
+  `build-deps`. Add `--no-docs` to skip the docs. Add `-j N` for parallel
+  work. Add `--clean` to remove the built files first.
 - **`raco test`** runs the `test` submodules (see
   [rackunit](../rackunit/SKILL.md)). The targets: `raco test file.rkt`,
   `raco test -c my-lib` (a collection), `raco test -p my-lib` (a package),
@@ -113,9 +119,9 @@ A typical loop: `raco pkg install --link`, edit, `raco test -p my-lib`, and
 
 A catalog entry (pkgs.racket-lang.org) maps a package *name* to a *source*,
 almost always a public git repository. A user then runs `raco pkg install
-my-lib`. The steps: put `info.rkt` at the root of the repository (or in a
-subdirectory for a repository with several packages), push to git, and
-register the name and the URL on the catalog. `raco pkg create --format zip`
+my-lib`. Do these steps. Put `info.rkt` at the root of the repository (or in a
+subdirectory for a repository with several packages). Push to git. Register
+the name and the URL on the catalog. `raco pkg create --format zip`
 bundles a directory into an archive with a checksum, if you distribute
 outside a catalog. Increase `version` in `info.rkt` on each release
 (semantic versions), because the catalog and `raco pkg update` track changes

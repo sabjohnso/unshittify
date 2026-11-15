@@ -24,10 +24,10 @@ teardown() {
 # --- YAML comment truncation ----------------------------------------------
 #
 # An unquoted YAML scalar ends at a space and then a #. So a description
-# that mentions a Racket #:keyword loses all the text after it, with the
-# "Use when..." clause that makes the skill triggerable at all. The file on
-# disk looks complete. That is why four skills shipped this way and nobody
-# saw it.
+# that mentions a Racket #:keyword loses all the text after it. That text
+# includes the "Use when..." clause that makes the skill triggerable at all.
+# The file on disk looks complete. That is why four skills shipped this way
+# and nobody saw it.
 
 @test "an unquoted description that a YAML comment truncates fails" {
   root="$(new_marketplace)"

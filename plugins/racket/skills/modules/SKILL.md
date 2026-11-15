@@ -1,5 +1,5 @@
 ---
-description: Organize Racket code with modules and submodules. Covers the require sub-forms (only-in, except-in, prefix-in, rename-in, submod), the provide forms (rename-out, struct-out, contract-out, all-defined-out, all-from-out, for-syntax), and the three submodule kinds (module+, module, module*), with the main and test idiom. Use when you structure code across files, when you control the exports and the imports, when you add tests or a script entry point inside a file, or when you reach a submodule with submod or dynamic-require.
+description: Organize Racket code with modules and submodules. Covers the require sub-forms (only-in, except-in, prefix-in, rename-in, submod). Also covers the provide forms (rename-out, struct-out, contract-out, all-defined-out, all-from-out, for-syntax). Also covers the three submodule kinds (module+, module, module*), with the main and test idiom. Use when you structure code across files, or when you control the exports and the imports. Also use when you add tests or a script entry point inside a file, or when you reach a submodule with submod or dynamic-require.
 allowed-tools: Bash(racket:*), Bash(raco:*), Read, Grep, Glob
 ---
 

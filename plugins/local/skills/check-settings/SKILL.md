@@ -1,5 +1,5 @@
 ---
-description: Inspect the local Claude Code settings of the current project (.claude/settings.local.json) for JSON errors, unknown keys, permission rules that conflict or repeat, stale plugin or marketplace references, unsafe hook commands, insecure file permissions, git exposure, and rules that are too broad. Reports only. Never edits the file. Use when the user asks you to check, audit, debug, or troubleshoot the local settings of this project. For the user-level ~/.claude/settings.json, use global:check-settings instead.
+description: Inspect the local Claude Code settings of the current project (.claude/settings.local.json). Check for JSON errors, unknown keys, and permission rules that conflict or repeat. Also check for stale plugin or marketplace references, unsafe hook commands, and insecure file permissions. Also check for git exposure and rules that are too broad. Reports only. Never edits the file. Use when the user asks you to check, audit, debug, or troubleshoot the local settings of this project. For the user-level ~/.claude/settings.json, use global:check-settings instead.
 allowed-tools: Read, Grep, Glob, Bash(claude plugin list:*), Bash(git check-ignore:*), Bash(stat:*)
 ---
 
@@ -17,15 +17,40 @@ The precedence, from the most authoritative to the least: enterprise managed set
 
 ## Checks
 
-1. **Parse errors.** Read the file and confirm that it is valid JSON (no comma at the end of a list, no unescaped backslash inside a `Bash(...)` pattern, no mismatched brace).
-2. **Unknown top-level keys.** Flag each key that is not one of the known settings keys: `permissions`, `model`, `hooks`, `enabledPlugins`, `enabledMcpjsonServers`, `enableAllProjectMcpServers`, `mcpServers`, `extraKnownMarketplaces`, `askUserQuestionTimeout`, `voice`, `voiceEnabled`, `skipWorkflowUsageWarning`, `theme`, `editorMode`, `switchModelsOnFlag`, `remoteControlAtStartup`, `agentPushNotifEnabled`, `statusLine`, `outputStyle`, `env`. This list can be incomplete. Flag an unknown key as "make sure that this is a real key", not as a confirmed error.
-3. **Permission rule conflicts.** Inside `permissions.allow` and `permissions.deny`, flag: the identical rule listed twice; the identical rule in both `allow` and `deny`; a rule that a broader rule in the same array already covers (for example `Bash(git status:*)` beside a bare `Bash`).
+1. **Parse errors.** Read the file and confirm that it is valid JSON. Look for a comma at the end of a list, an unescaped backslash in a `Bash(...)` pattern, and a mismatched brace.
+2. **Unknown top-level keys.** Flag each key that is not one of these known settings keys:
+   - `permissions`
+   - `model`
+   - `hooks`
+   - `enabledPlugins`
+   - `enabledMcpjsonServers`
+   - `enableAllProjectMcpServers`
+   - `mcpServers`
+   - `extraKnownMarketplaces`
+   - `askUserQuestionTimeout`
+   - `voice`
+   - `voiceEnabled`
+   - `skipWorkflowUsageWarning`
+   - `theme`
+   - `editorMode`
+   - `switchModelsOnFlag`
+   - `remoteControlAtStartup`
+   - `agentPushNotifEnabled`
+   - `statusLine`
+   - `outputStyle`
+   - `env`
+
+   This list can be incomplete. Flag an unknown key as "make sure that this is a real key", not as a confirmed error.
+3. **Permission rule conflicts.** Inside `permissions.allow` and `permissions.deny`, flag each of these cases:
+   - The identical rule listed twice.
+   - The identical rule in both `allow` and `deny`.
+   - A rule that a broader rule in the same array already covers (for example `Bash(git status:*)` beside a bare `Bash`).
 4. **Cross-scope repetition.** A rule in `settings.local.json` that repeats a rule already granted in `.claude/settings.json` or `~/.claude/settings.json` is redundant. Note it.
-5. **Rules that are too broad.** Flag a bare tool name with no argument scope in `allow` (for example `Bash`, `Edit`, or `Read` with no pattern), or a wildcard pattern (`Bash(*)`) that defeats the least privilege. Call these out as rules that deserve a second look, not as defects.
+5. **Rules that are too broad.** Flag a bare tool name with no argument scope in `allow` (for example `Bash`, `Edit`, or `Read` with no pattern). Also flag a wildcard pattern (`Bash(*)`) that defeats the least privilege. Call these out as rules that deserve a second look, not as defects.
 6. **Stale plugin references.** If `enabledPlugins` is present, compare each key against `claude plugin list --json`. Flag each entry for a plugin that is no longer installed.
 7. **Git exposure.** Run `git check-ignore .claude/settings.local.json` from the project root. If git does NOT ignore the file, flag this prominently. Local settings must stay personal and untracked, and a file that git does not ignore can be committed.
 8. **Stale marketplace references.** If `extraKnownMarketplaces` is present, check that the `source.path` of each entry (for the `"source": "directory"` entries) exists on disk. Flag each one that does not.
-9. **Hook exposure.** For each entry under `hooks`, quote the command exactly in the report. These commands run automatically and unattended for every matching tool call in this project. Call out each command that seems to embed a credential, a token, or shell logic that permits too much (for example no quotes around a `$(...)` substitution). A project-local hook runs unattended exactly as a global hook does, so the narrower scope gives no safety here.
+9. **Hook exposure.** For each entry under `hooks`, quote the command exactly in the report. These commands run automatically and unattended for every matching tool call in this project. Call out each command that seems to embed a credential, a token, or shell logic that permits too much. An example is a `$(...)` substitution with no quotes around it. A project-local hook runs unattended exactly as a global hook does, so the narrower scope gives no safety here.
 10. **File permissions.** Run `stat -c '%a %U:%G' .claude/settings.local.json` (or `stat -f '%Lp %Su:%Sg'` on macOS). Flag the file if the group or the world can write it. This is the scope with the highest precedence below the enterprise managed settings and the CLI flags. So each other person who can write it can define hooks that run automatically and override every other scope.
 
 ## Steps

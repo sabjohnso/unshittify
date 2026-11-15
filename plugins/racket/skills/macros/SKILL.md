@@ -8,9 +8,11 @@ allowed-tools: Read, Grep, Glob
 A macro is a compile-time function from syntax to syntax. `syntax-parse`
 (from `syntax/parse`) is the tool for a macro that is not trivial. It
 matches the input against patterns, validates with syntax classes, and
-produces precise error messages automatically. For the exact grammars, the
-full lists of patterns and directives, and the built-in syntax classes, read
-`reference.md` in this skill directory.
+produces precise error messages automatically.
+
+`reference.md` in this skill directory holds the exact grammars, the full
+lists of patterns and directives, and the built-in syntax classes. Read it
+when you need that detail.
 
 ## Use the right tool
 
@@ -77,7 +79,7 @@ clauses, and returns a syntax object (a `#'` template):
 
 Factor a recurrent pattern and its validation into a class. Its `pattern`
 clauses bind **attributes** that a caller reaches with a dotted name. Define
-a class at phase 1 (`begin-for-syntax`, or a module that is required
+a class at phase 1 (`begin-for-syntax`, or a module that you require
 `for-syntax`):
 
 ```racket
@@ -109,7 +111,7 @@ class does not match. Write it as a noun phrase.
 | `(p ...)` / `(p ...+)`        | an ellipsis: zero or more / one or more                 |
 | `(~optional p)`               | `p` or nothing. Pair it with `~?` in the template       |
 | `(~seq a b)`                  | an inline run of terms (in a splicing context)          |
-| `(~or* p1 p2)`                | alternatives (use `~or*`; a bare `~or` is deprecated)   |
+| `(~or* p1 p2)`                | alternatives (use `~or*`. A bare `~or` is deprecated)   |
 | `(~and pa pb)`                | both patterns against the same term                     |
 | `(~once p)` / `(~between p)`  | cardinality constraints inside an ellipsis              |
 | `(~datum x)` / `(~literal x)` | a match on a literal datum / a literal *binding*        |
@@ -143,8 +145,8 @@ Compute fresh identifiers with `racket/syntax`:
 An identifier that a macro introduces is **invisible** to the user code, and
 a user identifier does not collide with the identifiers of the macro. A
 `tmp` that `swap!` introduces cannot capture a user `tmp`. That is correct
-by default. The other side: a name that the macro defines (for example an
-internal `default`) is *not* visible to the body of the user, unless you
+by default. The other side is a name that the macro defines (for example an
+internal `default`). It is *not* visible to the body of the user, unless you
 give it the scopes of the user on purpose. To expose a name on purpose,
 derive it from a user identifier with `format-id` (as `get-x` above). Its
 lexical context comes from the `ctx` argument. Drop to `syntax->datum` and
@@ -154,7 +156,7 @@ lexical context comes from the `ctx` argument. Drop to `syntax->datum` and
 
 Macro code runs one phase earlier than the program. Require its libraries
 `for-syntax`. Put the helper definitions that the transformer uses in
-`begin-for-syntax` or in a module that is required `for-syntax`:
+`begin-for-syntax` or in a module that you require `for-syntax`:
 
 ```racket
 (require (for-syntax racket/base syntax/parse racket/syntax))

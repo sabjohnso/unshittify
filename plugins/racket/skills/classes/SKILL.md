@@ -1,5 +1,5 @@
 ---
-description: Object-oriented programs in Racket with racket/class. Covers the definition of a class over object%, the creation of an object with new or make-object and a message with send, inheritance (super, override, the pubment, augment, and inner hole), interfaces (interface, is-a?), composition with mixins and traits, abstract methods, and class and object contracts (class/c, object/c, is-a?/c, ->m). Use when you write stateful objects, when you work with racket/gui, or when you extend a class through mixins and interfaces.
+description: Object-oriented programs in Racket with racket/class. Covers the definition of a class over object%, the creation of an object with new or make-object, and a message with send. Also covers inheritance (super, override, the pubment, augment, and inner hole), and interfaces (interface, is-a?). Also covers composition with mixins and traits, abstract methods, and class and object contracts (class/c, object/c, is-a?/c, ->m). Use when you write stateful objects, when you work with racket/gui, or when you extend a class through mixins and interfaces.
 allowed-tools: Read, Grep, Glob
 ---
 
@@ -10,9 +10,9 @@ composition through mixins and traits. A class and an object are first-class
 values. A class is an expression, `new` builds an object, and `send` calls a
 method. `racket/gui` is built on this model.
 
-For the exact grammar of `class`, the `define/` method family, and the
-interface and composition forms, read `reference.md` in this skill
-directory.
+`reference.md` in this skill directory holds the exact grammar of `class`,
+the `define/` method family, and the interface and composition forms. Read
+it when you need that detail.
 
 Use `racket/class` when you need **stateful objects with behavior**, or when
 you must work with a class-based library (notably `racket/gui`). For plain

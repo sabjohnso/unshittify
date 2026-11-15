@@ -82,10 +82,19 @@ always-evt   never-evt                  ; ready at once / never ready
 (system-idle-evt) -> evt?
 ```
 
-The built-in event sources are: channels, `channel-put-evt`, semaphores,
-`semaphore-peek-evt`, threads (`thread-dead-evt`), an async-channel itself,
-ports (`port-progress-evt`, `eof-evt`), `thread-receive-evt`, subprocesses,
-TCP (Transmission Control Protocol) listeners, and custodian boxes.
+The built-in event sources are:
+
+- channels
+- `channel-put-evt`
+- semaphores
+- `semaphore-peek-evt`
+- threads (`thread-dead-evt`)
+- an async-channel itself
+- ports (`port-progress-evt`, `eof-evt`)
+- `thread-receive-evt`
+- subprocesses
+- TCP (Transmission Control Protocol) listeners
+- custodian boxes
 
 ## Futures (require racket/future)
 

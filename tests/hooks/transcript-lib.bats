@@ -87,7 +87,7 @@ setup() {
 # --- tool_use_events_since_line, anchored at the boundary ------------------
 # These tests compose find_turn_start_line and tool_use_events_since_line as
 # the hooks do. There is no wrapper for it. The hooks need the boundary on
-# its own for the brevity check, so each hook composes the two calls itself,
+# its own for the brevity check. So each hook composes the two calls itself,
 # and its suite pins the composition end to end.
 
 @test "the function emits one shaped event per tool_use after the start of the turn" {
@@ -254,8 +254,8 @@ setup() {
 #
 # The task-notification case is the one that causes damage, and it is not
 # hypothetical. The harness writes it after the Agent tool_use that started
-# the subagent. So a hook that anchors on the last qualifying user message
-# can never see a review that was delegated asynchronously.
+# the subagent. So a hook that anchors on the last user message that
+# qualifies can never see a review that was delegated asynchronously.
 
 @test "a task notification is not a boundary" {
   transcript="$(write_transcript "$(printf '%s\n%s\n%s\n' \
@@ -484,16 +484,17 @@ setup() {
 # --- the boundary invariant, over generated transcripts ---------------------
 #
 # transcript.sh states the rule as a law. The rejection of a message that
-# the harness wrote only moves the turn start EARLIER, and an earlier
+# the harness wrote only moves the turn start EARLIER. An earlier
 # boundary can only let a hook see more of the turn, never less. CLAUDE.md
 # repeats it. Fixed examples pinned it: three injection strings against one
 # transcript shape, and six prompt shapes that the same two lines always
 # followed. That is what once let the boundary run past the end of a file of
 # three lines.
 #
-# The generator below varies what the examples held constant: the length of
-# the transcript, the number and the order of the harness messages at the
-# end, and whether malformed lines are between them. It uses the seeded LCG
+# The generator below varies what the examples held constant. It varies the
+# length of the transcript and the number and order of the harness messages
+# at the end. It also varies whether malformed lines are between them. It
+# uses the seeded LCG
 # idiom from enforce-code-review-internals.bats, so a failed trial occurs
 # again on a rerun.
 
@@ -508,7 +509,7 @@ boundary_prng_next() {
 }
 
 # One line of each kind that the harness writes and the boundary rule must
-# reject, plus the two shapes that fooled it before: a tool_result that
+# reject. Two more shapes fooled the rule before: a tool_result that
 # quotes the marker text, and a prompt with several text blocks.
 harness_line() {
   case "$1" in

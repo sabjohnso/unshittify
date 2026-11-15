@@ -1,5 +1,5 @@
 ---
-description: Add Racket contracts with racket/contract. Covers function contracts (->, ->*, ->i, case->), contract-out on module exports, struct and data-structure contracts (listof, hash/c, struct/c, recursive-contract), combinators (or/c, and/c, between/c), and how to read a blame message. Use when you put a contract on a module boundary, when you specify argument or result constraints, when you debug a contract violation or a blame message, or when you choose between contract-out and define/contract.
+description: Add Racket contracts with racket/contract. Covers function contracts (->, ->*, ->i, case->), contract-out on module exports, and struct and data-structure contracts (listof, hash/c, struct/c, recursive-contract). Also covers combinators (or/c, and/c, between/c), and how to read a blame message. Use when you put a contract on a module boundary, or when you specify argument or result constraints. Also use when you debug a contract violation or a blame message, or when you choose between contract-out and define/contract.
 allowed-tools: Read, Grep, Glob
 ---
 

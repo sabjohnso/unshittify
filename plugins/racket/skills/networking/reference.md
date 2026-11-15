@@ -158,7 +158,10 @@ and docs.racket-lang.org/web-server/. The signatures agree with Racket v9.1 [cs]
 ;; dispatchers can combine: web-server/dispatchers/* (filter, sequencer, files, servlet)
 ```
 
-Other useful modules: `web-server/templates` (`include-template` for HTML
-templates), `web-server/formlets` (forms that you can combine),
-`web-server/servlet` (`send/suspend` and `send/suspend/dispatch` for control flow
-with continuations), `net/cookies/server` and `net/cookies/common` (cookies).
+Other useful modules:
+
+- `web-server/templates` has `include-template` for HTML templates.
+- `web-server/formlets` has forms that you can combine.
+- `web-server/servlet` has `send/suspend` and `send/suspend/dispatch` for
+  control flow with continuations.
+- `net/cookies/server` and `net/cookies/common` handle cookies.

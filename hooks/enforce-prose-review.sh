@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Stop hook. It blocks the end of the turn when the final assistant message
-# is substantial prose and no call to the communication:prose-reviewer agent
-# occurred after the last message from the user.
+# is substantial prose. It blocks only when no call to the
+# communication:prose-reviewer agent occurred after the last message from
+# the user.
 set -euo pipefail
 
 MIN_WORDS=50
@@ -28,7 +29,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib/transcript.sh"
 # on every turn. The field readers below are bare `jq -r '.field'` calls.
 # When the payload is not an object, the assignments that take their output
 # abort the script under `set -e`. The hook then exits with a nonzero status
-# and prints no decision, so the turn ends with no judgement and only jq's
+# and prints no decision. The turn then ends with no judgement and only jq's
 # parse error as a trace. A check at the start turns that crash into a
 # deliberate verdict. Unreadable input is evidence that the hook cannot
 # judge. This hook stays silent in that case, as transcript_judgeable does.
@@ -38,8 +39,9 @@ stop_hook_active_or_unreadable() {
   local flag
   flag=$(printf '%s' "$1" | jq -r 'if type == "object" then (.stop_hook_active // false | tostring) else empty end' 2>/dev/null)
   # An empty result is the only unreadable signal available here. jq -e
-  # reports a payload whose flag is legitimately false as a failure, because
-  # -e keys its exit status on the output value and not on the parse.
+  # reports a payload whose flag is legitimately false as a failure. The
+  # reason is that -e keys its exit status on the output value and not on the
+  # parse.
   [ -n "$flag" ] || return 1
   printf '%s' "$flag"
 }

@@ -1,5 +1,5 @@
 ---
-description: Destructure and dispatch on the shape of data with racket/match. Covers match and match*, the pattern catalog (list, struct, ?, and, or, app, ==, quasiquote, regexp, hash-table, ellipsis), the binding forms (match-define, match-let, match-lambda), guards and the => failure escape, and define-match-expander. Use when you write a match expression, when you destructure a struct, a list, or a hash, when you choose a match binding form, or when you fix a non-exhaustive-match error.
+description: Destructure and dispatch on the shape of data with racket/match. Covers match and match*, the pattern catalog (list, struct, ?, and, or, app, ==, quasiquote, regexp, hash-table, ellipsis), the binding forms (match-define, match-let, match-lambda). Also covers guards, the => failure escape, and define-match-expander. Use when you write a match expression, when you destructure a struct, a list, or a hash, or when you choose a match binding form. Also use when you fix a non-exhaustive-match error.
 allowed-tools: Read, Grep, Glob
 ---
 

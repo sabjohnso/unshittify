@@ -1,5 +1,5 @@
 ---
-description: "Iterate and build data with the Racket for loops and sequences. Covers the for family (for/list, for/vector, for/hash, for/fold, for/sum), the iteration clauses (#:when, #:break, #:final, parallel bindings), the sequence constructors (in-range, in-list, in-vector, in-hash, in-naturals), the racket/sequence operations, and the three ways to define a new sequence (prop:sequence, make-do-sequence, define-sequence-syntax). Use when you write a loop or a comprehension, when you choose a sequence constructor, or when you make a value iterable."
+description: "Iterate and build data with the Racket for loops and sequences. Covers the for family (for/list, for/vector, for/hash, for/fold, for/sum), and the iteration clauses (#:when, #:break, #:final, parallel bindings). Also covers the sequence constructors (in-range, in-list, in-vector, in-hash, in-naturals), and the racket/sequence operations. Also covers the three ways to define a new sequence (prop:sequence, make-do-sequence, define-sequence-syntax). Use when you write a loop or a comprehension, when you choose a sequence constructor, or when you make a value iterable."
 allowed-tools: Read, Grep, Glob
 ---
 
@@ -12,9 +12,9 @@ hash, or a fold. A sequence is the common iteration protocol. Lists,
 vectors, strings, hashes, ranges, ports, and your own types all flow through
 the same `for`.
 
-For the exact grammar of a `for` clause, the full list of sequence
-constructors, and the three ways to define a sequence, read `reference.md`
-in this skill directory.
+`reference.md` in this skill directory holds the exact grammar of a `for`
+clause and the full list of sequence constructors. It also holds the three
+ways to define a sequence. Read it when you need that detail.
 
 ```racket
 (for ([x (in-list '(a b c))]) (displayln x))          ; an effect
@@ -142,10 +142,10 @@ is the easiest way, and it is usually enough (see `../structs/SKILL.md`):
 
 ### 2. `make-do-sequence`: a sequence value from position functions
 
-For an iteration with no existing collection behind it, return a sequence
-whose thunk gives the position protocol: the element from a position, the
-next position, the initial position, and the predicates that decide whether
-to continue.
+For an iteration with no collection behind it, return a sequence
+whose thunk gives the position protocol. The protocol holds the element from
+a position, the next position, the initial position, and the predicates that
+decide whether to continue.
 
 ```racket
 (define (in-countdown n)
@@ -161,9 +161,9 @@ to continue.
 
 ### 3. `define-sequence-syntax`: an `in-X` that `for` inlines
 
-For a hot, reusable iterator, define a macro that the compiler splices
-*inline* into the loop through `:do-in` (no closure per step), with a
-procedure **fallback** for a use as an ordinary sequence value. Always give
+For a hot, reusable iterator, define a macro. The compiler splices it
+*inline* into the loop through `:do-in` (no closure per step). Give the macro
+a procedure **fallback** for a use as an ordinary sequence value. Always give
 the fallback:
 
 ```racket
@@ -199,5 +199,5 @@ compile-time inline expansion.
 - **Make a struct iterable with `prop:sequence` first.** Drop to
   `make-do-sequence` only for an iteration with no collection behind it.
   Drop to `define-sequence-syntax` only when a profile
-  (`../profiling/SKILL.md`) shows that the loop is hot, and always give it a
+  (`../profiling/SKILL.md`) shows that the loop is hot. Always give it a
   procedure fallback.

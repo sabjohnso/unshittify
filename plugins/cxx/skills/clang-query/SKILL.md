@@ -1,11 +1,11 @@
 ---
-description: Query and explore the abstract syntax tree of a C++ codebase with clang-query. Use the AST matcher language of Clang to find every occurrence of a structural pattern (a call to a specific function, every override of a virtual method, every use of a deprecated type) precisely, and not approximately with a text search. Covers the compilation-database setup, the batch and the interactive call, the matcher syntax, and the output control. Use when the user asks you to find, locate, or search for a C++ code pattern structurally, or to write or debug a clang-tidy check matcher.
+description: Query and explore the abstract syntax tree of a C++ codebase with clang-query. Use the AST matcher language of Clang to find every occurrence of a structural pattern precisely, and not approximately with a text search. Examples are a call to a specific function, every override of a virtual method, and every use of a deprecated type. Covers the compilation-database setup, the batch and the interactive call, the matcher syntax, and the output control. Use when the user asks you to find, locate, or search for a C++ code pattern structurally. Also use when the user asks you to write or debug a clang-tidy check matcher.
 allowed-tools: Bash(clang-query:*), Read, Grep, Glob
 ---
 
 # Query the AST with clang-query
 
-Goal: express the requested structural pattern as a Clang AST matcher. Run it with clang-query against source compiled with the real flags of the project. Report exactly the matching locations.
+Goal: express the requested structural pattern as a Clang AST matcher. Run it with clang-query against source compiled with the real flags of the project. Report exactly the locations that match.
 
 clang-query runs the AST matcher language of Clang against real, compiled C++ source. That is the same matcher language that clang-tidy checks and Tooling library passes use. So you can search for a structural pattern precisely. A text search or a regex only approximates it.
 
@@ -55,7 +55,7 @@ This skill runs `clang-query` and nothing else. The configuration or the run of 
 
 ## Steps
 
-1. Find the compilation database. Look for `compile_commands.json` in the working directory or in an obvious build directory (`build/`, `out/`). If there is none, ask the caller for one, or for the compiler flags to pass after `--`, per "Prerequisite" above.
+1. Find the compilation database. Look for `compile_commands.json` in the working directory or in an obvious build directory (`build/`, `out/`). If there is none, ask the caller for one, or for the compiler flags to pass after `--`. Follow the rule in "Prerequisite" above.
 2. Draft the narrowest matcher that can catch the requested pattern. Add `isExpansionInMainFile()`, unless the caller also wants the matches from the included headers.
 3. Run it in batch mode against one representative file first: `clang-query -p <build-dir> -c "set output diag" -c 'match <matcher>' <file>`.
 4. Read the result and adjust the matcher. Zero matches usually means that the flags or the matcher are wrong, not that the pattern is absent. Check the flags first, then widen the matcher. Too many matches means that the matcher needs another narrowing predicate.

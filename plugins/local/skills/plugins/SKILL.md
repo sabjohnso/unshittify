@@ -9,7 +9,7 @@ allowed-tools: Bash(claude plugin list:*), Bash(claude plugin enable:*), Bash(cl
 
 Goal: choose which installed plugins are active for the **current project only**. Toggle them at the `local` settings scope (`.claude/settings.local.json`). Leave the shared `.claude/settings.json` and the global configuration of the user as they are.
 
-If it applies, tell the user at the start: Claude Code enables or disables whole plugins, not individual skills inside a plugin. If the words of the user show that they want to keep one skill from a plugin and drop a different skill from that same plugin, tell them that this is not possible. The finest control is the plugin as a whole.
+If it applies, tell the user the following at the start. Claude Code enables or disables whole plugins, not individual skills inside a plugin. The user can want to keep one skill from a plugin and drop a different skill from that same plugin. If the words of the user show this, tell them that this is not possible. The finest control is the plugin as a whole.
 
 This skill only enables or disables plugins that are **already installed**. An install of a new plugin (`claude plugin install`) is a separate action. Do not do it here, unless the user explicitly asks for it.
 
@@ -24,7 +24,7 @@ This returns an array of objects such as `{"id": "name@marketplace", "version": 
 ## 2. Find the requested action
 
 - If `$ARGUMENTS` starts with `enable` or `disable`, with one or more plugin ids after it, use those directly.
-- Otherwise, show the user the installed plugins from step 1 (the id and the current `enabled` state), and ask which ones to enable or disable for this project.
+- Otherwise, show the user the installed plugins from step 1 (the id and the current `enabled` state). Ask which ones to enable or disable for this project.
 
 ## 3. Apply the changes
 

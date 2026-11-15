@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# Stop hook. It blocks the end of the turn when a file was written or edited
-# this turn and not all of the required reviews ran after the last message
-# from the user. An edit is an Edit, Write, or NotebookEdit tool call on a
-# file that EDIT_EXEMPT_PATHS does not match, a Bash command that matches
-# BASH_WRITE_PATTERNS, or a delegation to an agent that READ_ONLY_AGENTS does
-# not list. The REQUIRED_REVIEWS table below is the set
+# Stop hook. It blocks the end of the turn when two conditions hold. A file
+# was written or edited this turn. And not all of the required reviews ran
+# after the last message from the user. An edit is one of three events. The
+# first is an Edit, Write, or NotebookEdit tool call on a file that
+# EDIT_EXEMPT_PATHS does not match. The second is a Bash command that matches
+# BASH_WRITE_PATTERNS. The third is a delegation to an agent that
+# READ_ONLY_AGENTS does not list. The REQUIRED_REVIEWS table below is the set
 # of required reviews. To require a new review, add a line there. No other
 # code change is necessary.
 set -euo pipefail
@@ -33,7 +34,7 @@ CODE_CHANGE_TOOLS=(Edit Write NotebookEdit)
 #
 # THIS LIST FAILS CLOSED, in the opposite direction to a permission check. A
 # pattern that fires too often costs one redundant review. A write shape
-# that is missing here costs the whole guarantee of the gate. When the two
+# that is absent here costs the whole guarantee of the gate. When the two
 # conflict, add the pattern.
 BASH_WRITE_PATTERNS=(
   '(^|[[:space:];&|(])(awk|sed|perl|ruby)[[:space:]][^;&|]*-i'  # in-place edit
@@ -73,8 +74,8 @@ BASH_WRITE_PATTERNS=(
 # whitespace, so that `python3 -c'...'` counts too.
 #
 # NOT COVERED, stated and not implied: these patterns are matched against
-# the raw command, with no knowledge of quotes, so `echo 'run cp a b'` counts
-# as a write. mask_nonexecuting in confirm-git-commit-push.sh is the
+# the raw command, with no knowledge of quotes. Thus `echo 'run cp a b'`
+# counts as a write. mask_nonexecuting in confirm-git-commit-push.sh is the
 # quote-aware masker of this repository, but it removes shell comments and
 # heredoc bodies. It leaves a quoted ARGUMENT as it found it, so it does not
 # change this case. A fix needs a quoted-string masker that does not exist
@@ -82,11 +83,11 @@ BASH_WRITE_PATTERNS=(
 # hides the real write in `bash -c 'sed -i s/a/b/ f'`.
 
 # The characters that no exempt path can hold, as the inside of a bracket
-# expression: white space, a shell separator, a backslash, a parenthesis, a
-# redirection operator, a backtick, a "$", and the two quotes. Each one ends
-# the path, starts a substitution, or is removed by the shell. The last
-# case matters for a traversal: the shell reads /tmp/"../x" and /tmp/.\./x
-# as /tmp/../x, but the raw text shows no ".." component.
+# expression. They are white space, a shell separator, a backslash, a
+# parenthesis, a redirection operator, a backtick, a "$", and the two quotes.
+# Each one ends the path or starts a substitution, or the shell removes it.
+# The last case matters for a traversal: the shell reads /tmp/"../x" and
+# /tmp/.\./x as /tmp/../x, but the raw text shows no ".." component.
 # BASH_TEMP_COMPONENT and BASH_DOC_PATH both use the set. Thus the two
 # exemptions cannot disagree about where a path ends.
 BASH_PATH_STOP="[:space:];&|\\()<>\`\$\"'"
@@ -127,8 +128,8 @@ DOC_FILE_EXTENSIONS='(md|org|rst)'
 # operator, a backtick, or a "$". Thus `>src/a.c>notes.md` keeps its first
 # redirection, and a quoted or computed target counts as a write. A computed
 # target is not only unknown. A backtick substitution can run a command with
-# no space in it (${IFS} separates the words), and the exemption would
-# remove that command before the write patterns read it.
+# no space in it (${IFS} separates the words). The exemption would remove
+# that command before the write patterns read it.
 BASH_DOC_PATH="[^${BASH_PATH_STOP}]*\\.${DOC_FILE_EXTENSIONS}"
 
 # Text that writes nothing a review can cover. A space replaces it before the
@@ -138,15 +139,16 @@ BASH_DOC_PATH="[^${BASH_PATH_STOP}]*\\.${DOC_FILE_EXTENSIONS}"
 # | as alternation, and a | delimiter would truncate them with no error.
 #
 # A space, not a deletion: every write pattern anchors on a separator. A
-# space left behind means that the removal of an exempt clause can neither
-# join two commands into a shape that matches nor split one that must match.
+# space left behind has this result. The removal of an exempt clause can
+# neither join two commands into a shape that matches, nor split one that
+# must match.
 #
 # Each rule also puts back the separator on each side of the clause. The
 # install pattern reads a command position. A mask that removed the ";" of
 # `make >/dev/null;install a b` turned the install into an argument and hid
 # it. sed has no lookahead, so the rule names the separator by its group
-# number: \7 and \8 are the BASH_WORD_END and BASH_COMMAND_END groups, and
-# \1 is the separator before mkdir or touch. A new group to the left of one
+# number. \7 and \8 are the BASH_WORD_END and BASH_COMMAND_END groups, and \1
+# is the separator before mkdir or touch. A new group to the left of one
 # of them moves its number. That includes a group inside BASH_TEMP_PATH,
 # BASH_DOC_PATH, or DOC_FILE_EXTENSIONS, because the rule expands those
 # constants in place. The test "an exempt clause never hides the write that
@@ -245,10 +247,10 @@ fi
 # ITS `tools:` LINE. The difference is practical. Every entry below that
 # this repository defines holds Bash, except communication:prose-reviewer,
 # which holds Edit. The three harness agents are not defined here.
-# BASH_WRITE_PATTERNS above exists because Bash writes files, and the
-# Bash calls of a subagent go to the transcript of the subagent, which no
+# BASH_WRITE_PATTERNS above exists because Bash writes files. The Bash
+# calls of a subagent go to the transcript of the subagent, which no
 # SubagentStop hook reads. So the exemption rests on a read of the
-# instructions of each agent, with the finding that the agent is told to
+# instructions of each agent. The finding is that the agent is told to
 # read, search, and report. It does not rest on a capability that the
 # harness enforces.
 #
@@ -259,7 +261,7 @@ fi
 #   communication:prose-reviewer   Holds Edit, and is in the list. It is the
 #                                  one agent that another Stop hook MANDATES.
 #                                  enforce-prose-review.sh blocks a
-#                                  substantial reply until this agent has run
+#                                  substantial reply until this agent runs
 #                                  on it. When that mandated delegation
 #                                  counted as a possible code change, the two
 #                                  hooks had no move that satisfied both. One
@@ -309,10 +311,10 @@ transcript_path_from() {
 # extension of one grep. And each predicate can be tested on its own.
 #
 # All three capture their input into a variable. They do not pipe it into
-# grep. A pipe fails open on a long turn: grep -q exits at the first match,
-# SIGPIPE (141) kills the jq upstream, and `set -o pipefail` turns that into
-# a failed pipeline. The result reports "no code was edited" for a turn that
-# did edit code, and that opens the gate with no error.
+# grep. A pipe fails open on a long turn, for this reason. grep -q exits at
+# the first match, SIGPIPE (141) kills the jq upstream, and `set -o pipefail`
+# turns that into a failed pipeline. The result reports "no code was edited"
+# for a turn that did edit code, and that opens the gate with no error.
 
 # edit_tool_used <events-jsonl>
 #
@@ -363,8 +365,8 @@ bash_wrote_a_file() {
 #
 # Filter. It replaces every BASH_WRITE_EXEMPTIONS match in its input with a
 # space. One sed call carries the whole table. There is not one call per
-# rule, because this runs on the Stop path, and the user waits on that path
-# at the end of every turn that ran a Bash command.
+# rule. This runs on the Stop path, and the user waits on that path at the
+# end of every turn that ran a Bash command.
 strip_exempt_writes() {
   local -a sed_args=()
   local rule
@@ -419,7 +421,7 @@ code_was_edited() {
 # The function slurps the events into one JSON array (-s) and evaluates a
 # single any(...) expression. Thus the -e exit status of jq reflects the
 # match across the whole event list. Without -s, jq computes the -e status
-# per input line of the JSONL stream, and that gives the wrong answer with no
+# per input line of the JSONL stream. That gives the wrong answer with no
 # error as soon as there is more than one event.
 review_satisfied() {
   local events="$1" skill_name="$2" agent_name="$3"
@@ -451,9 +453,9 @@ missing_reviews() {
 # code_was_edited, turn_requests_brevity, and missing_reviews against a real
 # transcript file. Thus the tests run this single function directly with
 # synthetic transcript fixtures, not only end to end through stdin. Prints
-# nothing when there is no turn to judge, when no code was edited after the
-# start of the turn, when the prompt of the turn opted out, or when all
-# required reviews ran.
+# nothing when there is no turn to judge, or when no code was edited after
+# the start of the turn. It also prints nothing when the prompt of the turn
+# opted out, or when all required reviews ran.
 missing_reviews_for_transcript() {
   local transcript="$1"
   local start_line events
@@ -513,8 +515,9 @@ stop_hook_active_or_unreadable() {
   local flag
   flag=$(printf '%s' "$1" | jq -r 'if type == "object" then (.stop_hook_active // false | tostring) else empty end' 2>/dev/null)
   # An empty result is the only unreadable signal available here. jq -e
-  # reports a payload whose flag is legitimately false as a failure, because
-  # -e keys its exit status on the output value and not on the parse.
+  # reports a payload whose flag is legitimately false as a failure. The
+  # reason is that -e keys its exit status on the output value and not on the
+  # parse.
   [ -n "$flag" ] || return 1
   printf '%s' "$flag"
 }
