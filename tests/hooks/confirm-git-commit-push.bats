@@ -830,3 +830,19 @@ GITW=git
   run_hook "$SCRIPT" "$stdin"
   [ -z "$output" ]
 }
+
+# The two tests below pin behavior that the shared tokenizer of
+# lib/shell-command.sh gives this gate. The tokenizer got both rules for
+# deny-untracked-background.sh. A change of either rule there must show here.
+
+@test "BYPASS: a backslash continuation between git and its subcommand is gated" {
+  stdin="$(pretooluse_payload "$GITW "$'\\\n'"push origin main")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
+
+@test "an empty quoted value of a git option does not hide the subcommand" {
+  stdin="$(pretooluse_payload "$GITW -C \"\" push origin main")"
+  run_hook "$SCRIPT" "$stdin"
+  [ "$(permission_decision "$output")" = "ask" ]
+}
